@@ -83,6 +83,10 @@ def _shortcut_keys(shortcut: str) -> list[str]:
         keys.append("+")
     if not keys:
         raise ValueError("shortcut is empty")
+    # Resolve every key here so an unknown one is reported the same way on both
+    # paths: SendKeys raises its own wording, and only once it is already typing.
+    for key in keys:
+        _virtual_key(key)
     return keys
 
 

@@ -2,6 +2,7 @@
 
 import json
 import math
+import re
 import time
 from collections.abc import Callable, Iterator
 from typing import Any, Literal
@@ -77,11 +78,17 @@ _MODIFIERS = {
 
 
 def _as_modifiers(value: list | str | None) -> list[str]:
-    """Parse modifier keys given as "ctrl+shift", ["ctrl", "shift"] or a JSON list string."""
+    """Parse modifier keys given as "ctrl+shift", "ctrl, shift", ["ctrl", "shift"] or a JSON list.
+
+    Plus signs, commas and spaces all separate; an empty value means no modifiers.
+    """
     if value is None:
         return []
     if isinstance(value, str):
-        value = json.loads(value) if value.lstrip().startswith("[") else value.split("+")
+        if value.lstrip().startswith("["):
+            value = json.loads(value)
+        else:
+            value = [token for token in re.split(r"[+,\s]+", value) if token]
     names = []
     for item in value:
         key = _MODIFIERS.get(item.strip().lower()) if isinstance(item, str) else None
@@ -117,17 +124,25 @@ def release_held_button(desktop) -> str:
     return ""
 
 
-def _as_seconds(value: object, name: str, maximum: float | None = None) -> float:
-    """Parse a finite, non-negative number of seconds (numbers or numeric strings)."""
+def _as_seconds(
+    value: object, name: str, maximum: float | None = None, above: float | None = None
+) -> float:
+    """Parse a finite number of seconds (numbers or numeric strings).
+
+    Zero is allowed unless *above* is given, which makes it an exclusive floor
+    so every limit on the same argument is worded the same way.
+    """
     try:
         if isinstance(value, bool):
             raise ValueError
         seconds = float(value)
     except TypeError, ValueError:
         raise ValueError(f"{name} must be a number of seconds (got {value!r})") from None
-    if not math.isfinite(seconds) or seconds < 0 or (maximum is not None and seconds > maximum):
+    too_small = seconds <= above if above is not None else seconds < 0
+    if not math.isfinite(seconds) or too_small or (maximum is not None and seconds > maximum):
+        floor = f"more than {above:g}" if above is not None else "0 or more"
         limit = f" and at most {maximum:g}" if maximum is not None else ""
-        raise ValueError(f"{name} must be 0 or more{limit} seconds (got {value!r})")
+        raise ValueError(f"{name} must be {floor}{limit} seconds (got {value!r})")
     return seconds
 
 
@@ -313,7 +328,8 @@ def register(
             "Provide loc or label; with neither, clicks at the current mouse position. "
             "modifiers holds keys during the click, e.g. 'shift' to extend a selection, "
             "'ctrl' to add to it or open a link in a new tab, 'ctrl+shift'. "
-            "Allowed: ctrl, shift, alt, win. Not allowed with clicks=0, which only moves the pointer."
+            "Allowed: ctrl, shift, alt, win (aliases: control, windows), separated by +, a comma "
+            "or a space. Not allowed with clicks=0, which only moves the pointer."
         ),
         annotations=ToolAnnotations(
             title="Click",
@@ -401,7 +417,7 @@ def register(
 
     @mcp.tool(
         name="Scroll",
-        description="Scrolls at coordinates [x, y], a UI element's label/id, or current mouse position if loc=None. Type: vertical (default) or horizontal. Direction: up/down for vertical, left/right for horizontal. wheel_times controls amount, 1 or more (1 wheel ≈ 3-5 lines). Use for navigating long content, lists, and web pages. modifiers holds keys while scrolling, e.g. 'ctrl' with up/down to zoom a page or document (allowed: ctrl, shift, alt, win).",
+        description="Scrolls at coordinates [x, y], a UI element's label/id, or current mouse position if loc=None. Type: vertical (default) or horizontal. Direction: up/down for vertical, left/right for horizontal. wheel_times controls amount, 1 or more (1 wheel ≈ 3-5 lines). Use for navigating long content, lists, and web pages. modifiers holds keys while scrolling, e.g. 'ctrl' with up/down to zoom a page or document (allowed: ctrl, shift, alt, win; aliases: control, windows; separated by +, a comma or a space).",
         annotations=ToolAnnotations(
             title="Scroll",
             readOnlyHint=False,
@@ -561,9 +577,7 @@ def register(
         if type(repeat) is not int or not 1 <= repeat <= 100:
             raise ValueError(f"repeat must be a whole number from 1 to 100 (got {repeat!r})")
         if hold is not None:
-            hold = _as_seconds(hold, "hold", maximum=10)
-            if hold == 0:
-                raise ValueError("hold must be more than 0 seconds")
+            hold = _as_seconds(hold, "hold", maximum=10, above=0)
             if repeat != 1:
                 raise ValueError("hold and repeat cannot be combined")
         get_desktop().shortcut(shortcut, repeat=repeat, hold=hold)
