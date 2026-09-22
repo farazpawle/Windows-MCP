@@ -7,6 +7,8 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from windows_mcp.desktop.service import Desktop
+from windows_mcp.tree.utils import is_unreadable_window
+from windows_mcp.uia.core import Rect
 from windows_mcp.tools import input as input_tool_module
 from windows_mcp.tree.views import (
     BoundingBox,
@@ -164,3 +166,46 @@ class TestFindWindowFallbacks:
         window, error = self._find("Outlook")
         assert window is None
         assert "not found" in error
+
+
+# 1.6 follow-up: Antigravity's process is "Antigravity IDE.exe" on this PC
+@pytest.mark.parametrize("exe", ["Antigravity IDE.exe", "antigravity.exe", "Code.exe"])
+def test_vscode_family_process_names_are_unreadable(exe, monkeypatch):
+    monkeypatch.delenv("WINDOWS_MCP_READ_VSCODE", raising=False)
+    with patch("windows_mcp.tree.utils._process_name", return_value=exe):
+        assert is_unreadable_window(1)
+
+
+# 3.6 A region Snapshot only reads windows whose visible frame overlaps the region
+class TestRegionWindowSelection:
+    RECTS = {
+        1: Rect(0, 0, 1920, 1032),  # active window, maximised (visible frame)
+        2: Rect(0, 1032, 1920, 1080),  # taskbar
+        3: Rect(0, 0, 0, 0),  # zero-size helper window
+        4: Rect(0, 0, 1920, 1032),  # maximised background app window
+        5: Rect(100, 100, 800, 500),  # small app window
+    }
+
+    def _select(self, region):
+        with patch.object(Desktop, "__init__", lambda self: None):
+            desktop = Desktop()
+        windows = [SimpleNamespace(handle=h, bounding_box=None) for h in (4, 5)]
+        with patch(
+            "windows_mcp.desktop.service.uia.DwmGetWindowExtendFrameBounds",
+            side_effect=lambda h: self.RECTS[h],
+        ):
+            active_window = SimpleNamespace(handle=1, bounding_box=None)
+            active, others = desktop._select_tree_handles(active_window, {2, 3}, windows, region)
+        return active, set(others)
+
+    def test_taskbar_region_skips_maximised_windows(self):
+        # Their invisible bottom border reaches under the taskbar; it must not count.
+        region = BoundingBox(left=0, top=1035, right=400, bottom=1080, width=400, height=45)
+        assert self._select(region) == (None, {2})
+
+    def test_small_region_keeps_only_overlapping_windows(self):
+        region = BoundingBox(left=150, top=150, right=300, bottom=300, width=150, height=150)
+        assert self._select(region) == (1, {4, 5})
+
+    def test_no_region_keeps_everything_as_before(self):
+        assert self._select(None) == (1, {2, 3})

@@ -24,6 +24,7 @@ _UNREADABLE_PROCESSES = {
     "cursor.exe",
     "windsurf.exe",
     "antigravity.exe",
+    "antigravity ide.exe",  # the name its installer uses on this PC (froze 2026-09-22)
     "vscodium.exe",
 }
 

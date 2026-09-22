@@ -44,8 +44,8 @@ logger.setLevel(logging.INFO)
 
 import windows_mcp.uia as uia  # noqa: E402
 
-# Invisible characters some apps put in window titles (Edge: "Microsoft​ Edge").
-_ZERO_WIDTH = re.compile("[​‌‍⁠﻿]")
+# Invisible characters some apps put in window titles (Edge: "Microsoft\u200b Edge").
+_ZERO_WIDTH = re.compile("[\u200b\u200c\u200d\u2060\ufeff]")
 
 # Key name aliases for shortcut keys that differ from UIA SpecialKeyNames
 _KEY_ALIASES = {
@@ -205,21 +205,11 @@ class Desktop:
             other_windows_handles = set(controls_handles - windows_handles)
             if active_window_handle is not None:
                 other_windows_handles.discard(active_window_handle)
-            tree_active_window_handle = active_window_handle
-            if screenshot_region:
-                active_window_in_region = (
-                    self._filter_window_to_region(active_window, screenshot_region) is not None
-                )
-                tree_active_window_handle = (
-                    active_window_handle if active_window_in_region else None
-                )
-                other_windows_handles.update(
-                    window.handle
-                    for window in windows
-                    if self._filter_window_to_region(window, screenshot_region) is not None
-                )
+            tree_active_window_handle, tree_other_handles = self._select_tree_handles(
+                active_window, other_windows_handles, windows, screenshot_region
+            )
             tree_state = self.tree.get_state(
-                tree_active_window_handle, list(other_windows_handles), use_dom=use_dom
+                tree_active_window_handle, tree_other_handles, use_dom=use_dom
             )
         else:
             root_box = screenshot_region or self.tree.screen_box
@@ -471,7 +461,7 @@ class Desktop:
         if matched_window is not None:
             window_name, _ = matched_window
             return windows.get(window_name), ""
-        # Short names score too low against long titles ("Edge" vs "... - Microsoft​ Edge",
+        # Short names score too low against long titles ("Edge" vs "... - Microsoft\u200b Edge",
         # whose zero-width space also defeats the fuzzy match), so fall back to a plain
         # substring of the title, then to the process name ("msedge", "notepad.exe").
         query = name.casefold().strip()
@@ -1456,6 +1446,45 @@ class Desktop:
             width=right - left,
             height=bottom - top,
         )
+
+    def _select_tree_handles(
+        self,
+        active_window: Window | None,
+        other_handles: set[int],
+        windows: list[Window],
+        region: BoundingBox | None,
+    ) -> tuple[int | None, list[int]]:
+        """Pick the windows whose UI tree is read.
+
+        Without a region: the active window plus the non-app windows (taskbar,
+        desktop, pop-ups). With a region: only windows whose visible frame overlaps
+        it, so a small-area Snapshot no longer reads the whole desktop first.
+        """
+        active_handle = active_window.handle if active_window else None
+        if region is None:
+            return active_handle, list(other_handles)
+
+        def in_region(handle: int, known_box: BoundingBox | None = None) -> bool:
+            # The visible frame excludes invisible resize borders: a maximised window's
+            # border reaches under the taskbar and would otherwise count as overlapping.
+            rect = uia.DwmGetWindowExtendFrameBounds(handle) or known_box
+            if rect is None:
+                return True  # can't measure it: read it, as before
+            return (
+                rect.left < region.right
+                and rect.right > region.left
+                and rect.top < region.bottom
+                and rect.bottom > region.top
+            )
+
+        active = (
+            active_handle
+            if active_window and in_region(active_handle, active_window.bounding_box)
+            else None
+        )
+        others = [h for h in other_handles if in_region(h)]
+        others += [w.handle for w in windows if in_region(w.handle, w.bounding_box)]
+        return active, others
 
     def _filter_window_to_region(self, window: Window | None, region: BoundingBox) -> Window | None:
         if window is None:
