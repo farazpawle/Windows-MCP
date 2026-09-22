@@ -66,6 +66,49 @@ def _as_point(value: object, name: str) -> list[int]:
     return parsed
 
 
+_MODIFIERS = {
+    "ctrl": "ctrl",
+    "control": "ctrl",
+    "shift": "shift",
+    "alt": "alt",
+    "win": "win",
+    "windows": "win",
+}
+
+
+def _as_modifiers(value: list | str | None) -> list[str]:
+    """Parse modifier keys given as "ctrl+shift", ["ctrl", "shift"] or a JSON list string."""
+    if value is None:
+        return []
+    if isinstance(value, str):
+        value = json.loads(value) if value.lstrip().startswith("[") else value.split("+")
+    names = []
+    for item in value:
+        key = _MODIFIERS.get(item.strip().lower()) if isinstance(item, str) else None
+        if key is None:
+            raise ValueError(f"modifiers may only contain ctrl, shift, alt, win (got {item!r})")
+        names.append(key)
+    return list(dict.fromkeys(names))
+
+
+def _held_suffix(modifiers: list[str]) -> str:
+    return f" holding {'+'.join(modifiers)}" if modifiers else ""
+
+
+def _as_seconds(value: object, name: str, maximum: float | None = None) -> float:
+    """Parse a finite, non-negative number of seconds (numbers or numeric strings)."""
+    try:
+        if isinstance(value, bool):
+            raise ValueError
+        seconds = float(value)
+    except TypeError, ValueError:
+        raise ValueError(f"{name} must be a number of seconds (got {value!r})") from None
+    if not math.isfinite(seconds) or seconds < 0 or (maximum is not None and seconds > maximum):
+        limit = f" and at most {maximum:g}" if maximum is not None else ""
+        raise ValueError(f"{name} must be 0 or more{limit} seconds (got {value!r})")
+    return seconds
+
+
 def _text_matches(value: object | None, expected: str | None) -> bool:
     if expected is None:
         return True
@@ -245,7 +288,10 @@ def register(
             "Supports button types: 'left' for selection/activation, 'right' for context menus, 'middle'. "
             "Supports clicks: 0=hover only (no click), 1=single click (select/focus), 2=double click (open/activate), "
             "3=triple click (select a line/paragraph). "
-            "Provide either loc or label."
+            "Provide loc or label; with neither, clicks at the current mouse position. "
+            "modifiers holds keys during the click, e.g. 'shift' to extend a selection, "
+            "'ctrl' to add to it or open a link in a new tab, 'ctrl+shift'. "
+            "Allowed: ctrl, shift, alt, win."
         ),
         annotations=ToolAnnotations(
             title="Click",
@@ -261,25 +307,27 @@ def register(
         label: int | None = None,
         button: Literal["left", "right", "middle"] = "left",
         clicks: int = 1,
+        modifiers: list[str] | str | None = None,
         ctx: Context = None,
     ) -> str:
         if type(clicks) is not int or clicks not in _CLICK_NAMES:
             raise ValueError(f"clicks must be 0, 1, 2 or 3 (got {clicks!r})")
+        modifiers = _as_modifiers(modifiers)
         desktop = get_desktop()
         loc = _as_loc(loc)
-        if loc is None and label is None:
-            raise ValueError("Either loc or label must be provided.")
         if label is not None:
             loc = _resolve_label(desktop, label)
+        elif loc is None:
+            loc = list(desktop.get_cursor_location())
         if len(loc) != 2:
             raise ValueError("Location must be a list of exactly 2 integers [x, y]")
         x, y = loc[0], loc[1]
-        desktop.click(loc=loc, button=button, clicks=clicks)
-        return f"{_CLICK_NAMES[clicks]} {button} clicked at ({x},{y})."
+        desktop.click(loc=loc, button=button, clicks=clicks, modifiers=modifiers)
+        return f"{_CLICK_NAMES[clicks]} {button} clicked at ({x},{y}){_held_suffix(modifiers)}."
 
     @mcp.tool(
         name="Type",
-        description="Types text at specified coordinates [x, y] or passing a UI element's label/id. Set clear=True to clear existing text first, False to append. Set press_enter=True to submit after typing. Set caret_position to 'start' (beginning), 'end' (end), or 'idle' (default). Provide either loc or label.",
+        description="Types text at specified coordinates [x, y] or passing a UI element's label/id. Set clear=True to clear existing text first, False to append. Set press_enter=True to submit after typing. Set caret_position to 'start' (beginning), 'end' (end), or 'idle' (default). Provide loc or label to click the field first; with neither, types into the element that already has keyboard focus (no click, so the caret and selection stay put).",
         annotations=ToolAnnotations(
             title="Type",
             readOnlyHint=False,
@@ -300,13 +348,10 @@ def register(
     ) -> str:
         desktop = get_desktop()
         loc = _as_loc(loc)
-        if loc is None and label is None:
-            raise ValueError("Either loc or label must be provided.")
         if label is not None:
             loc = _resolve_label(desktop, label)
-        if len(loc) != 2:
+        if loc is not None and len(loc) != 2:
             raise ValueError("Location must be a list of exactly 2 integers [x, y]")
-        x, y = loc[0], loc[1]
         desktop.type(
             loc=loc,
             text=text,
@@ -314,11 +359,13 @@ def register(
             clear=as_bool(clear, "clear"),
             press_enter=as_bool(press_enter, "press_enter"),
         )
-        return f"Typed {text} at ({x},{y})."
+        if loc is None:
+            return f"Typed {text} into the focused element."
+        return f"Typed {text} at ({loc[0]},{loc[1]})."
 
     @mcp.tool(
         name="Scroll",
-        description="Scrolls at coordinates [x, y], a UI element's label/id, or current mouse position if loc=None. Type: vertical (default) or horizontal. Direction: up/down for vertical, left/right for horizontal. wheel_times controls amount (1 wheel ≈ 3-5 lines). Use for navigating long content, lists, and web pages.",
+        description="Scrolls at coordinates [x, y], a UI element's label/id, or current mouse position if loc=None. Type: vertical (default) or horizontal. Direction: up/down for vertical, left/right for horizontal. wheel_times controls amount (1 wheel ≈ 3-5 lines). Use for navigating long content, lists, and web pages. modifiers holds keys while scrolling, e.g. 'ctrl' with up/down to zoom a page or document (allowed: ctrl, shift, alt, win).",
         annotations=ToolAnnotations(
             title="Scroll",
             readOnlyHint=False,
@@ -334,22 +381,23 @@ def register(
         type: Literal["horizontal", "vertical"] = "vertical",
         direction: Literal["up", "down", "left", "right"] = "down",
         wheel_times: int = 1,
+        modifiers: list[str] | str | None = None,
         ctx: Context = None,
     ) -> str:
+        modifiers = _as_modifiers(modifiers)
         desktop = get_desktop()
         loc = _as_loc(loc)
         if label is not None:
             loc = _resolve_label(desktop, label)
         if loc and len(loc) != 2:
             raise ValueError("Location must be a list of exactly 2 integers [x, y]")
-        response = desktop.scroll(loc, type, direction, wheel_times)
+        response = desktop.scroll(loc, type, direction, wheel_times, modifiers=modifiers)
         if response:
             return response
+        where = f" at ({loc[0]},{loc[1]})" if loc else " at the mouse position"
         return (
             f"Scrolled {type} {direction} by {wheel_times} wheel times"
-            + f" at ({loc[0]},{loc[1]})."
-            if loc
-            else ""
+            f"{where}{_held_suffix(modifiers)}."
         )
 
     @mcp.tool(
@@ -360,7 +408,12 @@ def register(
             "to the target coordinates, or provide from_loc=[x, y] to make the drag explicit-start "
             "and atomic in one tool call. Optional duration controls bounded intermediate movement. "
             "Default (drag=False) is a simple cursor move (hover). "
-            "Provide either loc or label."
+            "Provide either loc or label. "
+            "modifiers (drag only) holds keys during the drag, e.g. 'ctrl' to copy instead of move. "
+            "For drags one straight move can't express (curved paths, hover before dropping): "
+            "mouse_button='down' presses the left button at loc, then plain Moves steer it, "
+            "then mouse_button='up' releases it (loc optional: current position). "
+            "Always finish a 'down' with an 'up'."
         ),
         annotations=ToolAnnotations(
             title="Move",
@@ -377,12 +430,32 @@ def register(
         drag: bool | str = False,
         from_loc: list[int] | str | None = None,
         duration: float | int | str | None = None,
+        modifiers: list[str] | str | None = None,
+        mouse_button: Literal["down", "up"] | None = None,
         ctx: Context = None,
     ) -> str:
         desktop = get_desktop()
         loc = _as_loc(loc)
         from_loc = _as_loc(from_loc)
         drag = as_bool(drag, "drag")
+        modifiers = _as_modifiers(modifiers)
+        if modifiers and not drag:
+            raise ValueError(
+                "modifiers require drag=True (use Click or Scroll modifiers otherwise)"
+            )
+        if mouse_button is not None:
+            if mouse_button not in ("down", "up"):
+                raise ValueError(f"mouse_button must be 'down' or 'up' (got {mouse_button!r})")
+            if drag or from_loc is not None or duration is not None:
+                raise ValueError("mouse_button cannot be combined with drag, from_loc or duration")
+            if label is not None:
+                loc = _resolve_label(desktop, label)
+            elif loc is None:
+                loc = list(desktop.get_cursor_location())
+            loc = _as_point(loc, "loc")
+            desktop.mouse_button(loc, mouse_button)
+            verb = "Pressed" if mouse_button == "down" else "Released"
+            return f"{verb} the left mouse button at ({loc[0]},{loc[1]})."
         if loc is None and label is None:
             raise ValueError("Either loc or label must be provided.")
         if label is not None:
@@ -410,14 +483,16 @@ def register(
                 loc,
                 from_loc=from_loc,
                 duration=duration,
+                modifiers=modifiers,
             )
             start_x, start_y = result["start"]
             effective_duration = result["duration"]
+            held = _held_suffix(modifiers)
             if effective_duration is None:
-                return f"Dragged from ({start_x},{start_y}) to ({x},{y})."
+                return f"Dragged from ({start_x},{start_y}) to ({x},{y}){held}."
             return (
                 f"Dragged from ({start_x},{start_y}) to ({x},{y}) "
-                f"over {effective_duration:.3f} seconds."
+                f"over {effective_duration:.3f} seconds{held}."
             )
         else:
             desktop.move(loc)
@@ -425,7 +500,7 @@ def register(
 
     @mcp.tool(
         name="Shortcut",
-        description='Executes keyboard shortcuts using key combinations separated by +. Examples: "ctrl+c" (copy), "ctrl+v" (paste), "alt+tab" (switch apps), "win+r" (Run dialog), "win" (Start menu), "ctrl+shift+esc" (Task Manager). Use for quick actions and system commands.',
+        description='Executes keyboard shortcuts using key combinations separated by +. Examples: "ctrl+c" (copy), "ctrl+v" (paste), "alt+tab" (switch apps), "win+r" (Run dialog), "win" (Start menu), "ctrl+shift+esc" (Task Manager). Use for quick actions and system commands. repeat=N presses the combination N times (1-100), e.g. "down" with repeat=20. hold=S keeps all the keys down for S seconds (up to 10), e.g. an arrow key in a game; a held key does not auto-repeat typed characters, so use repeat for that. hold and repeat cannot be combined.',
         annotations=ToolAnnotations(
             title="Shortcut",
             readOnlyHint=False,
@@ -435,13 +510,28 @@ def register(
         ),
     )
     @with_analytics(get_analytics(), "Shortcut-Tool")
-    def shortcut_tool(shortcut: str, ctx: Context = None):
-        get_desktop().shortcut(shortcut)
-        return f"Pressed {shortcut}."
+    def shortcut_tool(
+        shortcut: str,
+        repeat: int = 1,
+        hold: float | str | None = None,
+        ctx: Context = None,
+    ):
+        if type(repeat) is not int or not 1 <= repeat <= 100:
+            raise ValueError(f"repeat must be a whole number from 1 to 100 (got {repeat!r})")
+        if hold is not None:
+            hold = _as_seconds(hold, "hold", maximum=10)
+            if hold == 0:
+                raise ValueError("hold must be more than 0 seconds")
+            if repeat != 1:
+                raise ValueError("hold and repeat cannot be combined")
+        get_desktop().shortcut(shortcut, repeat=repeat, hold=hold)
+        if hold is not None:
+            return f"Held {shortcut} for {hold:g} seconds."
+        return f"Pressed {shortcut}" + (f" {repeat} times." if repeat > 1 else ".")
 
     @mcp.tool(
         name="Wait",
-        description="Pauses execution for specified duration in seconds. Use when waiting for: applications to launch/load, UI animations to complete, page content to render, dialogs to appear, or between rapid actions. Helps ensure UI is ready before next interaction.",
+        description="Pauses execution for specified duration in seconds (decimals allowed, e.g. 0.5). Use when waiting for: applications to launch/load, UI animations to complete, page content to render, dialogs to appear, or between rapid actions. Helps ensure UI is ready before next interaction.",
         annotations=ToolAnnotations(
             title="Wait",
             readOnlyHint=True,
@@ -451,9 +541,10 @@ def register(
         ),
     )
     @with_analytics(get_analytics(), "Wait-Tool")
-    def wait_tool(duration: int, ctx: Context = None) -> str:
-        time.sleep(duration)
-        return f"Waited for {duration} seconds."
+    def wait_tool(duration: float | str, ctx: Context = None) -> str:
+        seconds = _as_seconds(duration, "duration")
+        time.sleep(seconds)
+        return f"Waited for {seconds:g} seconds."
 
     @mcp.tool(
         name="WaitFor",

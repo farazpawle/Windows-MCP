@@ -1,6 +1,6 @@
 ---
 Title: Windows-MCP open issues backlog (from the 2026-09-22 tool testing)
-Description: Every failing behaviour and every change still needed after three test sessions of all 20 windows-mcp tools on 2026-09-22. Sections 1-5 are now fixed or tested; section 6 and the final guide review (7.2) are open. Grouped by priority, plus test-coverage gaps and seven actions missing compared with Claude computer use (Cowork), with the tool, what happens, why it matters and the suggested change, plus a standing task to update Skills/Skill.md as each fix lands. No freeze or server-crash issue is open: the frozen-app hang and the Avast HTTPS crash were fixed and committed (bf0137f). Source: docs/testing/windows-mcp-tool-test-report.md and Plan/windows-mcp-testing-tasks.md.
+Description: Every failing behaviour and every change still needed after three test sessions of all 20 windows-mcp tools on 2026-09-22. All sections are now fixed, tested or closed, including the seven section 6 abilities (added 2026-09-22) and the final guide review. Grouped by priority, plus test-coverage gaps and seven actions missing compared with Claude computer use (Cowork), with the tool, what happens, why it matters and the suggested change, plus a standing task to update Skills/Skill.md as each fix lands. No freeze or server-crash issue is open: the frozen-app hang and the Avast HTTPS crash were fixed and committed (bf0137f). Source: docs/testing/windows-mcp-tool-test-report.md and Plan/windows-mcp-testing-tasks.md.
 Total Tasks: 38
 ---
 
@@ -58,20 +58,20 @@ Reference: Anthropic's published computer-use toolset (`computer_toolset_2026080
 
 Already covered: screenshot (Screenshot), zoom (Screenshot `region` returns native-resolution pixels), right/middle/double/triple click (Click `button`/`clicks`), drag (Move `drag=true`), mouse move (Move), cursor position (shown in Screenshot output), scroll in four directions (Scroll), type (Type), key combos (Shortcut), wait (Wait).
 
-- [ ] 6.1 **Click with a modifier held** (Shift+click to extend a selection, Ctrl+click on a link). Only MultiSelect can Ctrl-click; nothing can Shift-click or Alt-click. Suggest: a `modifiers` option on Click.
-- [ ] 6.2 **Hold a key for a set time** (`hold_key`, e.g. hold an arrow key in a game or hold Shift). Missing. Suggest: a `hold` option on Shortcut with a duration cap.
-- [ ] 6.3 **Separate mouse button down / up** for drags that one straight move can't express (curved paths, drag-and-hover-then-drop). Missing. Suggest: `press`/`release` modes on Move.
-- [ ] 6.4 **Scroll or drag with a modifier held** (Ctrl+wheel to zoom a page or document). Missing. Suggest: the same `modifiers` option on Scroll and Move.
-- [ ] 6.5 **Repeat a key N times** (`key` with `repeat`, e.g. press Down 20 times). Missing; each press needs its own call. Suggest: a `repeat` option on Shortcut.
-- [ ] 6.6 **Click or type at the current position / current focus.** Click and Type both require `loc` or `label`; typing into an already-focused field forces an extra click that can move the caret or change the selection. Suggest: allow both to run without a location.
-- [ ] 6.7 **Wait takes whole seconds only.** Half-second waits are not possible. Suggest: accept decimals.
+- [x] 6.1 **Click with a modifier held** (Shift+click to extend a selection, Ctrl+click on a link). Only MultiSelect can Ctrl-click; nothing can Shift-click or Alt-click. Suggest: a `modifiers` option on Click. Done 2026-09-22: Click `modifiers` (ctrl/shift/alt/win, e.g. "ctrl+shift"); keys are always released, even on error. Live: Shift+click selected three Notepad lines.
+- [x] 6.2 **Hold a key for a set time** (`hold_key`, e.g. hold an arrow key in a game or hold Shift). Missing. Suggest: a `hold` option on Shortcut with a duration cap. Done 2026-09-22: Shortcut `hold` (seconds, up to 10). Live: holding `b` typed one `b` (a held key does not auto-repeat; noted in the guide).
+- [x] 6.3 **Separate mouse button down / up** for drags that one straight move can't express (curved paths, drag-and-hover-then-drop). Missing. Suggest: `press`/`release` modes on Move. Done 2026-09-22: Move `mouse_button="down"`/`"up"` (loc optional for up). Live: down, two moves, up selected text in Notepad; button not left held.
+- [x] 6.4 **Scroll or drag with a modifier held** (Ctrl+wheel to zoom a page or document). Missing. Suggest: the same `modifiers` option on Scroll and Move. Done 2026-09-22: `modifiers` on Scroll and on Move with `drag=true`. Live: Ctrl+wheel took Notepad from 100% to 120% zoom.
+- [x] 6.5 **Repeat a key N times** (`key` with `repeat`, e.g. press Down 20 times). Missing; each press needs its own call. Suggest: a `repeat` option on Shortcut. Done 2026-09-22: Shortcut `repeat` (1-100). Live: `down` x5 moved the caret five lines.
+- [x] 6.6 **Click or type at the current position / current focus.** Click and Type both require `loc` or `label`; typing into an already-focused field forces an extra click that can move the caret or change the selection. Suggest: allow both to run without a location. Done 2026-09-22: Click without a location clicks at the pointer; Type without one types into the focused element with no click. Live: typed into Notepad at the caret.
+- [x] 6.7 **Wait takes whole seconds only.** Half-second waits are not possible. Suggest: accept decimals. Done 2026-09-22: decimals (and numeric text) accepted; negative or non-numeric refused.
 
 Beyond the screen tools, Cowork also works with files, connectors and a built-in browser. windows-mcp covers files (FileSystem) and pages (Scrape) differently, and has extras Cowork's screen tools lack: the UI element tree (Snapshot), WaitFor, MultiEdit, PowerShell, Registry, Process, Clipboard, Notification and App.
 
 ## 7. Keep the agent guide in step with the fixes
 
-- [ ] 7.1 After each item above is fixed or added, update `Skills/Skill.md` in the same change: remove the workaround or warning it described, and document any new option (e.g. Click `modifiers`, Shortcut `hold`/`repeat`, Type without a location) with when to use it.
-- [ ] 7.2 At the end of the implementation, re-read `Skills/Skill.md` end to end and confirm every claim still matches the tools' real behaviour.
+- [x] 7.1 After each item above is fixed or added, update `Skills/Skill.md` in the same change: remove the workaround or warning it described, and document any new option (e.g. Click `modifiers`, Shortcut `hold`/`repeat`, Type without a location) with when to use it.
+- [x] 7.2 At the end of the implementation, re-read `Skills/Skill.md` end to end and confirm every claim still matches the tools' real behaviour. Done 2026-09-22: read end to end after the section 6 changes; every tool row matches the behaviour recorded in sections 1-6 (a read-through against those results, not a fresh live re-test of every claim).
 
 ## Not a bug
 

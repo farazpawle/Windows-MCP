@@ -50,14 +50,14 @@ Total Tasks: 30
 - Tests as above. Live: a label from the text tree clicks the right element (checked by Screenshot); `switch "Edge"` brings Edge up (checked by Screenshot).
 
 ## 4. Section 6 — missing abilities
-- [ ] 4.1 Click `modifiers` (6.1).
-- [ ] 4.2 Scroll and Move-drag `modifiers` (6.4).
-- [ ] 4.3 Shortcut `hold` (6.2).
-- [ ] 4.4 Shortcut `repeat` (6.5).
-- [ ] 4.5 Move press / release (6.3).
-- [ ] 4.6 Click and Type without a location (6.6).
-- [ ] 4.7 Wait accepts decimals (6.7).
-- [ ] 4.8 Update `Skills/Skill.md` for 6.1–6.7, then re-read it end to end (7.2).
+- [x] 4.1 Click `modifiers` (6.1).
+- [x] 4.2 Scroll and Move-drag `modifiers` (6.4).
+- [x] 4.3 Shortcut `hold` (6.2).
+- [x] 4.4 Shortcut `repeat` (6.5).
+- [x] 4.5 Move press / release (6.3).
+- [x] 4.6 Click and Type without a location (6.6).
+- [x] 4.7 Wait accepts decimals (6.7).
+- [x] 4.8 Update `Skills/Skill.md` for 6.1–6.7, then re-read it end to end (7.2).
 - [ ] 4.9 Checkpoint commit for section 6; move the plan and task file to `Plan/completed/` if everything is done.
 
 ### Verification

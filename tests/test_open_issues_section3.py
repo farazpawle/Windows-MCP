@@ -49,7 +49,9 @@ class TestClickCount:
         desktop = MagicMock()
         reply = _tool(input_tool_module, "Click", desktop)(loc=[5, 6], clicks=clicks)
         assert reply.startswith(word)
-        desktop.click.assert_called_once_with(loc=[5, 6], button="left", clicks=clicks)
+        desktop.click.assert_called_once_with(
+            loc=[5, 6], button="left", clicks=clicks, modifiers=[]
+        )
 
     @pytest.mark.parametrize("clicks", [-1, 4, 10, True])
     def test_out_of_range_is_rejected_without_clicking(self, clicks):

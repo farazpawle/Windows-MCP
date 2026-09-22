@@ -18,6 +18,7 @@ from windows_mcp.desktop import screenshot as screenshot_capture
 from windows_mcp.desktop import flash_overlay
 from windows_mcp.infrastructure import validate_url
 from urllib.parse import urljoin
+from contextlib import contextmanager
 from locale import getpreferredencoding
 from typing import Literal
 from markdownify import markdownify
@@ -56,6 +57,33 @@ _KEY_ALIASES = {
     "command": "Win",
     "option": "Alt",
 }
+
+
+def _virtual_key(key: str) -> int:
+    """Virtual-key code for one shortcut key name ("shift", "down", "a", "/")."""
+    name = _KEY_ALIASES.get(key.lower(), key)
+    if len(name) == 1:
+        code = ctypes.windll.user32.VkKeyScanW(ord(name))
+        if code != -1:
+            return code & 0xFF
+    elif name.upper() in uia.SpecialKeyNames:
+        return uia.SpecialKeyNames[name.upper()]
+    raise ValueError(f"Unknown key {key!r}")
+
+
+@contextmanager
+def _keys_held(keys: list[str]):
+    """Hold *keys* down for the duration of the block; always release them, last first."""
+    codes = [_virtual_key(k) for k in keys]  # resolve all before pressing any
+    pressed = []
+    try:
+        for code in codes:
+            uia.PressKey(code, waitTime=0.05)
+            pressed.append(code)
+        yield
+    finally:
+        for code in reversed(pressed):
+            uia.ReleaseKey(code, waitTime=0.05)
 
 
 class _WindowsTrustAdapter(requests.adapters.HTTPAdapter):
@@ -750,7 +778,13 @@ class Desktop:
             results.append((element_node.center.x, element_node.center.y))
         return results
 
-    def click(self, loc: tuple[int, int] | list[int], button: str = "left", clicks: int = 1):
+    def click(
+        self,
+        loc: tuple[int, int] | list[int],
+        button: str = "left",
+        clicks: int = 1,
+        modifiers: list[str] = (),
+    ):
         if isinstance(loc, list):
             x, y = loc[0], loc[1]
         else:
@@ -758,6 +792,10 @@ class Desktop:
         if clicks == 0:
             uia.SetCursorPos(x, y)
             return
+        with _keys_held(list(modifiers)):
+            self._click_button(x, y, button, clicks)
+
+    def _click_button(self, x: int, y: int, button: str, clicks: int) -> None:
         match button:
             case "left":
                 if clicks >= 2:
@@ -785,14 +823,17 @@ class Desktop:
 
     def type(
         self,
-        loc: tuple[int, int],
+        loc: tuple[int, int] | None,
         text: str,
         caret_position: Literal["start", "idle", "end"] = "idle",
         clear: bool | str = False,
         press_enter: bool | str = False,
     ):
-        x, y = loc
-        uia.Click(x, y)
+        # No location: type into whatever has focus, without a click that could
+        # move the caret or drop the selection.
+        if loc is not None:
+            x, y = loc
+            uia.Click(x, y)
         if caret_position == "start":
             uia.SendKeys("{Home}", waitTime=0.05)
         elif caret_position == "end":
@@ -855,9 +896,14 @@ class Desktop:
         type: Literal["horizontal", "vertical"] = "vertical",
         direction: Literal["up", "down", "left", "right"] = "down",
         wheel_times: int = 1,
+        modifiers: list[str] = (),
     ) -> str | None:
         if loc:
             self.move(loc)
+        with _keys_held(list(modifiers)):
+            return self._scroll_wheel(type, direction, wheel_times)
+
+    def _scroll_wheel(self, type: str, direction: str, wheel_times: int) -> str | None:
         match type:
             case "vertical":
                 match direction:
@@ -928,6 +974,7 @@ class Desktop:
         loc: tuple[int, int] | list[int],
         from_loc: tuple[int, int] | list[int] | None = None,
         duration: float | int | str | None = None,
+        modifiers: list[str] = (),
     ) -> dict[str, object]:
         x, y = self._normalize_drag_point(loc, "loc")
         normalized_from_loc = (
@@ -939,7 +986,8 @@ class Desktop:
             cx, cy = uia.GetCursorPos()
         else:
             cx, cy = normalized_from_loc
-        uia.DragDrop(cx, cy, x, y, moveSpeed=1, duration=effective_duration)
+        with _keys_held(list(modifiers)):
+            uia.DragDrop(cx, cy, x, y, moveSpeed=1, duration=effective_duration)
         return {
             "start": [cx, cy],
             "end": [x, y],
@@ -950,17 +998,32 @@ class Desktop:
         x, y = loc
         uia.MoveTo(x, y, moveSpeed=10)
 
-    def shortcut(self, shortcut: str):
-        keys = shortcut.split("+")
+    def mouse_button(self, loc: tuple[int, int] | list[int], action: Literal["down", "up"]):
+        """Press or release the left button at *loc*, for drags one straight move can't do."""
+        x, y = loc
+        if action == "down":
+            uia.PressMouse(x, y, waitTime=0.05)
+        else:
+            uia.SetCursorPos(x, y)
+            uia.ReleaseMouse(waitTime=0.05)
+
+    def shortcut(self, shortcut: str, repeat: int = 1, hold: float | None = None):
+        keys = [key.strip() for key in shortcut.split("+")]
+        if hold is not None:
+            # Held down as real key-down events; like a physical key held by
+            # software, it does not auto-repeat characters (use repeat for that).
+            with _keys_held(keys):
+                sleep(hold)
+            return
         sendkeys_str = ""
         for key in keys:
-            key = key.strip()
             if len(key) == 1:
                 sendkeys_str += key
             else:
                 name = _KEY_ALIASES.get(key.lower(), key)
                 sendkeys_str += "{" + name + "}"
-        uia.SendKeys(sendkeys_str, interval=0.01)
+        for _ in range(repeat):
+            uia.SendKeys(sendkeys_str, interval=0.01)
 
     def multi_select(self, press_ctrl: bool | str = False, locs: list[tuple[int, int]] = []):
         press_ctrl = press_ctrl is True or (

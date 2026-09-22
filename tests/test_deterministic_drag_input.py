@@ -92,6 +92,7 @@ def test_move_tool_accepts_explicit_drag_start_list() -> None:
             "loc": [100, 200],
             "from_loc": [10, 20],
             "duration": 0.25,
+            "modifiers": [],
         }
     ]
 
