@@ -9,7 +9,7 @@ from windows_mcp.tree.cache_utils import (
     is_uia_dead_element_error,
 )
 from windows_mcp.tree.budget import TreeElementBudget, resolve_max_tree_elements
-from windows_mcp.tree.utils import random_point_within_bounding_box, drop_occluded
+from windows_mcp.tree.utils import random_point_within_bounding_box, drop_occluded, is_unreadable_window
 from windows_mcp.tree import ia2 as ia2_traversal
 from typing import TYPE_CHECKING,Optional,Any
 from time import sleep,perf_counter
@@ -188,6 +188,20 @@ class Tree:
         task_inputs = []
         for handle in windows_handles:
             is_browser = False
+            if is_unreadable_window(handle):
+                # Listed by name only: walking it would lock the app up.
+                try:
+                    name = self.app_name_correction(ControlFromHandle(handle).Name.strip())
+                except Exception:
+                    name = "Unknown"
+                logger.info("[Tree] Skipping element read of VS Code-family window %r", name)
+                window_sem_nodes.append(SemanticNode(
+                    control_type='Window',
+                    element_type='window',
+                    name=f"{name} (elements not read: VS Code-family apps freeze when read; use Screenshot)",
+                    window_name=name,
+                ))
+                continue
             try:
                 temp_node = ControlFromHandle(handle)
                 if active_window_flag and temp_node.ClassName == "Progman":

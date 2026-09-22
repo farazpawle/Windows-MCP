@@ -4,6 +4,7 @@ from windows_mcp.desktop.utils import (
 )
 from windows_mcp.powershell.utils import ps_quote
 from windows_mcp.powershell import PowerShellExecutor
+from windows_mcp.tree.utils import is_unreadable_window
 from windows_mcp.vdm.core import (
     get_all_desktops,
     get_current_desktop,
@@ -677,7 +678,7 @@ class Desktop:
             | uia.PropertyConditionFlags.PropertyConditionFlags_MatchSubstring
         )
         for handle in handles:
-            if is_window_hung(handle):
+            if is_window_hung(handle) or is_unreadable_window(handle):
                 continue
             try:
                 condition = ia.CreatePropertyConditionEx(uia.PropertyId.NameProperty, text, flags)

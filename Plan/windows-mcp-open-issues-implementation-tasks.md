@@ -17,7 +17,7 @@ Total Tasks: 30
 - [x] 1.4 Registry: `recursive` option; refuse to delete a key with sub-keys without it.
 - [x] 1.5 Snapshot: drop background-window elements covered by another window.
 - [x] 1.6 Add `Skills/Skill.md` to git and update it for 1.1–1.5.
-- [ ] 1.7 Checkpoint commit for section 1.
+- [x] 1.7 Checkpoint commit for section 1 (fcfcf7d).
 
 ### Verification
 - Each item: new test failed before the fix and passes after; full suite and ruff clean.

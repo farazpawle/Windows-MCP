@@ -15,7 +15,7 @@ Total Tasks: 37
 - [x] 1.3 **Process name filter is fuzzy.** "pwsh" matched ShellExperienceHost, so a kill by name could end the wrong process. Fix: exact (case-insensitive) name match for kill; keep fuzzy only for listing. Done 2026-09-22.
 - [x] 1.4 **Registry key delete wipes all sub-keys** when `name` is omitted, with no warning. Fix: refuse to delete a key that has sub-keys unless an explicit `recursive=true` is passed. Done 2026-09-22.
 - [x] 1.5 **Snapshot lists hidden elements.** Elements of background windows are listed even where another window covers them, so a click on one hits the covering window. Fix: drop or mark elements whose centre point belongs to another window (hit-test with WindowFromPoint). Done 2026-09-22 (fix/open-issues-backlog).
-- [ ] 1.6 **Snapshot / WaitFor / App switch can freeze VS Code.** Repeated full-desktop reads made a large VS Code window go "Not Responding" on 2026-09-22: Electron answers every accessibility query on its UI thread. Fix idea: skip or cap the element walk of background Electron windows, or default to the focused window only.
+- [x] 1.6 **Snapshot / WaitFor / App switch can freeze VS Code.** Repeated full-desktop reads made a large VS Code window go "Not Responding" on 2026-09-22: Electron answers every accessibility query on its UI thread. Fix idea: skip or cap the element walk of background Electron windows, or default to the focused window only. Done 2026-09-22: proven that one read pins VS Code at 100% CPU until restart; VS Code-family windows are now listed by name only (override WINDOWS_MCP_READ_VSCODE=1). Full read went from 21.5 s to 0.2 s with VS Code idle.
 
 ## 2. Medium — wrong or misleading results
 

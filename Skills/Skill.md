@@ -20,7 +20,7 @@ Machine: 1 display 1920x1080, 100% scale (screen coords = image coords) · Power
 4. **Absolute paths only.** Relative paths resolve to the user's OneDrive-synced Desktop (cloud-synced).
 5. Sandbox experiments in `%TEMP%\<name>` and `HKCU:\Software\<TestKey>`. Clean up and verify cleanup.
 6. **Boolean params: pass real `true`/`false`.** Local repo: every tool also accepts `"yes"/"no"/"1"/"0"/"on"/"off"` and rejects any other word with an error. PyPI release: strings other than `"true"` are silently false (FileSystem `recursive="yes"` searched only the top folder).
-7. **Screen-reading tools can freeze VS Code.** Snapshot, WaitFor and App switch ask every open window to describe all its elements; VS Code (and other Electron apps) answer on the thread that draws the screen, so repeated calls with a big VS Code window open turned it "Not Responding" (2026-09-22). Keep these calls few, use `region` around the target, and prefer Screenshot or PowerShell for checks.
+7. **VS Code-family windows are never read (local repo).** One element read of VS Code pinned it at 100% CPU, "Not Responding" until restart, and returned nothing (proven 2026-09-22; Antigravity froze the same way). Snapshot/WaitFor/App switch now list VS Code, Cursor, Windsurf, Antigravity and VSCodium by name only ("elements not read"); use Screenshot + coordinates for them. `WINDOWS_MCP_READ_VSCODE=1` turns reading back on — don't. **The PyPI release still reads them: any Snapshot/WaitFor/App switch there freezes an open VS Code.**
 
 ## 1. Observe
 
