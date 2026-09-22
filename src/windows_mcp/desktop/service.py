@@ -71,7 +71,10 @@ def _virtual_key(key: str) -> int:
     raise ValueError(f"Unknown key {key!r}")
 
 
-_ALT_KEYS = frozenset([uia.Keys.VK_MENU, uia.Keys.VK_LMENU, uia.Keys.VK_RMENU])
+# Keys whose bare release opens something: Alt the menu bar, Win the Start menu.
+_MASKED_KEYS = frozenset(
+    [uia.Keys.VK_MENU, uia.Keys.VK_LMENU, uia.Keys.VK_RMENU, uia.Keys.VK_LWIN, uia.Keys.VK_RWIN]
+)
 _MENU_MASK_KEY = 0xE8  # unassigned virtual key
 
 
@@ -87,9 +90,9 @@ def _keys_held(keys: list[str]):
         yield
     finally:
         for code in reversed(pressed):
-            if code in _ALT_KEYS:
-                # A bare Alt-up opens the window's menu bar; an unassigned key in
-                # between cancels that (AutoHotkey's "menu mask").
+            if code in _MASKED_KEYS:
+                # An unassigned key between key-down and key-up cancels what a bare
+                # Alt/Win release would open (AutoHotkey's "menu mask").
                 uia.PressKey(_MENU_MASK_KEY, waitTime=0)
                 uia.ReleaseKey(_MENU_MASK_KEY, waitTime=0)
             uia.ReleaseKey(code, waitTime=0.05)

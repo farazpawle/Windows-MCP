@@ -110,6 +110,19 @@ class TestHeldModifiersInService:
         alt = uia.Keys.VK_MENU
         assert events == [("down", alt), ("down", 0xE8), ("up", 0xE8), ("up", alt)]
 
+    def test_win_is_masked_before_release_so_start_stays_closed(self):
+        # Round-2 2.2: a bare Win-up opens the Start menu.
+        events = []
+        with (
+            patch.object(uia, "PressKey", side_effect=lambda k, **_: events.append(("down", k))),
+            patch.object(uia, "ReleaseKey", side_effect=lambda k, **_: events.append(("up", k))),
+            patch.object(uia, "Click"),
+            patch.object(Desktop, "_require_on_screen"),
+        ):
+            _desktop().click([5, 6], modifiers=["win"])
+        win = uia.Keys.VK_LWIN
+        assert events == [("down", win), ("down", 0xE8), ("up", 0xE8), ("up", win)]
+
     def test_modifiers_are_released_even_when_the_action_fails(self):
         released = []
         with (
@@ -170,6 +183,17 @@ class TestShortcutHoldRepeat:
             _desktop().shortcut("shift+a", hold=2.0)
         shift, a = uia.Keys.VK_SHIFT, ord("A")
         assert events == [("down", shift), ("down", a), 2.0, ("up", a), ("up", shift)]
+
+    def test_service_hold_of_win_masks_before_release(self):
+        events = []
+        with (
+            patch.object(uia, "PressKey", side_effect=lambda k, **_: events.append(("down", k))),
+            patch.object(uia, "ReleaseKey", side_effect=lambda k, **_: events.append(("up", k))),
+            patch("windows_mcp.desktop.service.sleep"),
+        ):
+            _desktop().shortcut("win", hold=0.1)
+        win = uia.Keys.VK_LWIN
+        assert events == [("down", win), ("down", 0xE8), ("up", 0xE8), ("up", win)]
 
     def test_service_hold_rejects_unknown_key_before_pressing(self):
         with patch.object(uia, "PressKey") as press:
