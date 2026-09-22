@@ -67,7 +67,7 @@ The codebase follows a layered service architecture under `src/windows_mcp/`:
 - Fuzzy string matching (`thefuzz`) is used for element name matching
 - UI element fetching has retry logic (`THREAD_MAX_RETRIES=3` in tree service)
 - The server supports stdio, SSE, and streamable HTTP transports
-- `serve()` drops `SSLKEYLOGFILE` at startup (`_drop_ssl_keylog_env`): Avast/AVG inject it into every process, and this Python's OpenSSL then aborts the whole server on the first HTTPS request. Keep it.
+- `serve()` drops `SSLKEYLOGFILE` at startup (`_drop_ssl_keylog_env`): Avast/AVG inject it into every process, and this Python's OpenSSL then aborts the whole server on the first HTTPS request. Keep it. Test scripts that act as HTTP(S) clients (e.g. the FastMCP client) hit the same abort (`OPENSSL_Uplink ... no OPENSSL_Applink`); run them with `SSLKEYLOGFILE` unset (`env -u SSLKEYLOGFILE ...`).
 - Docs live in `docs/` (test reports in `docs/testing/`); plans and task files in `Plan/`.
 
 ## Environment Variables
