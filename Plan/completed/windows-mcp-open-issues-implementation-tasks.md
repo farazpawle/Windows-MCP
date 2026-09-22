@@ -58,7 +58,7 @@ Total Tasks: 30
 - [x] 4.6 Click and Type without a location (6.6).
 - [x] 4.7 Wait accepts decimals (6.7).
 - [x] 4.8 Update `Skills/Skill.md` for 6.1–6.7, then re-read it end to end (7.2).
-- [ ] 4.9 Checkpoint commit for section 6; move the plan and task file to `Plan/completed/` if everything is done.
+- [x] 4.9 Checkpoint commit for section 6; move the plan and task file to `Plan/completed/` if everything is done.
 
 ### Verification
 - Tests as above. Live on a Notepad window launched for the test (killed by PID afterwards): Shift+click extends a selection, Down×5 moves the caret, Ctrl+wheel zooms, press/move/release drags a selection — each checked by Screenshot or reading the file with PowerShell.
