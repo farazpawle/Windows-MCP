@@ -12,7 +12,8 @@ from fastmcp import FastMCP
 from fastmcp.exceptions import ToolError
 
 from windows_mcp.desktop.service import Desktop
-from windows_mcp.tools import app, filesystem, process, registry
+from windows_mcp.powershell import PowerShellExecutor
+from windows_mcp.tools import app, filesystem, process, registry, shell
 
 EXECUTE = "windows_mcp.powershell.PowerShellExecutor.execute_command"
 
@@ -65,3 +66,33 @@ def test_app_launch_of_unknown_app_is_a_tool_error():
     desktop.get_apps_from_start_menu = lambda: {}
     with pytest.raises(ToolError, match="not found in start menu"):
         _call(app, "App", desktop, mode="launch", name="Nowhere")
+
+
+def test_powershell_nonzero_exit_is_a_tool_error_with_the_output():
+    with patch(EXECUTE, return_value=("oops", 3)):
+        with pytest.raises(ToolError, match="(?s)oops.*Status Code: 3"):
+            _call(shell, "PowerShell", command="exit 3")
+
+
+def test_powershell_listed_exit_code_is_a_success():
+    # findstr exits 1 when nothing matches; robocopy uses 1-7 for success.
+    with patch(EXECUTE, return_value=("", 1)):
+        result = _call(shell, "PowerShell", command="findstr x y", success_exit_codes=[0, 1])
+    assert result.content[0].text.endswith("Status Code: 1")
+
+
+def test_powershell_timeout_is_an_error_even_when_1_is_listed():
+    with patch(EXECUTE, return_value=("Command execution timed out", PowerShellExecutor.NOT_RUN)):
+        with pytest.raises(ToolError, match="timed out"):
+            _call(shell, "PowerShell", command="sleep 99", success_exit_codes=[0, 1])
+
+
+def test_executor_reports_a_timeout_as_not_run(monkeypatch):
+    import subprocess
+
+    def timeout(*args, **kwargs):
+        raise subprocess.TimeoutExpired("pwsh", 1)
+
+    monkeypatch.setattr("windows_mcp.powershell.service.run_with_graceful_timeout", timeout)
+    _, status = PowerShellExecutor.execute_command("sleep 99", timeout=1)
+    assert status == PowerShellExecutor.NOT_RUN

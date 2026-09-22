@@ -206,6 +206,10 @@ def _prepare_env() -> dict[str, str]:
 class PowerShellExecutor:
     """Static utility class for executing PowerShell commands."""
 
+    # Status for a command that timed out or could not start. Windows exit codes are
+    # unsigned, so no real process returns it; code 1 was ambiguous with e.g. findstr.
+    NOT_RUN = -1
+
     @staticmethod
     def execute_command(
         command: str,
@@ -273,6 +277,6 @@ class PowerShellExecutor:
                 )
             return output, result.returncode
         except subprocess.TimeoutExpired:
-            return "Command execution timed out", 1
+            return "Command execution timed out", PowerShellExecutor.NOT_RUN
         except Exception as e:
-            return f"Command execution failed: {type(e).__name__}: {e}", 1
+            return f"Command execution failed: {type(e).__name__}: {e}", PowerShellExecutor.NOT_RUN
