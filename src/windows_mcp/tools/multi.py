@@ -6,6 +6,7 @@ from mcp.types import ToolAnnotations
 from windows_mcp.infrastructure import with_analytics
 from fastmcp import Context
 from windows_mcp.tools._args import as_bool
+from windows_mcp.tools.input import release_held_button
 
 
 def _as_loc(value: list | str | None) -> list | None:
@@ -50,10 +51,11 @@ def register(mcp, *, get_desktop, get_analytics):
                 raise ValueError(f"Failed to resolve labels {labels}: {e}")
 
         press_ctrl = as_bool(press_ctrl, "press_ctrl")
+        released = release_held_button(desktop)
         desktop.multi_select(press_ctrl, locs)
         elements_str = "\n".join([f"({loc[0]},{loc[1]})" for loc in locs])
         action = "Ctrl-selected elements" if press_ctrl else "Clicked in sequence"
-        return f"{action} at:\n{elements_str}"
+        return f"{action} at:\n{elements_str}{released}"
 
     @mcp.tool(
         name="MultiEdit",
@@ -100,6 +102,7 @@ def register(mcp, *, get_desktop, get_analytics):
             except Exception as e:
                 raise ValueError(f"Failed to process labels: {e}")
 
+        released = release_held_button(desktop)
         desktop.multi_edit(locs)
         elements_str = ", ".join([f"({e[0]},{e[1]}) with text '{e[2]}'" for e in locs])
-        return f"Multi-edited elements at: {elements_str}"
+        return f"Multi-edited elements at: {elements_str}{released}"

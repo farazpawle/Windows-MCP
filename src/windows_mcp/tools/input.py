@@ -95,6 +95,13 @@ def _held_suffix(modifiers: list[str]) -> str:
     return f" holding {'+'.join(modifiers)}" if modifiers else ""
 
 
+def release_held_button(desktop) -> str:
+    """Let go of a button left down by Move mouse_button='down'; the reply sentence, or ''."""
+    if desktop.release_held_button() is True:
+        return " Released the held left mouse button first."
+    return ""
+
+
 def _as_seconds(value: object, name: str, maximum: float | None = None) -> float:
     """Parse a finite, non-negative number of seconds (numbers or numeric strings)."""
     try:
@@ -322,8 +329,13 @@ def register(
         if len(loc) != 2:
             raise ValueError("Location must be a list of exactly 2 integers [x, y]")
         x, y = loc[0], loc[1]
+        # clicks=0 only moves the pointer, which is how a held drag is steered.
+        released = release_held_button(desktop) if clicks else ""
         desktop.click(loc=loc, button=button, clicks=clicks, modifiers=modifiers)
-        return f"{_CLICK_NAMES[clicks]} {button} clicked at ({x},{y}){_held_suffix(modifiers)}."
+        return (
+            f"{_CLICK_NAMES[clicks]} {button} clicked at ({x},{y}){_held_suffix(modifiers)}."
+            f"{released}"
+        )
 
     @mcp.tool(
         name="Type",
@@ -352,6 +364,8 @@ def register(
             loc = _resolve_label(desktop, label)
         if loc is not None and len(loc) != 2:
             raise ValueError("Location must be a list of exactly 2 integers [x, y]")
+        # Only a located Type clicks; typing into the focused element leaves a drag alone.
+        released = release_held_button(desktop) if loc is not None else ""
         desktop.type(
             loc=loc,
             text=text,
@@ -361,7 +375,7 @@ def register(
         )
         if loc is None:
             return f"Typed {text} into the focused element."
-        return f"Typed {text} at ({loc[0]},{loc[1]})."
+        return f"Typed {text} at ({loc[0]},{loc[1]}).{released}"
 
     @mcp.tool(
         name="Scroll",
@@ -391,13 +405,14 @@ def register(
             loc = _resolve_label(desktop, label)
         if loc and len(loc) != 2:
             raise ValueError("Location must be a list of exactly 2 integers [x, y]")
+        released = release_held_button(desktop)
         response = desktop.scroll(loc, type, direction, wheel_times, modifiers=modifiers)
         if response:
-            return response
+            return f"{response}{released}"
         where = f" at ({loc[0]},{loc[1]})" if loc else " at the mouse position"
         return (
             f"Scrolled {type} {direction} by {wheel_times} wheel times"
-            f"{where}{_held_suffix(modifiers)}."
+            f"{where}{_held_suffix(modifiers)}.{released}"
         )
 
     @mcp.tool(
@@ -413,7 +428,7 @@ def register(
             "For drags one straight move can't express (curved paths, hover before dropping): "
             "mouse_button='down' presses the left button at loc, then plain Moves steer it, "
             "then mouse_button='up' releases it (loc optional: current position). "
-            "Always finish a 'down' with an 'up'."
+            "Always finish a 'down' with an 'up'; any click, scroll or drag releases it first."
         ),
         annotations=ToolAnnotations(
             title="Move",
@@ -453,7 +468,8 @@ def register(
             elif loc is None:
                 loc = list(desktop.get_cursor_location())
             loc = _as_point(loc, "loc")
-            desktop.mouse_button(loc, mouse_button)
+            if not desktop.mouse_button(loc, mouse_button):
+                return "No mouse button was held; nothing was sent."
             verb = "Pressed" if mouse_button == "down" else "Released"
             return f"{verb} the left mouse button at ({loc[0]},{loc[1]})."
         if loc is None and label is None:
@@ -479,6 +495,7 @@ def register(
                 from_loc = _as_point(from_loc, "from_loc")
         x, y = loc[0], loc[1]
         if drag:
+            released = release_held_button(desktop)
             result = desktop.drag(
                 loc,
                 from_loc=from_loc,
@@ -489,10 +506,10 @@ def register(
             effective_duration = result["duration"]
             held = _held_suffix(modifiers)
             if effective_duration is None:
-                return f"Dragged from ({start_x},{start_y}) to ({x},{y}){held}."
+                return f"Dragged from ({start_x},{start_y}) to ({x},{y}){held}.{released}"
             return (
                 f"Dragged from ({start_x},{start_y}) to ({x},{y}) "
-                f"over {effective_duration:.3f} seconds{held}."
+                f"over {effective_duration:.3f} seconds{held}.{released}"
             )
         else:
             desktop.move(loc)

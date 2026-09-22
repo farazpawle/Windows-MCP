@@ -231,8 +231,9 @@ class TestMouseButtonDownUp:
             patch.object(uia, "SetCursorPos") as move,
             patch.object(uia, "ReleaseMouse") as release,
         ):
-            _desktop().mouse_button([5, 6], "down")
-            _desktop().mouse_button([7, 8], "up")
+            desktop = _desktop()  # one desktop: it remembers the held button
+            desktop.mouse_button([5, 6], "down")
+            desktop.mouse_button([7, 8], "up")
         press.assert_called_once_with(5, 6, waitTime=0.05)
         move.assert_called_once_with(7, 8)
         release.assert_called_once_with(waitTime=0.05)

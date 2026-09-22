@@ -1050,15 +1050,40 @@ class Desktop:
         self._require_on_screen([(x, y)])
         uia.MoveTo(x, y, moveSpeed=10)
 
-    def mouse_button(self, loc: tuple[int, int] | list[int], action: Literal["down", "up"]):
-        """Press or release the left button at *loc*, for drags one straight move can't do."""
+    _left_held = False  # set by mouse_button("down"), cleared by any release
+
+    def mouse_button(self, loc: tuple[int, int] | list[int], action: Literal["down", "up"]) -> bool:
+        """Press or release the left button at *loc*, for drags one straight move can't do.
+
+        Returns False, sending nothing, for "up" when this server holds no button.
+        """
         x, y = loc
         self._require_on_screen([(x, y)])
         if action == "down":
+            if self._left_held:
+                raise ValueError(
+                    "The left mouse button is already held; release it with mouse_button='up' first."
+                )
             uia.PressMouse(x, y, waitTime=0.05)
-        else:
-            uia.SetCursorPos(x, y)
-            uia.ReleaseMouse(waitTime=0.05)
+            self._left_held = True
+            return True
+        if not self._left_held:
+            return False
+        uia.SetCursorPos(x, y)
+        uia.ReleaseMouse(waitTime=0.05)
+        self._left_held = False
+        return True
+
+    def release_held_button(self) -> bool:
+        """Release a button left down by mouse_button("down"), in place; True if one was held.
+
+        A held button captures the mouse, so another click would go to the drag target.
+        """
+        if not self._left_held:
+            return False
+        uia.ReleaseMouse(waitTime=0.05)
+        self._left_held = False
+        return True
 
     def shortcut(self, shortcut: str, repeat: int = 1, hold: float | None = None):
         keys = [key.strip() for key in shortcut.split("+")]
