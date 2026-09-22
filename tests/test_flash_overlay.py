@@ -7,7 +7,7 @@ when ``tkinter`` cannot be imported).
 
 import sys
 import threading
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -257,3 +257,15 @@ class TestRunOverlayFallthrough:
         overlay = flash_overlay._Overlay()
         flash_overlay._run_overlay([(0, 0, 100, 100)], False, overlay)
         assert overlay.closed_event.is_set()
+
+
+class TestExcludedFromCapture:
+    def test_overlay_window_is_excluded_from_screen_capture(self, monkeypatch):
+        # Round-2 2.7: a glow still fading when the next capture ran leaked into it.
+        user32 = MagicMock()
+        user32.CreateWindowExW.return_value = 1234
+        monkeypatch.setattr(flash_overlay, "_user32", user32)
+
+        hwnd, _ = flash_overlay._create_layered_window("TestFlash", 0, 0, 10, 10)
+
+        user32.SetWindowDisplayAffinity.assert_called_once_with(hwnd, 0x11)

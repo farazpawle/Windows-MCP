@@ -138,6 +138,7 @@ _SWP_NOACTIVATE = 0x0010
 _SWP_SHOWWINDOW = 0x0040
 _PM_REMOVE = 0x0001
 _WM_DESTROY = 0x0002
+_WDA_EXCLUDEFROMCAPTURE = 0x00000011
 
 
 class _POINT(ctypes.Structure):
@@ -235,6 +236,8 @@ _user32.UpdateLayeredWindow.argtypes = [
     wintypes.DWORD,
 ]
 _user32.DestroyWindow.argtypes = [wintypes.HWND]
+_user32.SetWindowDisplayAffinity.restype = wintypes.BOOL
+_user32.SetWindowDisplayAffinity.argtypes = [wintypes.HWND, wintypes.DWORD]
 _user32.ShowWindow.argtypes = [wintypes.HWND, ctypes.c_int]
 _user32.SetWindowPos.argtypes = [
     wintypes.HWND,
@@ -385,6 +388,9 @@ def _create_layered_window(class_name: str, x: int, y: int, w: int, h: int):
     if not hwnd:
         _user32.UnregisterClassW(class_name, h_instance)
         raise OSError(f"CreateWindowExW failed: {ctypes.get_last_error()}")
+    # Keep the glow out of every capture, so one still fading can't leak into the next
+    # screenshot. Returns 0 (ignored) before Windows 10 2004; the pre-capture cancel remains.
+    _user32.SetWindowDisplayAffinity(hwnd, _WDA_EXCLUDEFROMCAPTURE)
     return hwnd, h_instance
 
 
