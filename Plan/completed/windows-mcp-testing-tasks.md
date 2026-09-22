@@ -1,6 +1,6 @@
 ---
 Title: Rigorous windows-mcp testing and Skills guide validation
-Description: Original task (2026-09-22) — rigorously test every windows-mcp tool in Claude Code and check whether Skills/Skill.md (written in Claude Desktop) steers agents to the right tool in the right scenario. Scope agreed with the user — all 20 tools, focused on the guide's claims and main risks, sandboxed destructive tests only (temp folder, HKCU:\Software\WMCP-Test, self-launched PIDs), guide changes applied only after approval. Done so far — capture/system/input tools tested, guide corrected for capture/system tools, the frozen-app hang fixed and proven live, and four input bugs fixed with tests (emoji typing, emoji paste, empty text, stuck Ctrl after a bad shortcut). All uncommitted. Session 2 also fixed horizontal scroll, WaitFor text_exists, clear on legacy edit boxes and a server-killing OpenSSL abort caused by Avast (all uncommitted, 632 tests pass), and wrote docs/testing/windows-mcp-tool-test-report.md. Session 3 ran the post-restart re-tests: emoji Type and Scrape pass; use_dom only partly (browser-lock extension). Remaining — decide on Claude Desktop config, the open issues in the report (FileSystem overwrite, hidden elements, toasts), and committing the report/plan changes.
+Description: DONE 2026-09-22 (remaining items resolved in Plan/completed/windows-mcp-open-issues.md). Original task (2026-09-22) — rigorously test every windows-mcp tool in Claude Code and check whether Skills/Skill.md (written in Claude Desktop) steers agents to the right tool in the right scenario. Scope agreed with the user — all 20 tools, focused on the guide's claims and main risks, sandboxed destructive tests only (temp folder, HKCU:\Software\WMCP-Test, self-launched PIDs), guide changes applied only after approval. Done so far — capture/system/input tools tested, guide corrected for capture/system tools, the frozen-app hang fixed and proven live, and four input bugs fixed with tests (emoji typing, emoji paste, empty text, stuck Ctrl after a bad shortcut). All uncommitted. Session 2 also fixed horizontal scroll, WaitFor text_exists, clear on legacy edit boxes and a server-killing OpenSSL abort caused by Avast (all uncommitted, 632 tests pass), and wrote docs/testing/windows-mcp-tool-test-report.md. Session 3 ran the post-restart re-tests: emoji Type and Scrape pass; use_dom only partly (browser-lock extension). Remaining — decide on Claude Desktop config, the open issues in the report (FileSystem overwrite, hidden elements, toasts), and committing the report/plan changes.
 Total Tasks: 26
 ---
 
@@ -22,7 +22,7 @@ Total Tasks: 26
 - [x] 3.2 Fix: CUIAutomation8 with 2 s / 5 s timeouts, ERROR_TIMEOUT mapped to UIATimeoutError and not retried, and hung windows skipped. Tests: tests/test_uia_timeouts.py, tests/test_hung_windows.py.
 - [x] 3.3 Claude Code's user-scope windows-mcp server now runs the local repo.
 - [x] 3.4 Committed with all session-2 fixes as bf0137f on branch fix/uia-hang-and-input-bugs (not pushed). Plan/ and Skills/ left untracked.
-- [ ] 3.5 [User] Decide whether to point Claude Desktop at the local repo too. Only the user can edit or approve Claude Desktop's config.
+- [x] 3.5 [User] Decide whether to point Claude Desktop at the local repo too. Done 2026-09-22 (first backlog item 4.2: Claude Desktop now runs the local repo). Only the user can edit or approve Claude Desktop's config.
 
 ## 4. Input tools — DONE (2026-09-22, second session)
 - [x] 4.1 [User] Restart Claude Code so the fixed local server is live.
@@ -44,7 +44,7 @@ Total Tasks: 26
 - [x] 5.1c [User] Confirm the toast appeared — user saw no toast (recorded as open issue).
 - [x] 5.1e User approved truststore: Scrape now verifies via the Windows cert store (tests/test_scrape_tls.py); live: example.com loads, expired cert refused.
 - [x] 5.1d After restart: Scrape HTTP, use_dom on an open tab, use_sampling=false. HTTP/HTTPS pass, expired cert refused; default sampling silently falls back to raw (Claude Code has no sampling); use_dom gives a clean "open the page first" reply.
-- [ ] 5.1f [User] Optional: full use_dom read. Needs a browser tab the agent can open; a browser-lock extension on the user's Edge replaces new windows with an error page, and the agent will not work around it.
+- [x] 5.1f [User] Optional: full use_dom read. Done 2026-09-22 by the agent in a new tab (first backlog item 4.1). Needs a browser tab the agent can open; a browser-lock extension on the user's Edge replaces new windows with an error page, and the agent will not work around it.
 
 ## 6. Report — PARTLY DONE
 - [x] 6.1a Test report written: docs/testing/windows-mcp-tool-test-report.md.

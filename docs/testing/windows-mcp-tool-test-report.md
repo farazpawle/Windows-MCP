@@ -1,6 +1,6 @@
 ---
 Title: Windows-MCP tool test report (2026-09-22)
-Description: Live test results for all 20 windows-mcp tools on the maintainer's Windows 11 PC, run from Claude Code against the local repo over two sessions on 2026-09-22. Gives a pass/fail verdict per tool, the ten bugs found and fixed (frozen-app hang, emoji typing and paste, empty Type text, stuck Ctrl after a bad shortcut, horizontal scroll, WaitFor text_exists missing static text and ignoring window_name, clear on legacy edit boxes, OpenSSL abort from Avast's SSLKEYLOGFILE, Scrape HTTPS rejected under Avast), the issues still open, the post-restart re-tests (emoji typing and Scrape pass; use_dom only partly tested), and how each result was verified.
+Description: Live test results for all 20 windows-mcp tools on the maintainer's Windows 11 PC, run from Claude Code against the local repo on 2026-09-22. Round 1 - a verdict per tool, the ten bugs found and fixed, and post-restart re-tests. Round 2 (after every round-1 item was fixed) - per-tool verdicts again, confirmation that all round-1 fixes held, and 49 new bugs (6 High - registry paths act as wildcards and reach the file system, Snapshot labels renumbered by WaitFor, off-screen points clamped and clicked, an on-top unfocused window gets no Snapshot elements, pop-up menus don't hide covered elements; 16 Medium; 27 Low), plus a comparison with Claude Cowork computer use giving 14 improvements and 8 new-tool ideas, with how each was verified. Round-2 backlog - Plan/windows-mcp-open-issues-round2.md.
 Tags: testing, qa, windows-mcp
 Updated: 2026-09-22
 ---
@@ -68,3 +68,72 @@ Run against the restarted server (local repo, truststore installed):
 - **Scrape HTTP/HTTPS.** `http://` and `https://example.com` load with `use_sampling=false`; `expired.badssl.com` is refused with a Windows certificate-store error (truststore active). The server stayed up.
 - **Scrape sampling.** With the default `use_sampling=true`, Claude Code does not support MCP sampling, so the tool silently returns the raw page. Expected fallback, but the reply does not say the summary was skipped.
 - **Scrape `use_dom`.** With no tab on the URL, it returns a clean "open the page in the browser first" message. A full DOM read was not possible: a browser-lock extension on the user's Edge replaces new windows with an error page.
+
+# Round 2 (2026-09-22, after the round-1 backlog was fixed)
+
+**Setup:** same PC and display; server from the local repo on branch `fix/open-issues-backlog` (Click offered `modifiers`, Move offered `mouse_button`, so the live tools ran the current code). Driven from Claude Code.
+
+**Method:** the round-1 WinForms harness, extended to log the modifier state at every mouse press, key-up events and wheel events. Two new background checkers: a key-state poller (`GetAsyncKeyState` every 5 ms, reporting each key or button seen down and for how long) and a foreground-window logger. System tools were checked with PowerShell reads (`reg query`, `Get-ChildItem`, `Get-Process`, byte-level file reads). Empty-string inputs and the screenshot backends were driven through a separate FastMCP client starting a private server, because the Claude Code client cannot send an empty string. Destructive work stayed in `%TEMP%\wmcp-r2` and `HKCU:\Software\WMCP-Test`; processes were ended by PID; Notepad and Edge were used only in the agent's own tabs, closed with Ctrl+W. All of it was removed afterwards and the user's clipboard text restored.
+
+## Verdicts
+
+| Tool | Verdict | Notes |
+|---|---|---|
+| DisplayInventory | Pass | Not re-tested beyond round 1. |
+| Screenshot | Pass, with notes | Grid lines work. The orange border sometimes leaks into the next capture. Grid values are not validated. |
+| Snapshot | **Fail (open)** | An on-top window without focus got no elements (cap spent on covered windows). DOM mode lists covered elements. Labels are renumbered by WaitFor. |
+| Click | **Fail (open)** | Alt also holds Ctrl; Win opens Start; off-screen points are clamped and clicked; `label=-1` clicks the last element; right/middle double clicks don't register. Shift/Ctrl and combos correct and released. |
+| Type | Pass, with notes | No-location typing, caret, clear, Enter, 1,097-char paste with emoji, clipboard preserved. Claims success when focus is a button. |
+| MultiEdit | **Fail (open)** | A bad target was clamped to the show-desktop corner, minimised every window and typed onto the desktop; the reply said all fields were edited. |
+| MultiSelect | Pass | Reply wording by mode correct. |
+| Scroll | Pass, with notes | Ctrl/Shift wheel correct. `wheel_times` 0 or negative accepted and reported as scrolled. |
+| Move | Pass, with notes | Drag with modifiers pixel-exact; down/steer/up works. No held-button tracking (forgotten `down` turns the next Click into a drag). |
+| Shortcut | Pass, with notes | `repeat` counts exact, `hold` accurate, bad values refused, nothing left held. ~0.52 s per repeated press. |
+| Wait | Pass, with notes | Decimals accurate; bad values refused; no upper limit. |
+| WaitFor | Pass, with notes | All conditions fast; but it replaces Snapshot's label map. |
+| App | Pass, with notes | Launch, restore-and-switch, resize, maximised refused. Switch uses a stale window list; resize accepts invalid sizes/off-screen positions. |
+| PowerShell | Pass, with notes | Errors at status 0, timeout, Unicode fine. No output cap; partial output lost on timeout. |
+| FileSystem | Pass, with notes | Overwrite guard and booleans hold; Unicode/space paths fine. 10 MB limit blocks offset/limit reads. |
+| Registry | **Fail (open)** | Paths are wildcards (a `*` delete removed two keys) and file-system paths are accepted (a delete removed a folder). |
+| Process | Pass, with notes | Exact-name kill held (near-miss survived). Negative `limit` dumps every process. |
+| Clipboard | Pass | Unicode/emoji/tabs round-trip; empty text works (script client). |
+| Notification | Pass | Unknown app refused; toasts shown, `<&>` literal. Toasts can appear a few seconds late. |
+| Scrape | Pass | Summary note, SSRF blocks (incl. IPv6-mapped, metadata, loopback DNS, redirect), DOM read of own tab. DOM text drops link text. |
+
+## Round-1 fixes re-checked
+
+All held: FileSystem overwrite and yes/no booleans, Process exact-name kill, Registry recursive guard (literal paths), hidden elements (normal tree), PowerShell errors/timeout/`timeout=0`, Registry binary input (read back with `reg query`), Notification checks, Screenshot wording and grid, Scrape note, Click counts, `[label:N]` ids, App switch/launch/resize, Snapshot region speed (1.4 s), screenshot backends (dxcam, pillow, mss -> pillow with warning, bogus -> auto), VS Code guard (listed by name only under every region Snapshot; VS Code stayed responsive).
+
+## New issues
+
+49 bugs, all recorded with steps, actual/expected, severity and a suggested fix in `Plan/windows-mcp-open-issues-round2.md` (Part A), plus improvements (Part B) and new tools (Part C) measured against Claude Cowork's computer use. The first five High ones:
+
+1. Registry paths are treated as wildcards: `delete HKCU:\Software\WMCP-Test\A*` with `recursive=true` deleted keys A1 and A2; `[ ]` in a key name makes it unwritable.
+2. The Registry tool accepts file-system paths: `delete` on a `%TEMP%` folder removed the folder and its file, replying "Registry key ... deleted"; an empty path lists the home folder.
+3. WaitFor replaces Snapshot's label map: `label=0` meant ShowLater before a WaitFor and the window's Close button after it; the click closed the window.
+4. Off-screen points are clamped to the screen edge and acted on: MultiEdit with `[99999,99999]` hit the show-desktop corner, minimised all windows and typed onto the desktop, and reported success.
+5. A visible always-on-top window that is not focused got no elements in a Snapshot of its own area (the 500-element cap was spent on the covered windows behind it).
+
+## Environmental notes
+
+- Focus moved to VS Code during one 55-second `repeat=100` run; 21 key presses went to the VS Code editor (caret moves only; `git status` showed no change). From then on the harness was clicked before every keyboard test.
+- A 1.1 s left-button press and a hover were seen that no tool sent (the user touching the mouse). No effect on results.
+- The Claude Code client cannot send an empty string argument; empty inputs were tested through a separate FastMCP client.
+- Not tested: true high-DPI scaling (needs a sign-out; left as a `[User]` item).
+
+## Continued testing (same day, after the first write-up)
+
+The user asked for more testing plus improvement and new-tool suggestions measured against Claude Cowork. Reference: Anthropic's computer-use toolset docs (17 actions; coordinates in screenshot space; errors for off-display points; `is_error` on failures; hold_key and wait up to 300 s; zoom upscales).
+
+Passed: Scroll/Move/Type/MultiSelect by label; WaitFor `focused_element`, `element_enabled`, missing-element timeout; FileSystem list of a file, missing search root, `../` pattern, folder info; DisplayInventory; Process sort by name/cpu, protected PIDs refused, negative PID refused; App `launch_executable` with a missing `cwd` refused; long notification; Scrape of a normal page; Snapshot annotated image with grid.
+
+New bugs (details in the backlog):
+- Pop-up menus don't hide the elements under them (High 1.6).
+- 12 of 13 failing calls return `is_error=False` (Medium 2.13), checked with a FastMCP script client.
+- A long Type wiped an image from the clipboard (Medium 2.14).
+- The plus key can't be named (`+`, `ctrl++`, `plus`); `ctrl+=` works (Medium 2.15).
+- Scrape gets 403 from Wikipedia because of the default Python User-Agent; PowerShell reproduces it with that User-Agent (Medium 2.16).
+- Holding `win` alone opens Start; the next key typed into Start search (added to Medium 2.2).
+- Low: Scrape ignores `query` silently; Screenshot region text form, 1-px out-of-bounds accepted, `use_annotation` ignored; Snapshot with tree and image both off; overlapping annotation badges; `launch_executable` error texts; PowerShell prompts; the server listing itself at ~96% CPU (it used 0 CPU seconds over 8 s); computer-use key names (`Page_Down`, `KP_Enter`, `super`, `cmd`) unknown.
+
+Tester's error: the clipboard-image test overwrote the user's clipboard without a fresh backup (the round-2 backup had already been restored and deleted). Windows clipboard history is on, so the earlier text remains available through Win+V.
