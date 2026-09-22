@@ -38,10 +38,10 @@ Machine: 1 display 1920x1080, 100% scale (screen coords = image coords) · Power
 ## 2. Apps and windows — `App`
 
 - `launch_executable`: `executable` = full path, `args` = argv **list**, optional `cwd`. Returns `{pid,...}`; **save the PID** for later kills. Tested: `C:\Program Files\PowerShell\7\pwsh.exe` with `["-NoProfile","-STA","-WindowStyle","Hidden","-File","<path>"]`.
-- `launch`: by Start Menu name (not tested directly).
+- `launch`: by Start Menu name, fuzzy ("calc" opens Calculator; verified 2026-09-22). An unknown name replies "... not found in start menu." Local repo names the app it actually matched ("Calculator launched."); PyPI echoes your text ("Calc launched."), so check the reply there. Returns no PID — use `launch_executable` when you need to kill it later. Store apps like Notepad may open a new tab in an already-running window instead of a new process.
 - `switch` (and `resize`): fuzzy match on the **window title**. Local repo then falls back to a plain part of the title ("Edge", "tri.txt") and to the program name ("msedge", "notepad.exe"); verified 2026-09-22. **PyPI needs a long title fragment** ("Personal - Microsoft Edge"; "Microsoft Edge" failed because Edge titles hide a zero-width space).
   - The approval click undoes the switch (see rule 1).
-- `resize`: `name`, `window_loc=[x,y]`, `window_size=[w,h]`. Works; the visible size is a few px smaller (invisible borders).
+- `resize`: `name`, `window_loc=[x,y]`, `window_size=[w,h]`. Works; the outer window rectangle matched exactly (700x500 at 100,100, checked 2026-09-22), and the visible frame is a few px smaller (invisible borders). Either `window_loc` or `window_size` alone is fine (the other is kept). With no `name` it resizes the window that was active at the **last Snapshot/Screenshot/App call**, not the current focus — pass `name` if focus may have moved. Maximized or minimized windows are refused ("... is maximized"); restore first.
 
 ## 3. Mouse and keyboard
 

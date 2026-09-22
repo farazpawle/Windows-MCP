@@ -28,8 +28,8 @@ def test_start_menu_apps_include_localized_appsfolder_name(monkeypatch: pytest.M
     desktop = Desktop.__new__(Desktop)
     monkeypatch.setattr(desktop, "_check_app_exists", lambda _: True)
 
-    assert desktop.launch_app("Notepad") == ("", 0, 0)
-    assert desktop.launch_app("记事本") == ("", 0, 0)
+    assert desktop.launch_app("Notepad") == ("notepad", 0, 0)
+    assert desktop.launch_app("记事本") == ("记事本", 0, 0)
     assert commands[-1] == f"Start-Process 'shell:AppsFolder\\{app_id}'"
 
 

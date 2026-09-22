@@ -161,3 +161,17 @@ class TestDegradedLatch:
         result, name = capture(None, backend="dxcam")
         assert name == "pillow", "should fall back to the last resort, not return junk"
         assert _is_usable_capture(result)
+
+
+def test_forced_backend_that_cannot_run_warns_and_names_the_fallback(registry, caplog):
+    """A pinned backend that is not installed (mss is optional) must not fall back silently."""
+    pillow = FakeBackend("pillow", 100, result=good_image())
+    mss = FakeBackend("mss", 20, available=False)
+    registry(mss, pillow)
+
+    with caplog.at_level("WARNING", logger=screenshot_mod.__name__):
+        _, used = capture(None, backend="mss")
+
+    assert used == "pillow"
+    assert "'mss' is not available" in caplog.text
+    assert "using pillow" in caplog.text

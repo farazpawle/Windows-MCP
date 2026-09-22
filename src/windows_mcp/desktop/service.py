@@ -524,6 +524,9 @@ class Desktop:
                 response, status, pid = self.launch_app(name)
                 if status != 0:
                     return response
+                # On success launch_app returns the matched Start Menu name ("code" ->
+                # "visual studio code"); the window title contains that, not the typed text.
+                name = response
 
                 # Smart wait using UIA Exists (avoids manual Python loops)
                 launched = False
@@ -591,7 +594,7 @@ class Desktop:
             command = f"Start-Process {safe}"
             response, status = PowerShellExecutor.execute_command(command)
 
-        return response, status, pid
+        return (app_name if status == 0 else response), status, pid
 
     def switch_app(self, name: str):
         try:

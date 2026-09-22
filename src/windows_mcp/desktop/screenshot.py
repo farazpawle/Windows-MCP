@@ -346,6 +346,14 @@ def capture(
             continue
         inst = _get_backend(backend_cls.name)
         if not inst.is_available(capture_rect):
+            if selected != "auto":
+                # A pinned backend must not be dropped silently: mss is an optional
+                # install, and dxcam only captures areas inside one display.
+                logger.warning(
+                    "Screenshot backend '%s' is not available for this capture (not "
+                    "installed, or the area spans more than one display); using pillow",
+                    inst.name,
+                )
             continue
         try:
             image = inst.capture(capture_rect)
