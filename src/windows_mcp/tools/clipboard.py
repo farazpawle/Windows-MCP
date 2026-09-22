@@ -5,6 +5,7 @@ from typing import Literal
 from mcp.types import ToolAnnotations
 from windows_mcp.infrastructure import with_analytics
 from fastmcp import Context
+from windows_mcp.tools._output import raise_error_replies
 
 
 def register(mcp, *, get_desktop, get_analytics):
@@ -20,6 +21,7 @@ def register(mcp, *, get_desktop, get_analytics):
         ),
     )
     @with_analytics(get_analytics(), "Clipboard-Tool")
+    @raise_error_replies
     def clipboard_tool(
         mode: Literal["get", "set"], text: str | None = None, ctx: Context = None,
     ) -> str:

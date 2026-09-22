@@ -13,7 +13,7 @@ from fastmcp.exceptions import ToolError
 
 from windows_mcp.desktop.service import Desktop
 from windows_mcp.powershell import PowerShellExecutor
-from windows_mcp.tools import app, filesystem, process, registry, shell
+from windows_mcp.tools import app, clipboard, filesystem, process, registry, shell
 
 EXECUTE = "windows_mcp.powershell.PowerShellExecutor.execute_command"
 
@@ -96,3 +96,9 @@ def test_executor_reports_a_timeout_as_not_run(monkeypatch):
     monkeypatch.setattr("windows_mcp.powershell.service.run_with_graceful_timeout", timeout)
     _, status = PowerShellExecutor.execute_command("sleep 99", timeout=1)
     assert status == PowerShellExecutor.NOT_RUN
+
+
+def test_clipboard_set_without_text_is_a_tool_error():
+    # Fails before the clipboard is opened, so the real clipboard is untouched.
+    with pytest.raises(ToolError, match="text parameter required"):
+        _call(clipboard, "Clipboard", mode="set")
