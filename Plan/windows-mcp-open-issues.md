@@ -1,7 +1,7 @@
 ---
 Title: Windows-MCP open issues backlog (from the 2026-09-22 tool testing)
-Description: Every failing behaviour and every change still needed after three test sessions of all 20 windows-mcp tools on 2026-09-22. Collected only, nothing fixed, as the user asked. Grouped by priority, plus test-coverage gaps and seven actions missing compared with Claude computer use (Cowork), with the tool, what happens, why it matters and the suggested change. No freeze or server-crash issue is open: the frozen-app hang and the Avast HTTPS crash were fixed and committed (bf0137f). Source: docs/testing/windows-mcp-tool-test-report.md and Plan/windows-mcp-testing-tasks.md.
-Total Tasks: 34
+Description: Every failing behaviour and every change still needed after three test sessions of all 20 windows-mcp tools on 2026-09-22. Collected only, nothing fixed, as the user asked. Grouped by priority, plus test-coverage gaps and seven actions missing compared with Claude computer use (Cowork), with the tool, what happens, why it matters and the suggested change, plus a standing task to update Skills/Skill.md as each fix lands. No freeze or server-crash issue is open: the frozen-app hang and the Avast HTTPS crash were fixed and committed (bf0137f). Source: docs/testing/windows-mcp-tool-test-report.md and Plan/windows-mcp-testing-tasks.md.
+Total Tasks: 36
 ---
 
 # Windows-MCP open issues
@@ -65,6 +65,11 @@ Already covered: screenshot (Screenshot), zoom (Screenshot `region` returns nati
 - [ ] 6.7 **Wait takes whole seconds only.** Half-second waits are not possible. Suggest: accept decimals.
 
 Beyond the screen tools, Cowork also works with files, connectors and a built-in browser. windows-mcp covers files (FileSystem) and pages (Scrape) differently, and has extras Cowork's screen tools lack: the UI element tree (Snapshot), WaitFor, MultiEdit, PowerShell, Registry, Process, Clipboard, Notification and App.
+
+## 7. Keep the agent guide in step with the fixes
+
+- [ ] 7.1 After each item above is fixed or added, update `Skills/Skill.md` in the same change: remove the workaround or warning it described, and document any new option (e.g. Click `modifiers`, Shortcut `hold`/`repeat`, Type without a location) with when to use it.
+- [ ] 7.2 At the end of the implementation, re-read `Skills/Skill.md` end to end and confirm every claim still matches the tools' real behaviour.
 
 ## Not a bug
 
