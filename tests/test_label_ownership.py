@@ -12,6 +12,7 @@ import pytest
 
 from windows_mcp.desktop.service import Desktop
 from windows_mcp.desktop.views import DesktopState
+from windows_mcp.tools import input as input_tools
 from windows_mcp.tools.snapshot import register as register_snapshot
 from windows_mcp.tree.views import BoundingBox, Center, TreeElementNode, TreeState
 
@@ -91,3 +92,28 @@ def test_snapshot_owns_labels_screenshot_does_not():
     desktop.get_state.return_value = state(tree("Close", 1049))
     asyncio.run(tools["Screenshot"]())
     assert desktop.label_tree_state is snapshot_tree
+
+
+# Round-2 2.11: label=-1 clicked the last element (Python negative indexing).
+@pytest.mark.parametrize("label", [-1, -2])
+def test_negative_label_is_refused_by_both_lookups(label):
+    desktop = Desktop.__new__(Desktop)
+    desktop.label_tree_state = tree("ClickMe", 203)
+
+    with pytest.raises(IndexError, match="out of range"):
+        desktop.get_coordinates_from_label(label)
+    with pytest.raises(IndexError, match="out of range"):
+        desktop.get_coordinates_from_labels([0, label])
+
+
+def test_click_with_negative_label_sends_no_input():
+    desktop = MagicMock()
+    desktop.label_tree_state = tree("ClickMe", 203)
+    for method in ("_label_tree", "get_coordinates_from_label", "get_coordinates_from_labels"):
+        setattr(desktop, method, getattr(Desktop, method).__get__(desktop))
+    mcp = FakeMCP()
+    input_tools.register(mcp, get_desktop=lambda: desktop, get_analytics=lambda: None)
+
+    with pytest.raises(ValueError, match="label -1"):
+        asyncio.run(mcp.tools["Click"](label=-1))
+    desktop.click.assert_not_called()
