@@ -41,6 +41,11 @@ def register(mcp, *, get_desktop, get_analytics):
         ctx: Context = None,
     ) -> str:
         try:
+            # Without this an empty path joins to nothing and silently means the
+            # Desktop folder, so "delete" would aim at the whole folder.
+            if not isinstance(path, str) or not path.strip():
+                return "Error: path is empty. Give a file or folder path."
+
             from platformdirs import user_desktop_dir
 
             default_dir = user_desktop_dir()

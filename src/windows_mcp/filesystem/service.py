@@ -32,6 +32,10 @@ def read_file(
         return f"Error: File not found: {file_path}"
     if not file_path.is_file():
         return f"Error: Path is not a file: {file_path}"
+    if offset is not None and offset < 1:
+        return f"Error: offset must be 1 or more (got {offset}); line numbers start at 1."
+    if limit is not None and limit < 1:
+        return f"Error: limit must be 1 or more (got {limit}); it is a count of lines."
     too_large = f"Error: File too large ({file_path.stat().st_size:,} bytes). Maximum is {MAX_READ_SIZE:,} bytes. Use offset/limit to read part of it, or the PowerShell tool."
     partial = offset is not None or limit is not None
     if not partial and file_path.stat().st_size > MAX_READ_SIZE:
@@ -82,6 +86,10 @@ def write_file(
     """Write or append text content to a file. An existing file is replaced only with overwrite=True."""
     file_path = Path(path).resolve()
 
+    if append and overwrite:
+        return "Error: append=True and overwrite=True conflict. Use append to add to the file, overwrite to replace it."
+    if file_path.is_dir():
+        return f"Error: Path is a folder, not a file: {file_path}"
     if file_path.exists() and not append and not overwrite:
         return f"Error: File already exists: {file_path}. Set overwrite=True to replace it or append=True to add to it."
 
@@ -89,13 +97,18 @@ def write_file(
         if create_parents:
             file_path.parent.mkdir(parents=True, exist_ok=True)
 
+        # Measured, not len(content): text mode turns a newline into CR+LF on Windows.
+        before = file_path.stat().st_size if append and file_path.exists() else 0
         mode = "a" if append else "w"
         with open(file_path, mode, encoding=encoding) as f:
             f.write(content)
 
-        action = "Appended to" if append else "Written to"
         size = file_path.stat().st_size
-        return f"{action} {file_path} ({size:,} bytes)"
+        # Windows drops trailing dots and spaces from a name, so report what it saved.
+        saved = Path(os.path.realpath(file_path))
+        if append:
+            return f"Appended to {saved} ({size - before:,} bytes added, {size:,} bytes total)"
+        return f"Written to {saved} ({size:,} bytes)"
     except PermissionError:
         msg = f"Error: Permission denied: {file_path}"
         if not is_elevated():

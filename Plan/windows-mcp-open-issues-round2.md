@@ -241,14 +241,15 @@ Source: live tests on 2026-09-22 (Windows 11 Pro 26200, one 1920x1080 display at
   - **Result (2026-09-22):** done. `_as_modifiers` splits on any run of `+`, commas and spaces, so "ctrl+shift", "ctrl, shift", "ctrl shift", "ctrl,shift" and " ctrl , shift " all give ctrl+shift; lists and JSON list strings are unchanged, and an empty string now means no modifiers instead of an error. (c) followed from (a): the old error named the whole input only because a comma list never split, so the single token *was* the whole input; "ctrl, bogus" and "bogus shift" now name just `'bogus'`. Both tools that take modifiers (Click, Scroll) document the aliases and the separators in their description; a test asserts that, so a future reword cannot silently drop it. Tested together with 3.4 (65 unit tests in the file; full suite 1000 passed). Live: `Click` with `modifiers="ctrl, shift"` on the harness text box replied "holding ctrl+shift" (the point was checked to be over the harness first).
 - [ ]  3.6 **FileSystem replies.** "Appended to ... (12 bytes)" gives the whole file size, not the bytes added; `write` to `trailingdot.` saves `trailingdot` but the reply keeps the dot; `write` onto a folder says "Permission denied ... may require an elevated (Administrator) terminal"; `offset=-1`, `limit=0` are silently ignored; `append=true` with `overwrite=true` silently appends (the two conflict); an empty `path` resolves to the Desktop folder and the error suggests "Set overwrite=True to replace it".
 
-  - [ ]  a. Report the bytes added on append.
-  - [ ]  b. Report the real saved file name.
-  - [ ]  c. Say "is a folder" when writing onto a folder.
-  - [ ]  d. Refuse `offset` below 1 and `limit` below 1.
-  - [ ]  e. Refuse `append=true` together with `overwrite=true`.
-  - [ ]  f. Refuse an empty `path`.
+  - [x]  a. Report the bytes added on append.
+  - [x]  b. Report the real saved file name.
+  - [x]  c. Say "is a folder" when writing onto a folder.
+  - [x]  d. Refuse `offset` below 1 and `limit` below 1.
+  - [x]  e. Refuse `append=true` together with `overwrite=true`.
+  - [x]  f. Refuse an empty `path`.
 
   - **Verify:** Unit - one test per case, run in a temp folder.
+  - **Result (2026-09-22):** done. (a) an append now reports "(3 bytes added, 8 bytes total)"; the added count is measured as the size before minus after, not `len(content)`, because text mode turns a newline into CR+LF on Windows. (b) the reply names the file through `os.path.realpath`, so `trailingdot.` is reported as `trailingdot` - what Windows actually saved. (c) writing onto a folder said "Permission denied ... may require an elevated (Administrator) terminal", which sent the reader after a non-existent permissions problem; it now says "Path is a folder, not a file". (d) `offset`/`limit` below 1 were silently ignored, and are now refused with the reason ("line numbers start at 1", "it is a count of lines"). (e) `append=true` with `overwrite=true` silently appended; refused now, before the file is opened. (f) an empty `path` joined to nothing and meant the Desktop folder - a `delete` would have aimed at the whole folder; the FileSystem tool refuses it before the path is resolved. All six reach the client as tool errors through `@raise_error_replies`. 22 new unit tests in `tests/test_filesystem_replies.py` failed first (18 of them), then passed; full suite 1054 passed. Live, through the real tool in a temp folder: every line above confirmed, including the file still reading "hello!!!" after the refused append+overwrite write, and only `log.txt` and `trailingdot` on disk. Note: `src/windows_mcp/filesystem/service.py` and `src/windows_mcp/tools/filesystem.py` predated the project's formatting - they were ruff-formatted in a separate commit first so this fix stays readable.
 - [ ]  3.7 **Registry replies.** DWord with `value=""` is stored as 0 but the reply says set to ""; `get` of a Binary value returns decimal bytes one per line (`222\r\n173...`) instead of the hex format `set` accepts; a `0x` prefix is refused; MultiString can hold only one item (already in the guide).
 
   - [ ]  a. Refuse an empty value for DWord/QWord.
