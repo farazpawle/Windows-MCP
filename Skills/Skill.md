@@ -94,7 +94,7 @@ Coordinates: use Snapshot centres. Re-snapshot after any window move, resize or 
 
 **Clipboard**: `get` / `set`; Unicode round-trips. Non-text content reads as "empty or non-text" and **can't be saved or restored**, so warn before overwriting.
 
-**Notification**: `title`, `message`, `app_id` — must be an installed app's AppID from `Get-StartApps`; Windows PowerShell's `{1AC14E77-02E7-4E5D-B744-2EB1AE5198B7}\WindowsPowerShell1.0\powershell.exe` was shown on screen on 2026-09-22. Local repo: an unknown app_id, or notifications turned off for the app / all apps / by policy, returns an error instead of "sent". Do Not Disturb (Focus) can't be read: with it on, a "sent" toast goes to the notification centre without popping up. **PyPI release reports success even for a fake app_id** (nothing is shown).
+**Notification**: `title`, `message`, `app_id` — must be an installed app's AppID from `Get-StartApps`; Windows PowerShell's `{1AC14E77-02E7-4E5D-B744-2EB1AE5198B7}\WindowsPowerShell1.0\powershell.exe` and File Explorer's `Microsoft.Windows.Explorer` were both shown on screen on 2026-09-22. Local repo: an unknown app_id, or notifications turned off for the app / all apps / by policy, returns an error instead of "sent". Do Not Disturb (Focus) can't be read: with it on, a "sent" toast goes to the notification centre without popping up. **PyPI release reports success even for a fake app_id** (nothing is shown).
 
 ## 5. Web — `Scrape`
 

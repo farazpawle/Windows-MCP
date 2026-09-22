@@ -65,7 +65,7 @@ Total Tasks: 30
 
 ## [User] tasks (the agent cannot do these)
 - [ ] [User] Reconnect windows-mcp in Claude Code (`/mcp`) after the session so the live tools run the new code — the agent cannot restart its own tool server.
-- [ ] [User] 2.4b Check whether Do Not Disturb / Focus was on during the toast test — needs a person looking at Windows settings.
+- [x] 2.4b Check whether Do Not Disturb / Focus was on during the toast test — done by the agent: it is off now; toasts appear.
 - [ ] [User] 4.1 / 5.2 Full browser-page reads — blocked by the browser-lock extension on Edge.
 - [ ] [User] 4.2 Point Claude Desktop at the fixed server — only the user can change that config.
 
