@@ -3,6 +3,7 @@
 from mcp.types import ToolAnnotations
 from windows_mcp.infrastructure import with_analytics
 from windows_mcp.powershell import PowerShellExecutor
+from windows_mcp.tools._output import cap_text
 from fastmcp import Context
 
 
@@ -27,4 +28,4 @@ def register(mcp, *, get_desktop, get_analytics):
         response, status_code = PowerShellExecutor.execute_command(
             command, timeout, include_errors=True
         )
-        return f"Response: {response}\nStatus Code: {status_code}"
+        return f"Response: {cap_text(response)}\nStatus Code: {status_code}"

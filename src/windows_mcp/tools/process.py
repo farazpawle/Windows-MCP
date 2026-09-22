@@ -7,6 +7,7 @@ from windows_mcp.infrastructure import with_analytics
 from fastmcp import Context
 from windows_mcp import process
 from windows_mcp.tools._args import as_bool
+from windows_mcp.tools._output import cap_text
 
 
 def register(mcp, *, get_desktop, get_analytics):
@@ -33,7 +34,10 @@ def register(mcp, *, get_desktop, get_analytics):
     ) -> str:
         try:
             if mode == "list":
-                return process.list_processes(name=name, sort_by=sort_by, limit=limit)
+                # 0 listed nothing and a negative number listed everything (list slicing).
+                if limit < 1:
+                    raise ValueError(f"limit must be at least 1 (got {limit})")
+                return cap_text(process.list_processes(name=name, sort_by=sort_by, limit=limit))
             elif mode == "kill":
                 force = as_bool(force, "force")
                 return process.kill_process(name=name, pid=pid, force=force)

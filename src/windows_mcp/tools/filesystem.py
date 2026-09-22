@@ -7,6 +7,7 @@ from mcp.types import ToolAnnotations
 from windows_mcp.infrastructure import with_analytics
 from windows_mcp import filesystem
 from windows_mcp.tools._args import as_bool
+from windows_mcp.tools._output import cap_text
 from fastmcp import Context
 
 
@@ -53,7 +54,9 @@ def register(mcp, *, get_desktop, get_analytics):
 
             match mode:
                 case 'read':
-                    return filesystem.read_file(path, offset=offset, limit=limit, encoding=encoding)
+                    return cap_text(
+                        filesystem.read_file(path, offset=offset, limit=limit, encoding=encoding)
+                    )
                 case 'write':
                     if content is None:
                         return 'Error: content parameter is required for write mode.'
