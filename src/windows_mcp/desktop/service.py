@@ -56,7 +56,33 @@ _KEY_ALIASES = {
     "windows": "Win",
     "command": "Win",
     "option": "Alt",
+    # Punctuation by name, so a shortcut never has to spell a separator or brace.
+    "plus": "+",
+    "minus": "-",
+    "equal": "=",
+    "equals": "=",
+    "comma": ",",
+    "period": ".",
+    "slash": "/",
+    "backslash": "\\",
+    "semicolon": ";",
+    "quote": "'",
+    "grave": "`",
+    "bracketleft": "[",
+    "bracketright": "]",
+    "braceleft": "{",
+    "braceright": "}",
 }
+
+
+def _shortcut_keys(shortcut: str) -> list[str]:
+    """Split "ctrl+shift+a" into key names; a trailing "+" ("ctrl++", "+") is the plus key."""
+    keys = [key.strip() for key in shortcut.split("+") if key.strip()]
+    if shortcut.strip().endswith("+"):
+        keys.append("+")
+    if not keys:
+        raise ValueError("shortcut is empty")
+    return keys
 
 
 def _virtual_key(key: str) -> int:
@@ -1035,7 +1061,7 @@ class Desktop:
         return True
 
     def shortcut(self, shortcut: str, repeat: int = 1, hold: float | None = None):
-        keys = [key.strip() for key in shortcut.split("+")]
+        keys = _shortcut_keys(shortcut)
         if hold is not None:
             # Held down as real key-down events; like a physical key held by
             # software, it does not auto-repeat characters (use repeat for that).
@@ -1044,10 +1070,14 @@ class Desktop:
             return
         sendkeys_str = ""
         for key in keys:
-            if len(key) == 1:
-                sendkeys_str += key
+            name = _KEY_ALIASES.get(key.lower(), key)
+            if name == "+" and len(keys) > 1:
+                # "+" is not a SendKeys character code, so Ctrl would not combine with
+                # it; the "=/+" key is what apps read as Ctrl+Plus (zoom in).
+                sendkeys_str += "{OEM_PLUS}"
+            elif len(name) == 1:
+                sendkeys_str += _escape_text_for_sendkeys(name)
             else:
-                name = _KEY_ALIASES.get(key.lower(), key)
                 sendkeys_str += "{" + name + "}"
         for _ in range(repeat):
             # SendKeys' default 0.5 s settle made repeat=100 block for ~50 s.
