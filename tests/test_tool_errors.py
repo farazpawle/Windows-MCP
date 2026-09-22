@@ -13,7 +13,7 @@ from fastmcp.exceptions import ToolError
 
 from windows_mcp.desktop.service import Desktop
 from windows_mcp.powershell import PowerShellExecutor
-from windows_mcp.tools import app, clipboard, filesystem, process, registry, shell
+from windows_mcp.tools import app, clipboard, filesystem, notification, process, registry, shell
 
 EXECUTE = "windows_mcp.powershell.PowerShellExecutor.execute_command"
 
@@ -102,3 +102,9 @@ def test_clipboard_set_without_text_is_a_tool_error():
     # Fails before the clipboard is opened, so the real clipboard is untouched.
     with pytest.raises(ToolError, match="text parameter required"):
         _call(clipboard, "Clipboard", mode="set")
+
+
+def test_notification_to_unknown_app_is_a_tool_error():
+    with patch(EXECUTE, return_value=("UNKNOWN_APP_ID", 3)):  # no real toast is shown
+        with pytest.raises(ToolError, match="not an installed app"):
+            _call(notification, "Notification", title="T", message="M", app_id="Made.Up.App")

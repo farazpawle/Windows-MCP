@@ -7,6 +7,7 @@ from pydantic import Field
 from windows_mcp.infrastructure import with_analytics
 from fastmcp import Context
 from windows_mcp import notifications
+from windows_mcp.tools._output import raise_error_replies
 
 
 def register(mcp, *, get_desktop, get_analytics):
@@ -22,6 +23,7 @@ def register(mcp, *, get_desktop, get_analytics):
         ),
     )
     @with_analytics(get_analytics(), "Notification-Tool")
+    @raise_error_replies
     def notification_tool(
         title: Annotated[
             str,

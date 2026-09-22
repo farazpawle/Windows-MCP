@@ -172,7 +172,7 @@ Source: live tests on 2026-09-22 (Windows 11 Pro 26200, one 1920x1080 display at
   - [x]  d. App: raise a tool error on failure.
   - [x]  e. PowerShell: raise a tool error on a non-zero exit code and on a timeout (keeping the output in the message).
   - [x]  f. Clipboard: raise a tool error on failure.
-  - [ ]  g. Notification: raise a tool error on failure.
+  - [x]  g. Notification: raise a tool error on failure.
   - [ ]  h. Screenshot: raise a tool error on failure (e.g. bad display index).
 
   - **Verify:** Unit - one failing case per tool asserts an error is raised. Live - re-run the 13-call FastMCP script client (with `SSLKEYLOGFILE` unset): all 13 return `is_error=True`, and the same calls' success cases still return `is_error=False`.
