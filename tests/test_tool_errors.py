@@ -63,6 +63,15 @@ def test_process_kill_failure_is_a_tool_error(args, message):
         _call(process, "Process", mode="kill", **args)
 
 
+def test_process_kill_refuses_pid_and_name_together():
+    # Round-2 3.8: the pid silently won and the name was ignored.
+    with patch("psutil.Process") as proc, patch("psutil.process_iter") as it:
+        with pytest.raises(ToolError, match="not both"):
+            _call(process, "Process", mode="kill", pid=1234, name="notepad")
+    proc.assert_not_called()
+    it.assert_not_called()
+
+
 def test_app_switch_to_unknown_window_is_a_tool_error():
     desktop = Desktop.__new__(Desktop)
     desktop.get_windows = lambda: ([], set())

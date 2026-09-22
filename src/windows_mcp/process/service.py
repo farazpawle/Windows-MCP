@@ -58,6 +58,9 @@ def kill_process(name: str | None = None, pid: int | None = None, force: bool = 
 
     if pid is None and name is None:
         return "Error: Provide either pid or name parameter for kill mode."
+    if pid is not None and name is not None:
+        # The pid used to win silently, so a mismatched name went unnoticed.
+        return "Error: Provide pid or name for kill mode, not both."
     killed = []
     if pid is not None:
         try:
