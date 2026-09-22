@@ -3,9 +3,20 @@ from windows_mcp.registry.service import (
     set_value,
     delete_entry,
     list_key,
+    resolve_path,
 )
 
 from windows_mcp.registry.views import (
     ALLOWED_REGISTRY_TYPES,
     RegistryType,
 )
+
+__all__ = [
+    "get_value",
+    "set_value",
+    "delete_entry",
+    "list_key",
+    "resolve_path",
+    "ALLOWED_REGISTRY_TYPES",
+    "RegistryType",
+]

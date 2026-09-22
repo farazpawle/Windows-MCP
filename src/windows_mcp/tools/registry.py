@@ -12,8 +12,8 @@ from windows_mcp.tools._args import as_bool
 
 def register(mcp, *, get_desktop, get_analytics):
     @mcp.tool(
-        name='Registry',
-        description='Read and write the Windows Registry. Keywords: regedit, registry key, HKEY, HKCU, HKLM, Windows settings, registry value. Use mode="get" to read a value, mode="set" to create/update a value, mode="delete" to remove a value (with name) or a key (without name; a key that has sub-keys also needs recursive=true), mode="list" to list values and sub-keys under a path. Paths use PowerShell format (e.g. "HKCU:\\Software\\MyApp", "HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion").',
+        name="Registry",
+        description='Read and write the Windows Registry. Keywords: regedit, registry key, HKEY, HKCU, HKLM, Windows settings, registry value. Use mode="get" to read a value, mode="set" to create/update a value, mode="delete" to remove a value (with name) or a key (without name; a key that has sub-keys also needs recursive=true), mode="list" to list values and sub-keys under a path. Paths use PowerShell format (e.g. "HKCU:\\Software\\MyApp", "HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion") and must start with a hive: HKCU:, HKLM:, HKCR:, HKU:, HKCC:, a regedit-style name (HKEY_CURRENT_USER\\...) or Registry::. Other paths are refused. Paths are literal: *, ? and [ ] are ordinary characters.',
         annotations=ToolAnnotations(
             title="Registry",
             readOnlyHint=False,
@@ -24,30 +24,34 @@ def register(mcp, *, get_desktop, get_analytics):
     )
     @with_analytics(get_analytics(), "Registry-Tool")
     def registry_tool(
-        mode: Literal['get', 'set', 'delete', 'list'],
+        mode: Literal["get", "set", "delete", "list"],
         path: str,
         name: str | None = None,
         value: str | None = None,
-        type: RegistryType = 'String',
+        type: RegistryType = "String",
         recursive: bool | str = False,
         ctx: Context = None,
     ) -> str:
         try:
-            if mode == 'get':
+            try:
+                path = registry.resolve_path(path)
+            except ValueError as e:
+                return f"Error: {e}"
+            if mode == "get":
                 if name is None:
-                    return 'Error: name parameter is required for get mode.'
+                    return "Error: name parameter is required for get mode."
                 return registry.get_value(path=path, name=name)
-            elif mode == 'set':
+            elif mode == "set":
                 if name is None:
-                    return 'Error: name parameter is required for set mode.'
+                    return "Error: name parameter is required for set mode."
                 if value is None:
-                    return 'Error: value parameter is required for set mode.'
+                    return "Error: value parameter is required for set mode."
                 return registry.set_value(path=path, name=name, value=value, reg_type=type)
-            elif mode == 'delete':
+            elif mode == "delete":
                 return registry.delete_entry(
-                    path=path, name=name, recursive=as_bool(recursive, 'recursive')
+                    path=path, name=name, recursive=as_bool(recursive, "recursive")
                 )
-            elif mode == 'list':
+            elif mode == "list":
                 return registry.list_key(path=path)
             else:
                 return 'Error: mode must be "get", "set", "delete", or "list".'

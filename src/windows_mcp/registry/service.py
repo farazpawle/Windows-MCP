@@ -16,6 +16,45 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 
+_HIVES = {
+    "HKCU": "HKEY_CURRENT_USER",
+    "HKLM": "HKEY_LOCAL_MACHINE",
+    "HKCR": "HKEY_CLASSES_ROOT",
+    "HKU": "HKEY_USERS",
+    "HKCC": "HKEY_CURRENT_CONFIG",
+}
+_HIVE_PATH = re.compile(r"(?i)(HK[A-Z_]+)(:?)(.*)", re.DOTALL)
+
+
+def resolve_path(path: str) -> str:
+    """Return *path* in a form PowerShell resolves inside the registry.
+
+    Without a hive prefix PowerShell resolves a path against the working folder,
+    so the Registry tool would read or delete files. ``HKCU:``/``HKLM:`` drive
+    paths are kept; other hives and regedit-style names ("HKLM\\X",
+    "HKEY_USERS\\X") become ``Registry::HKEY_...`` provider paths, since only
+    HKCU and HKLM exist as PowerShell drives. Raises ValueError otherwise.
+    """
+    error = ValueError(
+        f'"{path}" is not a registry path; nothing was done. Start it with a hive: '
+        "HKCU:\\, HKLM:\\, HKCR:\\, HKU:\\, HKCC:\\ or a full name like HKEY_CURRENT_USER\\."
+    )
+    if path[:10].lower() == "registry::":
+        path = path[10:]
+    match = _HIVE_PATH.fullmatch(path)
+    if not match:
+        raise error
+    hive, colon, rest = match[1].upper(), match[2], match[3]
+    if rest and not rest.startswith("\\"):
+        rest = "\\" + rest
+    if colon and hive in ("HKCU", "HKLM"):
+        return f"{match[1]}:{rest}"
+    full = _HIVES.get(hive, hive)
+    if full not in _HIVES.values():
+        raise error
+    return f"Registry::{full}{rest}"
+
+
 def parse_binary(value: str) -> bytes:
     """Parse a REG_BINARY value.
 
