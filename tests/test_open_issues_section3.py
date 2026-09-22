@@ -43,7 +43,9 @@ def _tool(module, name, desktop):
 # 3.1 Click validates clicks (0-3) and names each count
 class TestClickCount:
     @pytest.mark.parametrize(
-        ("clicks", "word"), [(0, "Hover"), (1, "Single"), (2, "Double"), (3, "Triple")]
+        # clicks=0 is worded as a move, not a click (round-2 3.1b).
+        ("clicks", "word"),
+        [(0, "Moved"), (1, "Single"), (2, "Double"), (3, "Triple")],
     )
     def test_valid_counts_are_named(self, clicks, word):
         desktop = MagicMock()

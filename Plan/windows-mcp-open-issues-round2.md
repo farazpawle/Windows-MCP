@@ -203,12 +203,13 @@ Source: live tests on 2026-09-22 (Windows 11 Pro 26200, one 1920x1080 display at
 
 ## 3. Low - replies and usability
 
-- [ ]  3.1 **Click `clicks=0` (hover) ignores `modifiers` but says it held them.** Reply "Hover left clicked at (204,171) holding win"; the poller saw no key down.
+- [x]  3.1 **Click `clicks=0` (hover) ignores `modifiers` but says it held them.** Reply "Hover left clicked at (204,171) holding win"; the poller saw no key down.
 
-  - [ ]  a. Refuse `modifiers` together with `clicks=0` (simpler than the other option, pressing the keys during the hover).
-  - [ ]  b. Word hover replies as "Moved to (x,y) (hover)".
+  - [x]  a. Refuse `modifiers` together with `clicks=0` (simpler than the other option, pressing the keys during the hover).
+  - [x]  b. Word hover replies as "Moved to (x,y) (hover)".
 
   - **Verify:** Unit - hover + modifiers refused; hover reply wording. Live - poller sees no key down and the reply is refused.
+  - **Result (2026-09-22):** done. Click now refuses `modifiers` when `clicks=0` ("modifiers cannot be used with clicks=0 (a hover holds no keys)") before the Desktop is touched, and a hover replies "Moved to (x,y) (hover)." instead of "Hover left clicked ...". The tool description says modifiers are not allowed with `clicks=0`. 4 new unit tests in `tests/test_hover_modifiers.py` failed first, then passed (9 in the file); the old section-3 test that expected "Hover" was updated to "Moved". Full suite 943 passed; changed files lint- and format-clean (repo warnings unchanged at 53). Live, hands-off (in-process server with the fixed code, real Desktop, a `GetAsyncKeyState` poller on shift/ctrl/alt/win, `GetCursorPos` before and after; the only move was to the cursor's own position so nothing on screen moved and nothing was clicked): `hover+win` and `hover+ctrl+shift` both refused with the cursor unmoved, plain hover replied "Moved to (728,1459) (hover).", and no modifier key was seen down at any point.
 - [ ]  3.2 **Scroll `wheel_times` 0 or negative is accepted.** `-3` replied "Scrolled vertical down by -3 wheel times" and nothing moved.
 
   - [ ]  a. Require `wheel_times` of 1 or more.

@@ -298,7 +298,7 @@ def register(
             "Provide loc or label; with neither, clicks at the current mouse position. "
             "modifiers holds keys during the click, e.g. 'shift' to extend a selection, "
             "'ctrl' to add to it or open a link in a new tab, 'ctrl+shift'. "
-            "Allowed: ctrl, shift, alt, win."
+            "Allowed: ctrl, shift, alt, win. Not allowed with clicks=0, which only moves the pointer."
         ),
         annotations=ToolAnnotations(
             title="Click",
@@ -320,6 +320,9 @@ def register(
         if type(clicks) is not int or clicks not in _CLICK_NAMES:
             raise ValueError(f"clicks must be 0, 1, 2 or 3 (got {clicks!r})")
         modifiers = _as_modifiers(modifiers)
+        # A hover never presses the keys, so accepting them would report a hold that never happened.
+        if clicks == 0 and modifiers:
+            raise ValueError("modifiers cannot be used with clicks=0 (a hover holds no keys)")
         desktop = get_desktop()
         loc = _as_loc(loc)
         if label is not None:
@@ -332,6 +335,8 @@ def register(
         # clicks=0 only moves the pointer, which is how a held drag is steered.
         released = release_held_button(desktop) if clicks else ""
         desktop.click(loc=loc, button=button, clicks=clicks, modifiers=modifiers)
+        if clicks == 0:
+            return f"Moved to ({x},{y}) (hover)."
         return (
             f"{_CLICK_NAMES[clicks]} {button} clicked at ({x},{y}){_held_suffix(modifiers)}."
             f"{released}"
