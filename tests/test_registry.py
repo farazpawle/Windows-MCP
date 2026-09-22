@@ -1,6 +1,9 @@
 import asyncio
 from unittest.mock import patch
 
+import pytest
+from fastmcp.exceptions import ToolError
+
 from windows_mcp import registry
 from windows_mcp.powershell.utils import ps_quote
 
@@ -230,11 +233,11 @@ class TestRegistryToolRefusesNonRegistryPaths:
             ("delete", {"recursive": True}),
         ):
             with patch(EXECUTE_COMMAND_PATH) as mock_exec:
-                result = asyncio.run(
-                    mcp.call_tool("Registry", {"mode": mode, "path": "C:\\Temp\\x", **extra})
-                )
+                with pytest.raises(ToolError, match="not a registry path"):  # 2.13: tool error
+                    asyncio.run(
+                        mcp.call_tool("Registry", {"mode": mode, "path": "C:\\Temp\\x", **extra})
+                    )
             mock_exec.assert_not_called()
-            assert "not a registry path" in result.content[0].text
 
 
 class TestRegistryList:

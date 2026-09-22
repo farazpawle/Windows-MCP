@@ -5,18 +5,21 @@ sent them as successful results, so the model could mistake a failure for succes
 """
 
 import asyncio
+from unittest.mock import patch
 
 import pytest
 from fastmcp import FastMCP
 from fastmcp.exceptions import ToolError
 
-from windows_mcp.tools import filesystem
+from windows_mcp.tools import filesystem, registry
+
+EXECUTE = "windows_mcp.powershell.PowerShellExecutor.execute_command"
 
 
-def _call(module, name, **args):
+def _call(module, tool, **args):
     mcp = FastMCP("test")
     module.register(mcp, get_desktop=lambda: None, get_analytics=lambda: None)
-    return asyncio.run(mcp.call_tool(name, args))
+    return asyncio.run(mcp.call_tool(tool, args))
 
 
 def test_filesystem_failure_is_a_tool_error(tmp_path):
@@ -29,3 +32,9 @@ def test_filesystem_success_is_not_an_error(tmp_path):
     f.write_text("hello", encoding="utf-8")
     result = _call(filesystem, "FileSystem", mode="read", path=str(f))
     assert "hello" in result.content[0].text
+
+
+def test_registry_failure_is_a_tool_error():
+    with patch(EXECUTE, return_value=("Property Nope does not exist", 1)):
+        with pytest.raises(ToolError, match="Error reading registry"):
+            _call(registry, "Registry", mode="get", path=r"HKCU:\Software", name="Nope")

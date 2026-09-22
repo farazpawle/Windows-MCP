@@ -167,7 +167,7 @@ Source: live tests on 2026-09-22 (Windows 11 Pro 26200, one 1920x1080 display at
 - [ ]  2.13 **Most tool failures are returned as successful results.** Tools: FileSystem, Registry, Process, App, PowerShell, Clipboard, Notification, Screenshot. Steps: a FastMCP script client called 13 failing operations (missing file, missing registry key, kill PID 4, unknown window/app, `exit 3`, PowerShell timeout, Clipboard set without text, bad app_id, display index 7, Click label 9999) and read `is_error`. Actual: 12 of 13 had `is_error=False` with the failure only in the text ("Error: File not found", "Status Code: 3", "Command execution timed out"); only Click raised a real error. Expected (and required by the computer-use reference): failures flagged `is_error: true`, so the client and the model can't mistake them for success.
 
   - [x]  a. FileSystem: raise a tool error on failure.
-  - [ ]  b. Registry: raise a tool error on failure.
+  - [x]  b. Registry: raise a tool error on failure.
   - [ ]  c. Process: raise a tool error on failure.
   - [ ]  d. App: raise a tool error on failure.
   - [ ]  e. PowerShell: raise a tool error on a non-zero exit code and on a timeout (keeping the output in the message).

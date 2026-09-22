@@ -8,6 +8,7 @@ from windows_mcp import registry
 from windows_mcp.registry import RegistryType
 from fastmcp import Context
 from windows_mcp.tools._args import as_bool
+from windows_mcp.tools._output import raise_error_replies
 
 
 def register(mcp, *, get_desktop, get_analytics):
@@ -23,6 +24,7 @@ def register(mcp, *, get_desktop, get_analytics):
         ),
     )
     @with_analytics(get_analytics(), "Registry-Tool")
+    @raise_error_replies
     def registry_tool(
         mode: Literal["get", "set", "delete", "list"],
         path: str,
