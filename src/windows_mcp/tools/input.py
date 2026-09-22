@@ -548,7 +548,7 @@ def register(
 
     @mcp.tool(
         name="Wait",
-        description="Pauses execution for specified duration in seconds (decimals allowed, e.g. 0.5). Use when waiting for: applications to launch/load, UI animations to complete, page content to render, dialogs to appear, or between rapid actions. Helps ensure UI is ready before next interaction.",
+        description="Pauses execution for specified duration in seconds (decimals allowed, e.g. 0.5; at most 300). Use when waiting for: applications to launch/load, UI animations to complete, page content to render, dialogs to appear, or between rapid actions. Helps ensure UI is ready before next interaction.",
         annotations=ToolAnnotations(
             title="Wait",
             readOnlyHint=True,
@@ -559,7 +559,8 @@ def register(
     )
     @with_analytics(get_analytics(), "Wait-Tool")
     def wait_tool(duration: float | str, ctx: Context = None) -> str:
-        seconds = _as_seconds(duration, "duration")
+        # Capped so a typo (600 for 6.00) or a huge value can't block the server for long.
+        seconds = _as_seconds(duration, "duration", maximum=300)
         time.sleep(seconds)
         return f"Waited for {seconds:g} seconds."
 

@@ -280,3 +280,16 @@ class TestWaitDecimals:
             with pytest.raises(ValueError, match="duration"):
                 _tool("Wait", MagicMock())(duration=value)
         sleep.assert_not_called()
+
+    # Round-2 2.12: no maximum, so Wait(1e9) or a typo like 600 blocked the server.
+    @pytest.mark.parametrize("value", [301, 1e9])
+    def test_over_300_seconds_rejected(self, value):
+        with patch.object(input_tool_module.time, "sleep") as sleep:
+            with pytest.raises(ValueError, match="at most 300"):
+                _tool("Wait", MagicMock())(duration=value)
+        sleep.assert_not_called()
+
+    def test_300_seconds_accepted(self):
+        with patch.object(input_tool_module.time, "sleep") as sleep:
+            _tool("Wait", MagicMock())(duration=300)
+        sleep.assert_called_once_with(300.0)
