@@ -478,25 +478,14 @@ class Desktop:
         except Exception:
             return False
 
-    def _find_window_by_name(
-        self, name: str, refresh_state: bool = False
-    ) -> tuple["Window | None", str]:
+    def _find_window_by_name(self, name: str) -> tuple["Window | None", str]:
         """Find a window by fuzzy name match. Returns (window, error_msg).
         If the returned window is None, error_msg describes the failure reason.
 
-        If refresh_state is True, always refresh desktop_state before searching;
-        otherwise refresh only when desktop_state is absent or empty.
+        Reads the live window list: the last capture's list misses windows opened since,
+        and a full get_state() (UI tree + screenshot) is far more than a lookup needs.
         """
-        if refresh_state or self.desktop_state is None or not self.desktop_state.windows:
-            self.get_state()
-        if self.desktop_state is None:
-            return None, "Failed to get desktop state. Please try again."
-
-        window_list = [
-            w
-            for w in [self.desktop_state.active_window] + (self.desktop_state.windows or [])
-            if w is not None
-        ]
+        window_list, _ = self.get_windows()
         if not window_list:
             return None, "No windows found on the desktop."
 
@@ -526,7 +515,7 @@ class Desktop:
         self, name: str | None = None, size: tuple[int, int] = None, loc: tuple[int, int] = None
     ) -> tuple[str, int]:
         if name is not None:
-            target_window, error = self._find_window_by_name(name, refresh_state=True)
+            target_window, error = self._find_window_by_name(name)
             if target_window is None:
                 return error, 1
         else:

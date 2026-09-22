@@ -148,7 +148,7 @@ class TestFindWindowFallbacks:
     def _find(self, query):
         with patch.object(Desktop, "__init__", lambda self: None):
             desktop = Desktop()
-        desktop.desktop_state = SimpleNamespace(active_window=None, windows=list(self.TITLES))
+        desktop.get_windows = lambda: (list(self.TITLES), set())
         with patch(
             "windows_mcp.desktop.service.Process",
             side_effect=lambda pid: SimpleNamespace(name=lambda: self.PROCESSES[pid]),
@@ -168,6 +168,19 @@ class TestFindWindowFallbacks:
         window, error = self._find("Outlook")
         assert window is None
         assert "not found" in error
+
+    # Round-2 2.8: a window opened since the last capture was "not found" until a Snapshot.
+    def test_reads_live_window_list_not_last_capture(self):
+        with patch.object(Desktop, "__init__", lambda self: None):
+            desktop = Desktop()
+        desktop.desktop_state = SimpleNamespace(active_window=None, windows=list(self.TITLES))
+        harness = _window("WMCP Harness", 4)
+        desktop.get_windows = lambda: (list(self.TITLES) + [harness], set())
+        desktop.get_state = lambda *a, **k: pytest.fail("full capture (tree + screenshot)")
+
+        window, error = desktop._find_window_by_name("WMCP Harness")
+
+        assert (window, error) == (harness, "")
 
 
 # 1.6 follow-up: Antigravity's process is "Antigravity IDE.exe" on this PC
