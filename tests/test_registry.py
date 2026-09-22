@@ -91,6 +91,89 @@ class TestRegistrySet:
         assert "Test-Path" in cmd
 
 
+class TestRegistryValueFormats:
+    """Round-2 item 3.7: numbers, binary and multi-string replies."""
+
+    def test_dword_empty_value_refused(self):
+        with patch(EXECUTE_COMMAND_PATH) as mock_exec:
+            result = registry.set_value(path="HKCU:\\Test", name="K", value="", reg_type="DWord")
+        assert "Error" in result
+        mock_exec.assert_not_called()
+
+    def test_qword_empty_value_refused(self):
+        with patch(EXECUTE_COMMAND_PATH) as mock_exec:
+            result = registry.set_value(path="HKCU:\\Test", name="K", value="  ", reg_type="QWord")
+        assert "Error" in result
+        mock_exec.assert_not_called()
+
+    def test_dword_not_a_number_refused(self):
+        with patch(EXECUTE_COMMAND_PATH) as mock_exec:
+            result = registry.set_value(path="HKCU:\\Test", name="K", value="abc", reg_type="DWord")
+        assert "Error" in result
+        mock_exec.assert_not_called()
+
+    def test_dword_accepts_hex_prefix(self):
+        with patch(EXECUTE_COMMAND_PATH, return_value=("", 0)) as mock_exec:
+            result = registry.set_value(
+                path="HKCU:\\Test", name="K", value="0x10", reg_type="DWord"
+            )
+        assert "Error" not in result
+        cmd = mock_exec.call_args[0][0]
+        assert "-Value 16 " in cmd
+        assert "16" in result
+
+    def test_dword_keeps_leading_zero_decimal(self):
+        with patch(EXECUTE_COMMAND_PATH, return_value=("", 0)) as mock_exec:
+            registry.set_value(path="HKCU:\\Test", name="K", value="01", reg_type="DWord")
+        assert "-Value 1 " in mock_exec.call_args[0][0]
+
+    def test_qword_accepts_hex_prefix(self):
+        with patch(EXECUTE_COMMAND_PATH, return_value=("", 0)) as mock_exec:
+            registry.set_value(path="HKCU:\\Test", name="K", value="0xFF", reg_type="QWord")
+        assert "-Value 255 " in mock_exec.call_args[0][0]
+
+    def test_get_returns_binary_as_hex(self):
+        with patch(EXECUTE_COMMAND_PATH, return_value=("de,ad,be,ef", 0)) as mock_exec:
+            result = registry.get_value(path="HKCU:\\Test", name="B")
+        cmd = mock_exec.call_args[0][0]
+        assert "[byte[]]" in cmd
+        assert "x2" in cmd
+        # -ExpandProperty unrolls the byte array and loses the type the check needs.
+        assert "-ExpandProperty" not in cmd
+        # Without this a missing value would come back as text, not an error.
+        assert "-ErrorAction Stop" in cmd
+        assert "de,ad,be,ef" in result
+
+    def test_get_returns_multistring_as_json_list(self):
+        with patch(EXECUTE_COMMAND_PATH, return_value=('["one","two"]', 0)) as mock_exec:
+            result = registry.get_value(path="HKCU:\\Test", name="M")
+        assert "[string[]]" in mock_exec.call_args[0][0]
+        assert '["one","two"]' in result
+
+    def test_multistring_accepts_json_list(self):
+        with patch(EXECUTE_COMMAND_PATH, return_value=("", 0)) as mock_exec:
+            result = registry.set_value(
+                path="HKCU:\\Test", name="M", value='["one", "two"]', reg_type="MultiString"
+            )
+        assert "Error" not in result
+        assert "@('one','two')" in mock_exec.call_args[0][0]
+
+    def test_multistring_plain_text_stays_one_item(self):
+        with patch(EXECUTE_COMMAND_PATH, return_value=("", 0)) as mock_exec:
+            registry.set_value(
+                path="HKCU:\\Test", name="M", value="just one", reg_type="MultiString"
+            )
+        assert "@('just one')" in mock_exec.call_args[0][0]
+
+    def test_multistring_bad_json_list_refused(self):
+        with patch(EXECUTE_COMMAND_PATH) as mock_exec:
+            result = registry.set_value(
+                path="HKCU:\\Test", name="M", value="[1, 2]", reg_type="MultiString"
+            )
+        assert "Error" in result
+        mock_exec.assert_not_called()
+
+
 class TestRegistryDelete:
     def test_delete_value(self):
         with patch(EXECUTE_COMMAND_PATH, return_value=("", 0)) as mock_exec:

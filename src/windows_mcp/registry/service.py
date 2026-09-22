@@ -86,11 +86,53 @@ def parse_binary(value: str) -> bytes:
     return bytes(data)
 
 
+def parse_number(value: str, reg_type: str) -> int:
+    """Parse a DWord/QWord value: decimal or hex with a 0x prefix.
+
+    An empty value used to be stored as 0 while the reply claimed "" was set,
+    so it is refused here. Raises ValueError for anything that is not a number.
+    """
+    text = value.strip()
+    if not text:
+        raise ValueError(f"{reg_type} needs a number; got an empty value")
+    digits = text[1:] if text[:1] in "+-" else text
+    base = 16 if digits[:2].lower() == "0x" else 10
+    try:
+        number = int(digits[2:] if base == 16 else digits, base)
+    except ValueError:
+        raise ValueError(
+            f"{reg_type} needs a whole number, decimal or 0x-prefixed hex (got {value!r})"
+        ) from None
+    return -number if text.startswith("-") else number
+
+
+def parse_multistring(value: str) -> list[str]:
+    """Parse a MultiString value: a JSON list of strings, or one plain string."""
+    text = value.strip()
+    if not text.startswith("["):
+        return [value]
+    try:
+        items = json.loads(text)
+    except json.JSONDecodeError as e:
+        raise ValueError(f"invalid string list {value!r}: {e}") from None
+    if not isinstance(items, list) or not all(isinstance(i, str) for i in items):
+        raise ValueError(f"MultiString list must hold text items (got {value!r})")
+    return items
+
+
 def get_value(path: str, name: str) -> str:
     """Read a registry value at *path* with the given *name*."""
     q_path = ps_quote(path)
     q_name = ps_quote(name)
-    command = f"Get-ItemProperty -LiteralPath {q_path} -Name {q_name} | Select-Object -ExpandProperty {q_name}"
+    command = (
+        # Property access, not -ExpandProperty: the latter unrolls a byte array
+        # into loose objects, losing the type this formatting depends on.
+        f"$v = (Get-ItemProperty -LiteralPath {q_path} -Name {q_name} -ErrorAction Stop).{q_name}; "
+        # Read values back in the shape set accepts: hex bytes, a JSON string list.
+        "if ($v -is [byte[]]) { ($v | ForEach-Object { $_.ToString('x2') }) -join ',' } "
+        "elseif ($v -is [string[]]) { ConvertTo-Json -Compress -InputObject @($v) } "
+        "else { $v }"
+    )
     response, status = PowerShellExecutor.execute_command(command)
     if status != 0:
         return f"Error reading registry: {response.strip()}"
@@ -106,6 +148,7 @@ def set_value(path: str, name: str, value: str, reg_type: RegistryType = "String
         )
     q_path = ps_quote(path)
     q_name = ps_quote(name)
+    shown = value
     if reg_type == "Binary":
         try:
             data = parse_binary(value)
@@ -113,6 +156,18 @@ def set_value(path: str, name: str, value: str, reg_type: RegistryType = "String
             return f"Error: invalid binary value: {e}"
         # A quoted string would be stored as a single byte; build a real byte array.
         q_value = f"([byte[]]({','.join(map(str, data))}))" if data else "([byte[]]@())"
+    elif reg_type in ("DWord", "QWord"):
+        try:
+            number = parse_number(value, reg_type)
+        except ValueError as e:
+            return f"Error: invalid {reg_type} value: {e}"
+        q_value = shown = str(number)
+    elif reg_type == "MultiString":
+        try:
+            items = parse_multistring(value)
+        except ValueError as e:
+            return f"Error: invalid MultiString value: {e}"
+        q_value = f"@({','.join(map(ps_quote, items))})"
     else:
         q_value = ps_quote(value)
     command = (
@@ -122,7 +177,7 @@ def set_value(path: str, name: str, value: str, reg_type: RegistryType = "String
     response, status = PowerShellExecutor.execute_command(command)
     if status != 0:
         return f"Error writing registry: {response.strip()}"
-    return f'Registry value [{path}] "{name}" set to "{value}" (type: {reg_type}).'
+    return f'Registry value [{path}] "{name}" set to "{shown}" (type: {reg_type}).'
 
 
 def delete_entry(path: str, name: str | None = None, recursive: bool = False) -> str:
