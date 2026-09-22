@@ -72,7 +72,7 @@ def test_off_screen_point_is_refused_without_input(desktop, sent, point, action)
 @pytest.mark.parametrize("point", ON_SCREEN)
 def test_edge_points_are_accepted(desktop, sent, point):
     desktop.click(list(point))
-    sent["Click"].assert_called_once_with(*point)
+    sent["Click"].assert_called_once_with(*point, waitTime=0)
 
 
 def test_gap_between_displays_is_refused(desktop, sent):
@@ -83,7 +83,7 @@ def test_gap_between_displays_is_refused(desktop, sent):
     with pytest.raises(ValueError, match="outside every display"):
         desktop.click([2000, 900])
     desktop.click([2000, 700])
-    sent["Click"].assert_called_once_with(2000, 700)
+    sent["Click"].assert_called_once_with(2000, 700, waitTime=0)
 
 
 def test_multi_edit_names_every_bad_target(desktop, sent):

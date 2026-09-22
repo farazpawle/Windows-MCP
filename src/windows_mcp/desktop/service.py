@@ -843,16 +843,14 @@ class Desktop:
             return
         with _keys_held(list(modifiers)):
             self._click_button(x, y, button, clicks)
+        sleep(0.5)  # let the app react; outside the block so modifiers lift at mouse-up
 
     def _click_button(self, x: int, y: int, button: str, clicks: int) -> None:
         press = {"left": uia.Click, "right": uia.RightClick, "middle": uia.MiddleClick}[button]
-        if clicks >= 2:
-            # Presses must fall inside GetDoubleClickTime(), or apps see separate single clicks.
-            dbl_wait = uia.GetDoubleClickTime() / 2000.0
-            for i in range(clicks):
-                press(x, y, waitTime=dbl_wait if i < clicks - 1 else 0.5)
-        else:
-            press(x, y)
+        # Presses must fall inside GetDoubleClickTime(), or apps see separate single clicks.
+        dbl_wait = uia.GetDoubleClickTime() / 2000.0
+        for i in range(clicks):
+            press(x, y, waitTime=dbl_wait if i < clicks - 1 else 0)
 
     # Strings longer than this typed via clipboard paste instead of
     # per-key SendKeys. SendKeys at high cadence loses keystrokes on
@@ -1095,7 +1093,8 @@ class Desktop:
                 name = _KEY_ALIASES.get(key.lower(), key)
                 sendkeys_str += "{" + name + "}"
         for _ in range(repeat):
-            uia.SendKeys(sendkeys_str, interval=0.01)
+            # SendKeys' default 0.5 s settle made repeat=100 block for ~50 s.
+            uia.SendKeys(sendkeys_str, interval=0.01, waitTime=0.02)
 
     def multi_select(self, press_ctrl: bool | str = False, locs: list[tuple[int, int]] = []):
         press_ctrl = press_ctrl is True or (

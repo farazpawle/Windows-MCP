@@ -21,4 +21,5 @@ def test_multi_click_gap_is_half_the_double_click_time(button, clicks):
         Desktop.__new__(Desktop)._click_button(10, 20, button, clicks)
 
     waits = [c.kwargs["waitTime"] for c in press.call_args_list]
-    assert waits == [0.25] * (clicks - 1) + [0.5]
+    # The last press settles in click(), after the modifiers are released (2.6).
+    assert waits == [0.25] * (clicks - 1) + [0]

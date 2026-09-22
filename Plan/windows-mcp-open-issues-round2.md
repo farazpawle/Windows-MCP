@@ -115,12 +115,13 @@ Source: live tests on 2026-09-22 (Windows 11 Pro 26200, one 1920x1080 display at
 
   - **Verify:** Live - harness logs `clicks=2` for right and middle double clicks and `clicks=3` for triple.
   - **Result (2026-09-22):** done. `Desktop._click_button` now picks the press function by button and runs one loop for all three: presses `GetDoubleClickTime()/2` apart (250 ms here), 0.5 s after the last. Right and middle were 550 ms apart before (the default 0.5 s wait plus the 50 ms press). An unknown button now raises instead of silently doing nothing (the tool only offers left/right/middle). 6 new unit tests (3 buttons x 2 and 3 clicks) - the 4 right/middle ones failed first, then passed; full suite 880 passed; lint unchanged at 54. Live (user hands-off; real Click tool through an in-process FastMCP client; a scratch TopMost WinForms panel logging `MouseEventArgs.Clicks`; WindowFromPoint guard): left, right and middle `clicks=2` each logged `clicks=1`, `clicks=2`. Triple: right and middle logged 1, 2, 1, identical to the left triple control. The Verify line's `clicks=3` cannot be seen this way: Windows has no triple-click message and WinForms `Clicks` only reports 1 or 2; apps that support triple-click count the third press themselves, and the timing is now the same as the left button's.
-- [ ]  2.6 **Shortcut `repeat` is slow: about 0.52 s per press.** Tool: Shortcut. Steps: `left`, `repeat=20` (10 s); `shift+left`, `repeat=100` (~55 s). Every modifier click also keeps the keys down ~0.5 s after the mouse is released. Actual: counts are right when the window keeps focus (20 of 20), but a 100-press call blocks almost a minute. In the `repeat=100` run only 79 presses reached the harness: focus moved to VS Code for 7.6 s mid-run (about 14 presses went there); the other ~7 are unexplained. Expected: tens of milliseconds per press.
+- [x]  2.6 **Shortcut `repeat` is slow: about 0.52 s per press.** Tool: Shortcut. Steps: `left`, `repeat=20` (10 s); `shift+left`, `repeat=100` (~55 s). Every modifier click also keeps the keys down ~0.5 s after the mouse is released. Actual: counts are right when the window keeps focus (20 of 20), but a 100-press call blocks almost a minute. In the `repeat=100` run only 79 presses reached the harness: focus moved to VS Code for 7.6 s mid-run (about 14 presses went there); the other ~7 are unexplained. Expected: tens of milliseconds per press.
 
-  - [ ]  a. Drop the per-action pause inside the repeat loop, keeping a 10-30 ms gap.
-  - [ ]  b. Release modifiers straight after the mouse-up in modifier clicks (same change as B.14).
+  - [x]  a. Drop the per-action pause inside the repeat loop, keeping a 10-30 ms gap.
+  - [x]  b. Release modifiers straight after the mouse-up in modifier clicks (same change as B.14).
 
   - **Verify:** Unit - the repeat loop sleeps no more than 30 ms per press. Live - `left repeat=20` finishes in under 1 s with 20 of 20 presses logged; `shift+left repeat=100` logs 100 of 100 while the harness keeps focus; the poller sees Shift released within 100 ms of mouse-up on a modifier click.
+  - **Result (2026-09-22):** done. (a) The Shortcut repeat loop passes `waitTime=0.02` to `SendKeys` (its default settle was 0.5 s per press). (b) `Desktop.click` now gives the last press no wait and does its 0.5 s settle after `_keys_held` releases the modifiers, so they lift at mouse-up (also B.14); a click without modifiers still returns after the same 0.5 s. Scroll and Move drag, which also hold modifiers, were not changed. 3 new unit tests (repeat wait per press; Shift held after mouse-up for 1 and 2 clicks) failed first, then passed; the 2.5 test and two exact-call asserts in the off-screen tests updated for the moved settle; full suite 883 passed; lint unchanged at 54. Live (user hands-off; real Click and Shortcut tools through an in-process FastMCP client; a scratch TopMost WinForms window logging key-downs and mouse-up times; WindowFromPoint guard; a `GetAsyncKeyState` Shift poller at 2 ms): `left repeat=20` took 0.84 s, 20 of 20 logged; `shift+left repeat=100` took 6.31 s (~63 ms per press, most of it the 10 ms gap between SendKeys' four key events), 100 of 100 logged with `mods=Shift`, harness in front throughout; Click `modifiers="shift"` - Shift released 2 ms after the harness logged mouse-up.
 - [ ]  2.7 **The orange capture border can leak into the next screenshot.** Tool: Screenshot. Steps: several region screenshots of the same area in quick succession. Actual: one capture showed the full orange glow from the previous capture; another had faint orange edges. Expected: never.
 
   - [ ]  a. Exclude the overlay window from capture with `SetWindowDisplayAffinity(WDA_EXCLUDEFROMCAPTURE)`, or wait until it is gone before the next capture.
@@ -446,10 +447,11 @@ Each item: what windows-mcp does today, what computer use / Cowork does, and the
 
   - Done together with 1.5 (always-on-top windows), 1.6 (pop-up menus) and 2.3 (DOM mode).
   - **Verify:** see 1.5, 1.6, 2.3.
-- [ ]  B.14 **Faster modifier release.** Today: modifier keys stay down ~0.5 s after each click. Cowork holds modifiers "only for the duration of that click".
+- [x]  B.14 **Faster modifier release.** Today: modifier keys stay down ~0.5 s after each click. Cowork holds modifiers "only for the duration of that click".
 
   - Done together with 2.6 (subtask b).
   - **Verify:** see 2.6.
+  - **Result (2026-09-22):** done with 2.6: Shift lifted 2 ms after mouse-up on a live Shift-click.
 
 # Part C - New tools / abilities
 
