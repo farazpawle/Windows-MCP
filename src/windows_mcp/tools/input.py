@@ -384,7 +384,7 @@ def register(
 
     @mcp.tool(
         name="Scroll",
-        description="Scrolls at coordinates [x, y], a UI element's label/id, or current mouse position if loc=None. Type: vertical (default) or horizontal. Direction: up/down for vertical, left/right for horizontal. wheel_times controls amount (1 wheel ≈ 3-5 lines). Use for navigating long content, lists, and web pages. modifiers holds keys while scrolling, e.g. 'ctrl' with up/down to zoom a page or document (allowed: ctrl, shift, alt, win).",
+        description="Scrolls at coordinates [x, y], a UI element's label/id, or current mouse position if loc=None. Type: vertical (default) or horizontal. Direction: up/down for vertical, left/right for horizontal. wheel_times controls amount, 1 or more (1 wheel ≈ 3-5 lines). Use for navigating long content, lists, and web pages. modifiers holds keys while scrolling, e.g. 'ctrl' with up/down to zoom a page or document (allowed: ctrl, shift, alt, win).",
         annotations=ToolAnnotations(
             title="Scroll",
             readOnlyHint=False,
@@ -403,6 +403,9 @@ def register(
         modifiers: list[str] | str | None = None,
         ctx: Context = None,
     ) -> str:
+        # isinstance, not type(): the `type` parameter above shadows the builtin here.
+        if isinstance(wheel_times, bool) or not isinstance(wheel_times, int) or wheel_times < 1:
+            raise ValueError(f"wheel_times must be 1 or more (got {wheel_times!r})")
         modifiers = _as_modifiers(modifiers)
         desktop = get_desktop()
         loc = _as_loc(loc)

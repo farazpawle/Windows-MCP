@@ -210,11 +210,12 @@ Source: live tests on 2026-09-22 (Windows 11 Pro 26200, one 1920x1080 display at
 
   - **Verify:** Unit - hover + modifiers refused; hover reply wording. Live - poller sees no key down and the reply is refused.
   - **Result (2026-09-22):** done. Click now refuses `modifiers` when `clicks=0` ("modifiers cannot be used with clicks=0 (a hover holds no keys)") before the Desktop is touched, and a hover replies "Moved to (x,y) (hover)." instead of "Hover left clicked ...". The tool description says modifiers are not allowed with `clicks=0`. 4 new unit tests in `tests/test_hover_modifiers.py` failed first, then passed (9 in the file); the old section-3 test that expected "Hover" was updated to "Moved". Full suite 943 passed; changed files lint- and format-clean (repo warnings unchanged at 53). Live, hands-off (in-process server with the fixed code, real Desktop, a `GetAsyncKeyState` poller on shift/ctrl/alt/win, `GetCursorPos` before and after; the only move was to the cursor's own position so nothing on screen moved and nothing was clicked): `hover+win` and `hover+ctrl+shift` both refused with the cursor unmoved, plain hover replied "Moved to (728,1459) (hover).", and no modifier key was seen down at any point.
-- [ ]  3.2 **Scroll `wheel_times` 0 or negative is accepted.** `-3` replied "Scrolled vertical down by -3 wheel times" and nothing moved.
+- [x]  3.2 **Scroll `wheel_times` 0 or negative is accepted.** `-3` replied "Scrolled vertical down by -3 wheel times" and nothing moved.
 
-  - [ ]  a. Require `wheel_times` of 1 or more.
+  - [x]  a. Require `wheel_times` of 1 or more.
 
   - **Verify:** Unit - `0` and `-3` refused.
+  - **Result (2026-09-22):** done. Scroll refuses anything that is not a whole number of 1 or more ("wheel_times must be 1 or more (got -3)") before the Desktop is touched; the parameter description now says "1 or more". Note the guard uses `isinstance`, not `type()`: the tool's own `type` parameter shadows the builtin, and the first attempt with `type(...)` raised "'str' object is not callable" for every scroll - caught by the tests, not shipped. 10 new unit tests in `tests/test_scroll_wheel_times.py` failed first, then passed (0, -1, -3, 1.5, "3", None, True refused with no scroll sent; 1, 3, 20 still scroll). Full suite 953 passed; changed files lint- and format-clean (repo warnings unchanged at 53). Live smoke (in-process server, real Desktop, no input sent): `wheel_times=0` and `-3` both refused with the cursor unmoved.
 - [ ]  3.3 **Type without a location reports success when the focus can't take text.** Focus on a button; Type "abc" replied "Typed abc into the focused element."; nothing changed.
 
   - [ ]  a. Name the focused element and its type in the reply.
