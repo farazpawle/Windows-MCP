@@ -30,7 +30,7 @@ def list_processes(
                     "mem_mb": round(mem_mb, 1),
                 }
             )
-        except (psutil.NoSuchProcess, psutil.AccessDenied):
+        except psutil.NoSuchProcess, psutil.AccessDenied:
             continue
     if name:
         # Plain substring match: the old fuzzy score let "pwsh" match ShellExperienceHost.
@@ -53,9 +53,7 @@ def list_processes(
     return f"Processes ({len(procs)} shown):\n{table}"
 
 
-def kill_process(
-    name: str | None = None, pid: int | None = None, force: bool = False
-) -> str:
+def kill_process(name: str | None = None, pid: int | None = None, force: bool = False) -> str:
     import psutil
 
     if pid is None and name is None:
@@ -85,7 +83,7 @@ def kill_process(
                     else:
                         p.terminate()
                     killed.append(f"{p.info['name']} (PID {p.info['pid']})")
-            except (psutil.NoSuchProcess, psutil.AccessDenied):
+            except psutil.NoSuchProcess, psutil.AccessDenied:
                 continue
     if not killed:
         return f'Error: No process matching "{name}" found or access denied.'
