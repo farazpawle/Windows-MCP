@@ -4,7 +4,7 @@ from windows_mcp.desktop.utils import (
 )
 from windows_mcp.powershell.utils import ps_quote
 from windows_mcp.powershell import PowerShellExecutor
-from windows_mcp.tree.utils import is_fully_covered, is_unreadable_window
+from windows_mcp.tree.utils import is_fully_covered, is_unreadable_window, top_level_window_at
 from windows_mcp.vdm.core import (
     get_all_desktops,
     get_current_desktop,
@@ -1679,6 +1679,20 @@ class Desktop:
             metadata=node.metadata,
         )
 
+    @staticmethod
+    def _clip_moves_onto_other_window(center, clipped_box: BoundingBox) -> bool:
+        """True when clipping moved an element's click point onto a different window.
+
+        The hidden-element filter already proved the window at the original centre
+        is the element's own. A partly-in-region element gets its centre moved into
+        the clipped part, which a covering window may own: a click there would hit
+        that window instead.
+        """
+        new = clipped_box.get_center()
+        if center is None or (new.x, new.y) == (center.x, center.y):
+            return False
+        return top_level_window_at(center.x, center.y) != top_level_window_at(new.x, new.y)
+
     def _filter_semantic_node_to_region(
         self,
         node: SemanticNode | None,
@@ -1691,6 +1705,10 @@ class Desktop:
         if node.bounding_box is not None:
             clipped_box = self._clip_bounding_box_to_region(node.bounding_box, region)
             if clipped_box is None:
+                return None
+            if node.element_type in ("interactive", "scrollable") and (
+                self._clip_moves_onto_other_window(node.center, clipped_box)
+            ):
                 return None
 
         filtered_children = []
@@ -1715,16 +1733,21 @@ class Desktop:
         return filtered_node
 
     def _filter_tree_state_to_region(self, tree_state, region: BoundingBox):
+        def reachable(node, filtered_node) -> bool:
+            return filtered_node is not None and not self._clip_moves_onto_other_window(
+                node.center, filtered_node.bounding_box
+            )
+
         filtered_interactive_nodes = []
         for node in tree_state.interactive_nodes:
             filtered_node = self._filter_tree_node_to_region(node, region)
-            if filtered_node is not None:
+            if reachable(node, filtered_node):
                 filtered_interactive_nodes.append(filtered_node)
 
         filtered_scrollable_nodes = []
         for node in tree_state.scrollable_nodes:
             filtered_node = self._filter_scroll_node_to_region(node, region)
-            if filtered_node is not None:
+            if reachable(node, filtered_node):
                 filtered_scrollable_nodes.append(filtered_node)
 
         filtered_dom_node = None

@@ -14,9 +14,10 @@ from windows_mcp.desktop.views import Window, Status, DesktopState
 
 @pytest.fixture(autouse=True)
 def _nothing_covers_fake_windows(monkeypatch):
-    """Tests use made-up window handles; hit-testing them against the real desktop
-    would call every one of them covered. Tests of the check patch it themselves."""
+    """Tests use made-up windows and coordinates; hit-testing them against the real
+    desktop would call them covered. Tests of these checks patch them themselves."""
     monkeypatch.setattr("windows_mcp.desktop.service.is_fully_covered", lambda *a, **k: False)
+    monkeypatch.setattr("windows_mcp.desktop.service.top_level_window_at", lambda x, y: 0)
 
 
 @pytest.fixture
