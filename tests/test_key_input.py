@@ -44,6 +44,26 @@ def test_unknown_key_name_raises_before_any_key_is_pressed(sent):
     assert sent["vk"] == []
 
 
+@pytest.mark.parametrize(
+    ("vk", "extended"),
+    [
+        (core.Keys.VK_MENU, False),  # extended Alt = right Alt = AltGr, which adds Ctrl
+        (core.Keys.VK_SHIFT, False),
+        (ord("A"), False),
+        (core.Keys.VK_LEFT, True),
+        (core.Keys.VK_DELETE, True),
+        (core.Keys.VK_LWIN, True),
+    ],
+)
+def test_extended_flag_only_on_real_extended_keys(monkeypatch, vk, extended):
+    calls = []
+    fake_user32 = SimpleNamespace(keybd_event=lambda *a: calls.append(a))
+    monkeypatch.setattr(core, "ctypes", SimpleNamespace(windll=SimpleNamespace(user32=fake_user32)))
+    flags = core.KeyboardEventFlag.KeyDown | core.KeyboardEventFlag.ExtendedKey
+    core.keybd_event(vk, 0, flags, 0)
+    assert bool(calls[0][2] & core.KeyboardEventFlag.ExtendedKey) is extended
+
+
 def test_clipboard_buffer_counts_utf16_units(monkeypatch):
     calls = {}
 

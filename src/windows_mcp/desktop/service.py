@@ -71,6 +71,10 @@ def _virtual_key(key: str) -> int:
     raise ValueError(f"Unknown key {key!r}")
 
 
+_ALT_KEYS = frozenset([uia.Keys.VK_MENU, uia.Keys.VK_LMENU, uia.Keys.VK_RMENU])
+_MENU_MASK_KEY = 0xE8  # unassigned virtual key
+
+
 @contextmanager
 def _keys_held(keys: list[str]):
     """Hold *keys* down for the duration of the block; always release them, last first."""
@@ -83,6 +87,11 @@ def _keys_held(keys: list[str]):
         yield
     finally:
         for code in reversed(pressed):
+            if code in _ALT_KEYS:
+                # A bare Alt-up opens the window's menu bar; an unassigned key in
+                # between cancels that (AutoHotkey's "menu mask").
+                uia.PressKey(_MENU_MASK_KEY, waitTime=0)
+                uia.ReleaseKey(_MENU_MASK_KEY, waitTime=0)
             uia.ReleaseKey(code, waitTime=0.05)
 
 

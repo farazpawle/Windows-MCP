@@ -91,6 +91,25 @@ class TestHeldModifiersInService:
         ctrl, shift = uia.Keys.VK_CONTROL, uia.Keys.VK_SHIFT
         assert events == [("down", ctrl), ("down", shift), ("click",), ("up", shift), ("up", ctrl)]
 
+    @pytest.mark.parametrize("action", ["click", "scroll"])
+    def test_alt_holds_only_alt_and_masks_the_menu_before_release(self, action):
+        # Round-2 2.1: Alt must not bring Ctrl along, and a tap of the unassigned
+        # key 0xE8 before Alt-up keeps the window's menu bar from opening.
+        events = []
+        with (
+            patch.object(uia, "PressKey", side_effect=lambda k, **_: events.append(("down", k))),
+            patch.object(uia, "ReleaseKey", side_effect=lambda k, **_: events.append(("up", k))),
+            patch.object(uia, "Click"),
+            patch.object(uia, "WheelUp"),
+            patch.object(Desktop, "_require_on_screen"),
+        ):
+            if action == "click":
+                _desktop().click([5, 6], modifiers=["alt"])
+            else:
+                _desktop().scroll(None, "vertical", "up", 1, modifiers=["alt"])
+        alt = uia.Keys.VK_MENU
+        assert events == [("down", alt), ("down", 0xE8), ("up", 0xE8), ("up", alt)]
+
     def test_modifiers_are_released_even_when_the_action_fails(self):
         released = []
         with (

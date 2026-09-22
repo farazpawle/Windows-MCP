@@ -230,8 +230,20 @@ def mouse_event(dwFlags: int, dx: int, dy: int, dwData: int, dwExtraInfo: int) -
     ctypes.windll.user32.mouse_event(dwFlags, dx, dy, dwData, dwExtraInfo)
 
 
+# Keys that really are "extended" (second key of a pair, or the grey keys).
+_EXTENDED_VKS = frozenset(
+    [0x03, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28, 0x2C, 0x2D, 0x2E]
+    + [0x5B, 0x5C, 0x5D, 0x6F, 0x90, 0xA3, 0xA5]
+    + list(range(0xA6, 0xB8))  # browser, volume and media keys
+)
+
+
 def keybd_event(bVk: int, bScan: int, dwFlags: int, dwExtraInfo: int) -> None:
     """keybd_event from Win32."""
+    # Callers pass ExtendedKey for every key. For Alt that means the right Alt, which
+    # is AltGr on many layouts (Windows then adds a Ctrl), so keep it only where real.
+    if bVk not in _EXTENDED_VKS:
+        dwFlags &= ~KeyboardEventFlag.ExtendedKey
     ctypes.windll.user32.keybd_event(bVk, bScan, dwFlags, dwExtraInfo)
 
 
