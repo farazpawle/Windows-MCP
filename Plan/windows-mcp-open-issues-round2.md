@@ -1,7 +1,7 @@
 ---
 Title: Windows-MCP open issues backlog - round 2 (2026-09-22)
-Description: Findings of the second round of live testing of all 20 windows-mcp tools on 2026-09-22, turned into a task file. Part A Bugs - 7 High (registry paths act as wildcards and reach the file system; WaitFor renumbers Snapshot labels; off-screen points are clamped and clicked; an on-top unfocused window gets no Snapshot elements; pop-up menus don't hide covered elements; region clipping moves a click point under a covering window), 16 Medium, 27 Low. Part B Improvements to reach Claude Cowork computer-use behaviour. Part C New tools/abilities (each needs the user's design approval first). Part D Skills/Skill.md corrections and one optional [User] high-DPI test. Every item keeps its finding, then lists single-action fix subtasks and its own Verify line; the file ends with the overall verification rules.
-Total Tasks: 177
+Description: Findings of the second round of live testing of all 20 windows-mcp tools on 2026-09-22, turned into a task file. Part A Bugs - 7 High (registry paths act as wildcards and reach the file system; WaitFor renumbers Snapshot labels; off-screen points are clamped and clicked; an on-top unfocused window gets no Snapshot elements; pop-up menus don't hide covered elements; region clipping moves a click point under a covering window), 16 Medium, 27 Low. Part B Improvements to reach Claude Cowork computer-use behaviour. Part C New tools/abilities (each needs the user's design approval first). Part D Skills/Skill.md corrections and one optional [User] high-DPI test. Items 3.28 and 3.29 were found on 2026-09-22 while fixing 3.4 and 3.2 and are not yet done. Every item keeps its finding, then lists single-action fix subtasks and its own Verify line; the file ends with the overall verification rules.
+Total Tasks: 179
 ---
 # Windows-MCP open issues - round 2
 
@@ -239,7 +239,7 @@ Source: live tests on 2026-09-22 (Windows 11 Pro 26200, one 1920x1080 display at
 
   - **Verify:** Unit - `"ctrl, shift"` parses to ctrl+shift; `"ctrl+bogus"` error names `bogus`.
   - **Result (2026-09-22):** done. `_as_modifiers` splits on any run of `+`, commas and spaces, so "ctrl+shift", "ctrl, shift", "ctrl shift", "ctrl,shift" and " ctrl , shift " all give ctrl+shift; lists and JSON list strings are unchanged, and an empty string now means no modifiers instead of an error. (c) followed from (a): the old error named the whole input only because a comma list never split, so the single token *was* the whole input; "ctrl, bogus" and "bogus shift" now name just `'bogus'`. Both tools that take modifiers (Click, Scroll) document the aliases and the separators in their description; a test asserts that, so a future reword cannot silently drop it. Tested together with 3.4 (65 unit tests in the file; full suite 1000 passed). Live: `Click` with `modifiers="ctrl, shift"` on the harness text box replied "holding ctrl+shift" (the point was checked to be over the harness first).
-- [ ]  3.6 **FileSystem replies.** "Appended to ... (12 bytes)" gives the whole file size, not the bytes added; `write` to `trailingdot.` saves `trailingdot` but the reply keeps the dot; `write` onto a folder says "Permission denied ... may require an elevated (Administrator) terminal"; `offset=-1`, `limit=0` are silently ignored; `append=true` with `overwrite=true` silently appends (the two conflict); an empty `path` resolves to the Desktop folder and the error suggests "Set overwrite=True to replace it".
+- [x]  3.6 **FileSystem replies.** "Appended to ... (12 bytes)" gives the whole file size, not the bytes added; `write` to `trailingdot.` saves `trailingdot` but the reply keeps the dot; `write` onto a folder says "Permission denied ... may require an elevated (Administrator) terminal"; `offset=-1`, `limit=0` are silently ignored; `append=true` with `overwrite=true` silently appends (the two conflict); an empty `path` resolves to the Desktop folder and the error suggests "Set overwrite=True to replace it".
 
   - [x]  a. Report the bytes added on append.
   - [x]  b. Report the real saved file name.
@@ -381,6 +381,16 @@ Source: live tests on 2026-09-22 (Windows 11 Pro 26200, one 1920x1080 display at
   - [ ]  a. Update the Move description to say `down` may omit `loc` too.
 
   - **Verify:** The tool description text says so.
+- [ ]  3.28 **A one-second hold replies "for 1 seconds".** Tool: Shortcut. Found on 2026-09-22 while fixing 3.4, not part of it. `Shortcut shortcut="shift+left" hold=1` replies "Held shift+left for 1 seconds." Expected: "for 1 second". The `{hold:g}` format drops the decimal for a whole number, so the plural is wrong for exactly 1; every other value reads correctly ("0.5 seconds", "2 seconds").
+
+  - [ ]  a. Word the unit singular when the value is exactly 1, in the Shortcut hold reply and anywhere else a duration is printed (check Wait).
+
+  - **Verify:** Unit - `hold=1` replies "for 1 second", `hold=0.5` and `hold=2` keep "seconds".
+- [ ]  3.29 **Scroll's `type` parameter shadows the Python builtin.** Tool: Scroll (`scroll_tool` in `tools/input.py`). Found on 2026-09-22 while fixing 3.2, not part of it. The tool's `type: Literal["horizontal", "vertical"]` argument hides the `type()` builtin for the whole function body, so the guard written as `type(wheel_times) is not int` raised "'str' object is not callable" on **every** scroll, not just bad ones. The tests caught it and nothing shipped, but the trap is still there for the next edit; `Desktop.scroll` has the same parameter name. No user-visible fault today - this is a latent one.
+
+  - [ ]  a. Decide with the user whether to rename the argument (it is part of the tool's public schema, so renaming changes what the model sends) or to leave it and add a comment at the top of both functions warning that `type` is shadowed. `[User]` - renaming is a visible API change, so it needs the user's call.
+
+  - **Verify:** Whichever is chosen: if renamed, the old name still works or the description is updated and the tests pass; if not, the comment is present in `scroll_tool` and `Desktop.scroll`.
 
 # Part B - Improvements (to work like Claude Cowork)
 
