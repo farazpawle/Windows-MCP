@@ -23,7 +23,7 @@ WaitForCondition = Literal[
 
 def _resolve_label(desktop: Any, label: int) -> list[int]:
     """Resolve a UI element label to screen coordinates."""
-    if desktop.desktop_state is None:
+    if desktop.label_tree_state is None:
         raise ValueError("Desktop state is empty. Please call Snapshot first.")
     try:
         return list(desktop.get_coordinates_from_label(label))

@@ -141,6 +141,10 @@ class Desktop:
         self.encoding = getpreferredencoding()
         self.tree = Tree(self)
         self.desktop_state = None
+        # The tree whose [label:N] ids the last Snapshot printed. Only Snapshot sets it:
+        # every other capture (WaitFor, App, Scrape, Screenshot) replaces desktop_state,
+        # which silently renumbered labels.
+        self.label_tree_state: TreeState | None = None
 
     def get_state(
         self,
@@ -746,8 +750,13 @@ class Desktop:
                 return True
         return False
 
+    def _label_tree(self) -> TreeState:
+        if self.label_tree_state is None:
+            raise ValueError("No element labels yet. Call Snapshot first.")
+        return self.label_tree_state
+
     def get_coordinates_from_label(self, label: int) -> tuple[int, int]:
-        tree_state = self.desktop_state.tree_state
+        tree_state = self._label_tree()
         if label < len(tree_state.interactive_nodes):
             element_node = tree_state.interactive_nodes[label]
         else:
@@ -760,7 +769,7 @@ class Desktop:
 
     def get_coordinates_from_labels(self, labels: list[int]) -> list[tuple[int, int]]:
         """Resolve multiple UI element labels to screen coordinates in bulk."""
-        tree_state = self.desktop_state.tree_state
+        tree_state = self._label_tree()
         interactive_nodes = tree_state.interactive_nodes
         scrollable_nodes = tree_state.scrollable_nodes
         interactive_len = len(interactive_nodes)

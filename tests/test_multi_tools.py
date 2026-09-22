@@ -66,6 +66,7 @@ def make_desktop_with_tree_state():
             ],
         ),
     )
+    desktop.label_tree_state = desktop.desktop_state.tree_state  # as Snapshot sets it
     return desktop
 
 

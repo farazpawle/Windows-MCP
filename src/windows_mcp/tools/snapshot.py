@@ -22,8 +22,9 @@ screenshot_tool = None
 
 def register(mcp, *, get_desktop, get_analytics):
     global state_tool, screenshot_tool
+
     @mcp.tool(
-        name='Snapshot',
+        name="Snapshot",
         description="Take a screenshot and inspect the screen. Keywords: screenshot, screen capture, see screen, observe, look, inspect, UI elements, what's on screen. Captures complete desktop state including: system language, focused/opened windows, interactive elements (buttons, text fields, links, menus with coordinates), and scrollable areas. Set use_vision=True to include screenshot with cursor highlight. Set use_annotation=False to get a clean screenshot without bounding box overlays on UI elements (default: True, draws colored rectangles around detected elements). Set use_ui_tree=False for a faster screenshot-only snapshot when you do not need interactive or scrollable element extraction. Set width_reference_lines/height_reference_lines to overlay a grid for better spatial reasoning (make sure vision is enabled to use it). Set use_dom=True for browser content to get web page elements instead of browser UI. Set display=[0] or display=[0,1] using zero-based active Windows display indices; omit it to keep the default full-desktop behavior. Set region=[left, top, right, bottom] in virtual-desktop pixel coordinates to capture and inspect only that rectangle instead of the whole screen/display — useful when you already know which area matters and want to save tokens; region takes precedence over display when both are given, and an invalid or out-of-bounds region raises an error rather than silently capturing something else. Always call this first to understand the current desktop state before taking actions.",
         annotations=ToolAnnotations(
             title="Snapshot",
@@ -45,9 +46,10 @@ def register(mcp, *, get_desktop, get_analytics):
         region: list[int] | str | None = None,
         ctx: Context = None,
     ):
+        desktop = get_desktop()
         try:
             capture_result = capture_desktop_state(
-                get_desktop(),
+                desktop,
                 use_vision=as_bool(use_vision, "use_vision"),
                 use_dom=as_bool(use_dom, "use_dom"),
                 use_annotation=as_bool(use_annotation, "use_annotation"),
@@ -63,16 +65,18 @@ def register(mcp, *, get_desktop, get_analytics):
                 "Snapshot failed with display=%s region=%s use_vision=%s use_dom=%s",
                 display,
                 region,
-                use_vision if 'use_vision' in locals() else None,
-                use_dom if 'use_dom' in locals() else None,
+                use_vision if "use_vision" in locals() else None,
+                use_dom if "use_dom" in locals() else None,
                 exc_info=True,
             )
-            return [f'Error capturing desktop state: {str(e)}. Please try again.']
+            return [f"Error capturing desktop state: {str(e)}. Please try again."]
 
+        # Label clicks resolve against exactly the tree printed here, never a later capture.
+        desktop.label_tree_state = capture_result["desktop_state"].tree_state
         return build_snapshot_response(capture_result, include_ui_details=True)
 
     @mcp.tool(
-        name='Screenshot',
+        name="Screenshot",
         description="Captures a fast screenshot-first desktop snapshot with cursor position, desktop/window summaries, and an image. This path skips UI tree extraction for speed. Use Snapshot when you need interactive element ids, scrollable regions, or browser DOM extraction. Set display=[0] or display=[0,1] using zero-based active Windows display indices to capture only those monitors. Set region=[left, top, right, bottom] in virtual-desktop pixel coordinates to capture only that rectangle instead of the whole screen/display — useful when you already know which area matters and want to save tokens; region takes precedence over display when both are given, and an invalid or out-of-bounds region raises an error rather than silently capturing something else. Note: the returned image may be downscaled for efficiency; when it is, multiply image coordinates by the ratio of original size to displayed size to get the actual screen coordinates for mouse actions (Click, Move, etc.).",
         annotations=ToolAnnotations(
             title="Screenshot",
@@ -111,7 +115,7 @@ def register(mcp, *, get_desktop, get_analytics):
                 region,
                 exc_info=True,
             )
-            return [f'Error capturing screenshot: {str(e)}. Please try again.']
+            return [f"Error capturing screenshot: {str(e)}. Please try again."]
 
         return build_snapshot_response(
             capture_result,

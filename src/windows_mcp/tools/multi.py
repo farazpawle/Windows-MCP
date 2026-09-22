@@ -41,7 +41,7 @@ def register(mcp, *, get_desktop, get_analytics):
             raise ValueError("Either locs or labels must be provided.")
         locs = locs or []
         if labels is not None:
-            if desktop.desktop_state is None:
+            if desktop.label_tree_state is None:
                 raise ValueError("Desktop state is empty. Please call Snapshot first.")
             try:
                 resolved_locs = desktop.get_coordinates_from_labels(labels)
@@ -79,7 +79,7 @@ def register(mcp, *, get_desktop, get_analytics):
             raise ValueError("Either locs or labels must be provided.")
         locs = locs or []
         if labels is not None:
-            if desktop.desktop_state is None:
+            if desktop.label_tree_state is None:
                 raise ValueError("Desktop state is empty. Please call Snapshot first.")
 
             # Pre-validate and extract labels and texts
