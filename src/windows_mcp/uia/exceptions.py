@@ -47,7 +47,7 @@ class UIANoClickablePointError(UIAException):
 
 
 class UIATimeoutError(UIAException):
-    """UIA or RPC operation timed out (UIA_E_TIMEOUT, RPC_E_TIMEOUT)."""
+    """UIA or RPC operation timed out (UIA_E_TIMEOUT, RPC_E_TIMEOUT, ERROR_TIMEOUT)."""
 
 
 class UIAThreadError(UIAException):
@@ -86,6 +86,7 @@ _CODE_TO_EXCEPTION: dict[int, type[UIAException]] = {
     UIAError.UIA_E_NOCLICKABLEPOINT: UIANoClickablePointError,
     UIAError.UIA_E_TIMEOUT: UIATimeoutError,
     UIAError.RPC_E_TIMEOUT: UIATimeoutError,
+    UIAError.ERROR_TIMEOUT: UIATimeoutError,
     UIAError.UIA_E_INVALIDOPERATION: UIAInvalidOperationError,
     UIAError.RPC_E_WRONG_THREAD: UIAThreadError,
     UIAError.RPC_E_THREAD_NOT_INIT: UIAThreadError,

@@ -1,5 +1,6 @@
 from __future__ import annotations
 from windows_mcp.uia import Control, ComboBoxControl, DocumentControl, CheckBoxControl, EditControl, ButtonControl, SliderControl, ScrollPattern, WindowControl, ImageControl, Rect, ExpandCollapseState, ToggleState, PatternId, PropertyId, AccessibleRoleNames, TreeScope, ControlFromHandle, UIADeadElementError, from_com_error, TextPatternRangeEndpoint
+from windows_mcp.uia.exceptions import UIATimeoutError
 from windows_mcp.tree.config import INTERACTIVE_CONTROL_TYPE_NAMES, DOCUMENT_CONTROL_TYPE_NAMES, INFORMATIVE_CONTROL_TYPE_NAMES, DEFAULT_ACTIONS, INTERACTIVE_ROLES, THREAD_MAX_RETRIES, STRUCTURAL_CONTROL_TYPE_NAMES
 from windows_mcp.tree.views import TreeElementNode, ScrollElementNode, TextElementNode, Center, BoundingBox, TreeState, SemanticNode, _prune_structural, _reverse_children_order
 from windows_mcp.tree.cache_utils import (
@@ -215,6 +216,12 @@ class Tree:
                         dom_informative_nodes.extend(info_nodes)
                         if win_sem_node is not None:
                             window_sem_nodes.append(win_sem_node)
+                    break
+                except UIATimeoutError:
+                    # The app did not answer within the UIA timeout — it is frozen, not busy.
+                    # Retrying would only multiply the wait, so skip it immediately.
+                    logger.warning(f"Window handle {handle} timed out (not responding) — skipped")
+                    failed_handles.append(handle)
                     break
                 except Exception as e:
                     retry_counts[handle] = attempt + 1

@@ -27,7 +27,7 @@ pytest                     # Run all tests
 pytest tests/test_foo.py   # Run a single test file
 ```
 
-**Package manager**: UV (not pip). **Python**: 3.13+. **Build backend**: Hatchling.
+**Package manager**: UV (not pip). **Python**: 3.14+ (`requires-python = ">=3.14"`; `.python-version` pins 3.14.7, which older uv releases cannot download — use `uv sync --python 3.14 --extra dev`, since pytest/ruff live in the `dev` extra). **Build backend**: Hatchling.
 
 ## Architecture
 
@@ -67,6 +67,8 @@ The codebase follows a layered service architecture under `src/windows_mcp/`:
 - Fuzzy string matching (`thefuzz`) is used for element name matching
 - UI element fetching has retry logic (`THREAD_MAX_RETRIES=3` in tree service)
 - The server supports stdio, SSE, and streamable HTTP transports
+- `serve()` drops `SSLKEYLOGFILE` at startup (`_drop_ssl_keylog_env`): Avast/AVG inject it into every process, and this Python's OpenSSL then aborts the whole server on the first HTTPS request. Keep it.
+- Docs live in `docs/` (test reports in `docs/testing/`); plans and task files in `Plan/`.
 
 ## Environment Variables
 

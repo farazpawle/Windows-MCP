@@ -129,16 +129,42 @@ def _node_matches(node: Any, text: str | None, window_name: str | None) -> bool:
     ) and _text_matches(getattr(node, "window_name", ""), window_name)
 
 
+def _text_window_handles(desktop_state: Any, window_name: str | None) -> list[int]:
+    """Windows to search for static text: those matching window_name, else the active one."""
+    active_window = getattr(desktop_state, "active_window", None)
+    if window_name is None:
+        return [active_window.handle] if active_window is not None else []
+    windows = [active_window, *getattr(desktop_state, "windows", [])]
+    handles = [w.handle for w in windows if w is not None and _text_matches(w.name, window_name)]
+    return list(dict.fromkeys(handles))
+
+
 def _matches_wait_condition(
     desktop_state: Any,
     condition: WaitForCondition,
     text: str | None,
     window_name: str | None,
+    desktop: Any = None,
 ) -> tuple[bool, str]:
     if condition == "text_exists":
-        for source in _iter_text_sources(desktop_state):
+        if window_name is None:
+            sources = _iter_text_sources(desktop_state)
+        else:
+            sources = [
+                n.name for n in _iter_nodes(desktop_state) if _node_matches(n, text, window_name)
+            ]
+            # DOM text carries no window name; it belongs to the active (browser) window.
+            active_window = getattr(desktop_state, "active_window", None)
+            tree_state = getattr(desktop_state, "tree_state", None)
+            if active_window is not None and _text_matches(active_window.name, window_name):
+                sources += [n.text for n in getattr(tree_state, "dom_informative_nodes", [])]
+        for source in sources:
             if _text_matches(source, text):
                 return True, f"text {text!r} appeared"
+        if desktop is not None and desktop.find_text(
+            text, _text_window_handles(desktop_state, window_name)
+        ):
+            return True, f"text {text!r} appeared"
         return False, f"text {text!r} was absent"
 
     if condition == "active_window":
@@ -488,6 +514,7 @@ def register(
                 condition=normalized,
                 text=text,
                 window_name=window_name,
+                desktop=desktop,
             )
             if matched:
                 elapsed = time.monotonic() - started_at

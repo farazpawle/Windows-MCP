@@ -1,4 +1,5 @@
 from windows_mcp.desktop.utils import (
+    is_window_hung,
     resolve_known_folder_guid_path,
 )
 from windows_mcp.powershell.utils import ps_quote
@@ -27,6 +28,8 @@ import win32process
 import win32gui
 import win32con
 import requests
+import ssl
+import truststore
 import logging
 import random
 import ctypes
@@ -49,6 +52,19 @@ _KEY_ALIASES = {
     "command": "Win",
     "option": "Alt",
 }
+
+
+class _WindowsTrustAdapter(requests.adapters.HTTPAdapter):
+    # Verify HTTPS against the Windows certificate store, as browsers do. Python
+    # 3.13+'s strict X.509 checks reject antivirus TLS-inspection roots (Avast),
+    # which failed every HTTPS scrape. Scoped to Scrape: truststore is client-only.
+    def init_poolmanager(self, *args, **kwargs):
+        kwargs["ssl_context"] = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+        return super().init_poolmanager(*args, **kwargs)
+
+
+_http_session = requests.Session()
+_http_session.mount("https://", _WindowsTrustAdapter())
 
 
 def _snapshot_profile_enabled() -> bool:
@@ -648,6 +664,33 @@ class Desktop:
         except Exception as e:
             logger.exception(f"Failed to bring window to top: {e}")
 
+    def find_text(self, text: str, handles: list[int]) -> bool:
+        """Return True if any element in the given windows has a name containing `text`.
+
+        The tree capture keeps only interactive/scrollable nodes outside browsers, so
+        plain labels ("Saved", "Done") are invisible to it. One native UIA FindFirst
+        per window (case-insensitive substring) finds them in tens of milliseconds.
+        """
+        ia = uia.core._AutomationClient.instance().IUIAutomation
+        flags = (
+            uia.PropertyConditionFlags.PropertyConditionFlags_IgnoreCase
+            | uia.PropertyConditionFlags.PropertyConditionFlags_MatchSubstring
+        )
+        for handle in handles:
+            if is_window_hung(handle):
+                continue
+            try:
+                condition = ia.CreatePropertyConditionEx(uia.PropertyId.NameProperty, text, flags)
+                found = ia.ElementFromHandle(handle).FindFirst(
+                    uia.TreeScope.TreeScope_Descendants, condition
+                )
+            except Exception as e:
+                logger.debug("find_text failed for window %s: %s", handle, e)
+                continue
+            if found:
+                return True
+        return False
+
     def get_coordinates_from_label(self, label: int) -> tuple[int, int]:
         tree_state = self.desktop_state.tree_state
         if label < len(tree_state.interactive_nodes):
@@ -731,6 +774,7 @@ class Desktop:
             sleep(0.5)
             uia.SendKeys("{Ctrl}a", waitTime=0.05)
             uia.SendKeys("{Back}", waitTime=0.05)
+            self._finish_clear()
         # Per-key SendKeys for short text (so escape sequences keep working);
         # clipboard paste for long text (so the scan-code queue can't race).
         has_control_chars = any(c in text for c in ("\n", "\t", "{", "}"))
@@ -743,6 +787,18 @@ class Desktop:
             uia.SendKeys(escaped_text, interval=0.04, waitTime=0.05)
         if press_enter is True or (isinstance(press_enter, str) and press_enter.lower() == "true"):
             uia.SendKeys("{Enter}", waitTime=0.05)
+
+    def _finish_clear(self) -> None:
+        # Legacy Win32 EDIT boxes (no visual styles) ignore Ctrl+A, so the Back
+        # above removed a single char. Empty any leftover through ValuePattern;
+        # fields that cleared normally are untouched.
+        try:
+            focused = uia.GetFocusedControl()
+            pattern = focused.GetPattern(uia.PatternId.ValuePattern) if focused else None
+            if pattern is not None and not pattern.IsReadOnly and pattern.Value:
+                pattern.SetValue("")
+        except Exception as e:
+            logger.debug("ValuePattern clear fallback failed: %s", e)
 
     def _paste_text(self, text: str):
         """Stash text on the clipboard, Ctrl+V, restore prior clipboard.
@@ -785,22 +841,36 @@ class Desktop:
                     case _:
                         return 'Invalid direction. Use "up" or "down".'
             case "horizontal":
-                match direction:
-                    case "left":
-                        uia.PressKey(uia.Keys.VK_SHIFT, waitTime=0.05)
-                        uia.WheelUp(wheel_times)
-                        sleep(0.05)
-                        uia.ReleaseKey(uia.Keys.VK_SHIFT, waitTime=0.05)
-                    case "right":
-                        uia.PressKey(uia.Keys.VK_SHIFT, waitTime=0.05)
-                        uia.WheelDown(wheel_times)
-                        sleep(0.05)
-                        uia.ReleaseKey(uia.Keys.VK_SHIFT, waitTime=0.05)
-                    case _:
-                        return 'Invalid direction. Use "left" or "right".'
+                if direction not in ("left", "right"):
+                    return 'Invalid direction. Use "left" or "right".'
+                self._scroll_horizontal(direction == "right", wheel_times)
             case _:
                 return 'Invalid type. Use "horizontal" or "vertical".'
         return None
+
+    def _scroll_horizontal(self, right: bool, wheel_times: int) -> None:
+        # Shift+wheel is only a browser/Explorer convention; native apps scroll
+        # vertically on it. Prefer the ScrollPattern of the nearest horizontally
+        # scrollable element under the cursor, else send a real horizontal wheel.
+        pattern = None
+        try:
+            control = uia.ControlFromCursor()
+            while control is not None and pattern is None:
+                candidate = control.GetPattern(uia.PatternId.ScrollPattern)
+                if candidate is not None and candidate.HorizontallyScrollable:
+                    pattern = candidate
+                control = control.GetParentControl()
+        except Exception as e:
+            logger.debug("Horizontal ScrollPattern lookup failed, using wheel: %s", e)
+            pattern = None
+        if pattern is not None:
+            step = uia.ScrollAmount.SmallIncrement if right else uia.ScrollAmount.SmallDecrement
+            for _ in range(wheel_times * 3):  # one wheel notch ~ 3 lines, as vertically
+                pattern.Scroll(step, uia.ScrollAmount.NoAmount)
+            return
+        for _ in range(wheel_times):
+            uia.mouse_event(uia.MouseEventFlag.HWheel, 0, 0, 120 if right else -120, 0)
+            sleep(0.05)
 
     def _normalize_drag_duration(self, duration: float | int | str | None) -> float | None:
         if duration is None:
@@ -887,7 +957,7 @@ class Desktop:
         try:
             for _ in range(5):
                 validate_url(current_url)
-                response = requests.get(current_url, timeout=10, allow_redirects=False)
+                response = _http_session.get(current_url, timeout=10, allow_redirects=False)
                 if not response.is_redirect:
                     break
                 location = response.headers.get("Location")
@@ -932,6 +1002,9 @@ class Desktop:
                     win32gui.IsWindow(hwnd)
                     and win32gui.IsWindowVisible(hwnd)
                     and is_window_on_current_desktop(hwnd)
+                    # UIA calls on a not-responding window block forever, stalling the
+                    # whole capture — drop it before anything downstream touches it.
+                    and not is_window_hung(hwnd)
                 ):
                     handles.add(hwnd)
             except Exception:
@@ -1019,7 +1092,8 @@ class Desktop:
         handle = uia.GetForegroundWindow()
         # NULL handle means no window has foreground focus right now —
         # don't pass that into ControlFromHandle, which would raise.
-        if not handle:
+        # A not-responding foreground window would make ControlFromHandle block forever.
+        if not handle or is_window_hung(handle):
             return None
         return self.get_window_from_element_handle(handle)
 

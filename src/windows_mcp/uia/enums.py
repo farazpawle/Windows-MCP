@@ -2137,6 +2137,7 @@ class UIAError(IntEnum):
     RPC_E_WRONG_THREAD = -2147417842  # 0x8001010E — interface marshalled for a different thread
     RPC_E_THREAD_NOT_INIT = -2147417841  # 0x8001010F — CoInitialize not called on current thread
     RPC_E_TIMEOUT = -2147417825  # 0x8001011F — RPC-level operation timed out
+    ERROR_TIMEOUT = -2147023436  # 0x800705B4 — CUIAutomation8 Connection/TransactionTimeout hit
     RPC_E_UNEXPECTED = -2147352577  # 0x8001FFFF — internal RPC error
     RPC_E_ACCESS_DENIED = -2147417829  # 0x8001011B — RPC-level access denied
 

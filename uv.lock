@@ -1773,6 +1773,7 @@ dependencies = [
     { name = "requests" },
     { name = "tabulate" },
     { name = "thefuzz" },
+    { name = "truststore" },
     { name = "uuid7" },
 ]
 
@@ -1804,6 +1805,7 @@ requires-dist = [
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.9.0" },
     { name = "tabulate", specifier = ">=0.9.0" },
     { name = "thefuzz", specifier = ">=0.22.1" },
+    { name = "truststore", specifier = ">=0.10.4" },
     { name = "uuid7", specifier = ">=0.1.0" },
 ]
 provides-extras = ["dev"]

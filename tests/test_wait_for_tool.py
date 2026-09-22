@@ -23,10 +23,16 @@ class FakeMCP:
 
 
 class FakeDesktop:
-    def __init__(self, states: list[DesktopState]) -> None:
+    def __init__(self, states: list[DesktopState], static_text: str = "") -> None:
         self.states = states
         self.desktop_state: DesktopState | None = None
         self.calls: list[dict[str, object]] = []
+        self.static_text = static_text
+        self.find_text_calls: list[tuple[str, list[int]]] = []
+
+    def find_text(self, text: str, handles: list[int]) -> bool:
+        self.find_text_calls.append((text, handles))
+        return text.casefold() in self.static_text.casefold()
 
     def get_state(self, **kwargs: object) -> DesktopState:
         self.calls.append(kwargs)
@@ -41,14 +47,14 @@ def _box() -> BoundingBox:
     return BoundingBox(left=0, top=0, right=100, bottom=40, width=100, height=40)
 
 
-def _window(name: str) -> Window:
+def _window(name: str, handle: int = 123) -> Window:
     return Window(
         name=name,
         is_browser=False,
         depth=0,
         status=Status.NORMAL,
         bounding_box=_box(),
-        handle=123,
+        handle=handle,
         process_id=456,
     )
 
@@ -74,13 +80,14 @@ def _state(
     active_window_name: str = "Notepad",
     elements: list[TreeElementNode] | None = None,
     dom_texts: list[str] | None = None,
+    windows: list[Window] | None = None,
 ) -> DesktopState:
     active_window = _window(active_window_name)
     return DesktopState(
         active_desktop={"name": "Desktop 1"},
         all_desktops=[],
         active_window=active_window,
-        windows=[],
+        windows=windows or [],
         tree_state=TreeState(
             interactive_nodes=elements or [],
             dom_informative_nodes=[TextElementNode(text=text) for text in (dom_texts or [])],
@@ -117,6 +124,63 @@ def test_wait_for_text_polls_until_dom_text_appears() -> None:
     assert len(desktop.calls) == 2
     assert desktop.calls[0]["use_dom"] is True
     assert desktop.calls[0]["use_vision"] is False
+
+
+def test_wait_for_text_finds_static_text_in_active_window() -> None:
+    # Plain labels are not interactive, so only the targeted search can see them.
+    desktop = FakeDesktop([_state()], static_text="Saved successfully")
+    tools = _register_tools(desktop)
+
+    result = asyncio.run(
+        tools["WaitFor"](condition="text_exists", text="saved", timeout=1, interval=0.001)
+    )
+
+    assert "text 'saved' appeared" in result
+    assert desktop.find_text_calls == [("saved", [123])]
+
+
+def test_wait_for_text_respects_window_name() -> None:
+    other = _element("Saved", window_name="Other App")
+    desktop = FakeDesktop(
+        [
+            _state(
+                elements=[other],
+                windows=[_window("Other App", handle=7), _window("Harness", handle=9)],
+            )
+        ]
+    )
+    tools = _register_tools(desktop)
+
+    with pytest.raises(TimeoutError, match="was absent"):
+        asyncio.run(
+            tools["WaitFor"](
+                condition="text_exists",
+                text="saved",
+                window_name="harness",
+                timeout=0.01,
+                interval=0.001,
+            )
+        )
+    assert desktop.find_text_calls[0] == ("saved", [9])
+
+
+def test_wait_for_dom_text_with_window_name_of_active_browser() -> None:
+    desktop = FakeDesktop([_state(active_window_name="Docs - Edge", dom_texts=["Order placed"])])
+    tools = _register_tools(desktop)
+
+    result = asyncio.run(
+        tools["WaitFor"](
+            condition="text_exists",
+            text="order placed",
+            window_name="edge",
+            use_dom=True,
+            timeout=1,
+            interval=0.001,
+        )
+    )
+
+    assert "appeared" in result
+    assert desktop.find_text_calls == []
 
 
 def test_wait_for_active_window_matches_by_window_name() -> None:

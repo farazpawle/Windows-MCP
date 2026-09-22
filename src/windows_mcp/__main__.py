@@ -162,6 +162,23 @@ class OptionsMiddleware:
             await self.app(scope, receive, send)
 
 
+def _drop_ssl_keylog_env() -> bool:
+    """Remove SSLKEYLOGFILE from this process before any TLS context is created.
+
+    Avast/AVG inject ``SSLKEYLOGFILE=\\\\.\\aswMonFltProxy\\...`` into every process.
+    Python's ssl module honours it, and the bundled OpenSSL then aborts the whole
+    server natively ("OPENSSL_Uplink ... no OPENSSL_Applink") on the first HTTPS
+    request. The server never needs TLS key logging, so it is dropped.
+
+    Returns:
+        ``True`` when the variable was present and removed.
+    """
+    if os.environ.pop("SSLKEYLOGFILE", None) is None:
+        return False
+    logger.info("Ignoring SSLKEYLOGFILE: it crashes OpenSSL in this Python build")
+    return True
+
+
 def _watchdog_enabled() -> bool:
     """Whether the UIA focus WatchDog should run. Off unless asked for.
 
@@ -590,6 +607,7 @@ def serve(
 ):
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
     install_selfpipe_guard()
+    _drop_ssl_keylog_env()
     if transport == Transport.STDIO.value:
         os.environ.setdefault("NO_COLOR", "1")
     if debug:

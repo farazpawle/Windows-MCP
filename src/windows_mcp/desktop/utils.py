@@ -11,7 +11,21 @@ __all__ = [
     "remove_private_use_chars",
     "repair_surrogates",
     "is_elevated",
+    "is_window_hung",
 ]
+
+
+def is_window_hung(hwnd: int) -> bool:
+    """Return True if Windows reports the window as not responding.
+
+    UIA calls (e.g. ControlFromHandle) on such a window block indefinitely, so
+    callers must check this before touching the window through UIA.
+    """
+    import ctypes
+    try:
+        return bool(ctypes.windll.user32.IsHungAppWindow(hwnd))
+    except Exception:
+        return False
 
 
 def is_elevated() -> bool:

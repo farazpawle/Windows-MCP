@@ -49,6 +49,12 @@ from .exceptions import from_com_error  # noqa: E402
 from .comtypes_cache import safe_get_module  # noqa: E402
 
 
+# Upper bounds for a single UIA call into another process. Without them a window whose
+# UI thread is frozen ("Not Responding") blocks the call — and the whole capture — forever.
+UIA_CONNECTION_TIMEOUT_MS = 2000
+UIA_TRANSACTION_TIMEOUT_MS = 5000
+
+
 class _AutomationClient:
     _instance = None
 
@@ -70,10 +76,15 @@ class _AutomationClient:
                 self.UIAutomationCore = safe_get_module(
                     "UIAutomationCore.dll", required_attr="IUIAutomation"
                 )
+                # CUIAutomation8 (not the legacy CUIAutomation) is the only coclass whose
+                # IUIAutomation2 exposes call timeouts; IUIAutomation2 extends IUIAutomation,
+                # so every existing caller keeps working unchanged.
                 self.IUIAutomation = comtypes.client.CreateObject(
-                    "{ff48dba4-60ef-4201-aa87-54103eef594e}",
-                    interface=self.UIAutomationCore.IUIAutomation,
+                    self.UIAutomationCore.CUIAutomation8,
+                    interface=self.UIAutomationCore.IUIAutomation2,
                 )
+                self.IUIAutomation.ConnectionTimeout = UIA_CONNECTION_TIMEOUT_MS
+                self.IUIAutomation.TransactionTimeout = UIA_TRANSACTION_TIMEOUT_MS
                 self.ViewWalker = self.IUIAutomation.RawViewWalker
                 # self.ViewWalker = self.IUIAutomation.ControlViewWalker
                 break
@@ -1452,24 +1463,27 @@ def SendUnicodeChar(char: str, charMode: bool = True) -> int:
     Return int, the number of events that it successfully inserted into the keyboard or mouse input stream.
                 If the function returns zero, the input was already blocked by another thread.
     """
-    if charMode:
-        vk = 0
-        scan = ord(char)
-        flag = KeyboardEventFlag.KeyUnicode
-    else:
+    if not charMode and ord(char) <= 0xFFFF:
         res = ctypes.windll.user32.VkKeyScanW(ctypes.wintypes.WCHAR(char))
         if (res >> 8) & 0xFF == 0:
             vk = res & 0xFF
-            scan = 0
-            flag = 0
-        else:
-            vk = 0
-            scan = ord(char)
-            flag = KeyboardEventFlag.KeyUnicode
-    return SendInput(
-        KeyboardInput(vk, scan, flag | KeyboardEventFlag.KeyDown),
-        KeyboardInput(vk, scan, flag | KeyboardEventFlag.KeyUp),
-    )
+            return SendInput(
+                KeyboardInput(vk, 0, KeyboardEventFlag.KeyDown),
+                KeyboardInput(vk, 0, KeyboardEventFlag.KeyUp),
+            )
+    # KEYEVENTF_UNICODE carries one UTF-16 unit, so a char outside the BMP
+    # (emoji) must be sent as its surrogate pair or it arrives truncated.
+    data = char.encode("utf-16-le")
+    inputs = []
+    for i in range(0, len(data), 2):
+        unit = int.from_bytes(data[i : i + 2], "little")
+        inputs.append(
+            KeyboardInput(0, unit, KeyboardEventFlag.KeyUnicode | KeyboardEventFlag.KeyDown)
+        )
+        inputs.append(
+            KeyboardInput(0, unit, KeyboardEventFlag.KeyUnicode | KeyboardEventFlag.KeyUp)
+        )
+    return SendInput(*inputs)
 
 
 _SCKeys = {
@@ -1567,6 +1581,9 @@ def SendKeys(
         "LALT",
         "RALT",
     )
+    if not text:
+        time.sleep(waitTime)
+        return
     keys = []
     printKeys = []
     i = 0
@@ -1736,6 +1753,11 @@ def SendKeys(
             i += 1
         if i >= length:
             break
+    # Reject unknown {Name} keys before sending anything: failing mid-sequence
+    # would leave an already-pressed hold key (Ctrl, Alt, ...) stuck down.
+    for key in keys:
+        if key[1] == "UnicodeChar" and len(key[0]) != 1:
+            raise ValueError(f'Unknown key name "{key[0]}"')
     hotkeyInterval = 0.01
     for i, key in enumerate(keys):
         if key[1] == "UnicodeChar":
@@ -2110,7 +2132,8 @@ def SetClipboardText(text: str) -> bool:
     with _ClipboardLock:
         if _OpenClipboard(0):
             ctypes.windll.user32.EmptyClipboard()
-            textByteLen = (len(text) + 1) * 2
+            # Size in UTF-16 units, not code points: emoji take two units each.
+            textByteLen = len(text.encode("utf-16-le")) + 2
             hClipboardData = ctypes.windll.kernel32.GlobalAlloc(0x2, textByteLen)  # GMEM_MOVEABLE
             hDestText = ctypes.windll.kernel32.GlobalLock(ctypes.c_void_p(hClipboardData))
             ctypes.cdll.msvcrt.wcsncpy(
