@@ -17,6 +17,7 @@ from windows_mcp.tree.service import Tree
 from windows_mcp.desktop import screenshot as screenshot_capture
 from windows_mcp.desktop import flash_overlay
 from windows_mcp.infrastructure import validate_url
+from importlib import metadata
 from urllib.parse import urljoin
 from contextlib import contextmanager
 from locale import getpreferredencoding
@@ -135,6 +136,20 @@ class _WindowsTrustAdapter(requests.adapters.HTTPAdapter):
 
 _http_session = requests.Session()
 _http_session.mount("https://", _WindowsTrustAdapter())
+
+
+def _package_version() -> str:
+    try:
+        return metadata.version("windows-mcp")
+    except metadata.PackageNotFoundError:
+        return "dev"
+
+
+# Wikimedia and others answer 403 to the default "python-requests/x.y" identity;
+# their policy asks for a tool name, version and a contact URL.
+_http_session.headers["User-Agent"] = (
+    f"windows-mcp/{_package_version()} (+https://github.com/CursorTouch/Windows-MCP)"
+)
 
 
 def _snapshot_profile_enabled() -> bool:
