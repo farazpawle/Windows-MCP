@@ -536,7 +536,7 @@ class TestDisplayFiltering:
 
     def test_get_state_skips_tree_capture_when_use_ui_tree_false(self, desktop):
         desktop.tree = MagicMock()
-        desktop.tree.screen_box = make_box(0, 0, 1920, 1080)
+        desktop.get_screen_box = MagicMock(return_value=make_box(0, 0, 1920, 1080))
         desktop.get_controls_handles = MagicMock(return_value={1})
         active_window = Window(
             name="Browser",
@@ -565,7 +565,7 @@ class TestDisplayFiltering:
                 )
 
         desktop.tree.get_state.assert_not_called()
-        assert state.tree_state.root_node.bounding_box == desktop.tree.screen_box
+        assert state.tree_state.root_node.bounding_box == make_box(0, 0, 1920, 1080)
         assert state.tree_state.interactive_nodes == []
         assert state.tree_state.scrollable_nodes == []
         assert state.screenshot_original_size.to_string() == "(800,600)"
@@ -666,7 +666,7 @@ class TestDisplayFiltering:
 
     def test_get_state_logs_snapshot_profile_when_enabled(self, desktop, monkeypatch):
         desktop.tree = MagicMock()
-        desktop.tree.screen_box = make_box(0, 0, 1920, 1080)
+        desktop.get_screen_box = MagicMock(return_value=make_box(0, 0, 1920, 1080))
         desktop.get_controls_handles = MagicMock(return_value={1})
         active_window = Window(
             name="Browser",

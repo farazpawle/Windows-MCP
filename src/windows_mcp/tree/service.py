@@ -67,6 +67,9 @@ class Tree:
         # Fresh budget per capture — huge lists/grids (e.g. thousands of rows) must not
         # stall UI Automation or blow up the serialized response.
         self.element_budget = TreeElementBudget(resolve_max_tree_elements())
+        # Re-read per capture: a monitor plugged in (or docked) after startup would
+        # otherwise sit outside the cached box and all its elements get clipped away.
+        self.screen_box = self.desktop.get_screen_box()
         start_time = perf_counter()
         profile_enabled = _snapshot_profile_enabled()
 

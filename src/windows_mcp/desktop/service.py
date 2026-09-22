@@ -212,7 +212,7 @@ class Desktop:
                 tree_active_window_handle, tree_other_handles, use_dom=use_dom
             )
         else:
-            root_box = screenshot_region or self.tree.screen_box
+            root_box = screenshot_region or self.get_screen_box()
             tree_state = TreeState(
                 status=True,
                 root_node=TreeElementNode(
@@ -1468,17 +1468,7 @@ class Desktop:
             return active_handle, list(other_handles)
 
         def in_region(handle: int, known_box: BoundingBox | None = None) -> bool:
-            # The visible frame excludes invisible resize borders: a maximised window's
-            # border reaches under the taskbar and would otherwise count as overlapping.
-            rect = uia.DwmGetWindowExtendFrameBounds(handle) or known_box
-            if rect is None:
-                return True  # can't measure it: read it, as before
-            return (
-                rect.left < region.right
-                and rect.right > region.left
-                and rect.top < region.bottom
-                and rect.bottom > region.top
-            )
+            return self._visible_frame_overlaps(handle, known_box, region)
 
         active = (
             active_handle
@@ -1489,8 +1479,27 @@ class Desktop:
         others += [w.handle for w in windows if in_region(w.handle, w.bounding_box)]
         return active, others
 
+    @staticmethod
+    def _visible_frame_overlaps(
+        handle: int, known_box: BoundingBox | None, region: BoundingBox
+    ) -> bool:
+        # The visible frame excludes invisible resize borders: a maximised window's border
+        # reaches under the taskbar, or 8 px onto the next display, and would otherwise
+        # count as overlapping.
+        rect = uia.DwmGetWindowExtendFrameBounds(handle) or known_box
+        if rect is None:
+            return True  # can't measure it: keep it, as before
+        return (
+            rect.left < region.right
+            and rect.right > region.left
+            and rect.top < region.bottom
+            and rect.bottom > region.top
+        )
+
     def _filter_window_to_region(self, window: Window | None, region: BoundingBox) -> Window | None:
         if window is None:
+            return None
+        if not self._visible_frame_overlaps(window.handle, window.bounding_box, region):
             return None
         clipped_box = self._clip_bounding_box_to_region(window.bounding_box, region)
         if clipped_box is None:
