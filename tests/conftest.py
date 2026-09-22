@@ -12,6 +12,13 @@ from windows_mcp.tree.views import BoundingBox, Center, TreeElementNode, ScrollE
 from windows_mcp.desktop.views import Window, Status, DesktopState
 
 
+@pytest.fixture(autouse=True)
+def _nothing_covers_fake_windows(monkeypatch):
+    """Tests use made-up window handles; hit-testing them against the real desktop
+    would call every one of them covered. Tests of the check patch it themselves."""
+    monkeypatch.setattr("windows_mcp.desktop.service.is_fully_covered", lambda *a, **k: False)
+
+
 @pytest.fixture
 def sample_bounding_box():
     return BoundingBox(left=100, top=50, right=300, bottom=150, width=200, height=100)

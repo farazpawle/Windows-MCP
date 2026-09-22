@@ -4,7 +4,7 @@ from windows_mcp.desktop.utils import (
 )
 from windows_mcp.powershell.utils import ps_quote
 from windows_mcp.powershell import PowerShellExecutor
-from windows_mcp.tree.utils import is_unreadable_window
+from windows_mcp.tree.utils import is_fully_covered, is_unreadable_window
 from windows_mcp.vdm.core import (
     get_all_desktops,
     get_current_desktop,
@@ -1583,13 +1583,29 @@ class Desktop:
         def in_region(handle: int, known_box: BoundingBox | None = None) -> bool:
             return self._visible_frame_overlaps(handle, known_box, region)
 
+        def seen_in_region(handle: int, known_box: BoundingBox | None = None) -> bool:
+            # Overlapping is not enough: a window buried under others in the region
+            # would spend the element cap on elements that are then dropped as hidden.
+            if not in_region(handle, known_box):
+                return False
+            frame = uia.DwmGetWindowExtendFrameBounds(handle) or known_box
+            if frame is None:
+                return True
+            part = uia.Rect(
+                max(frame.left, region.left),
+                max(frame.top, region.top),
+                min(frame.right, region.right),
+                min(frame.bottom, region.bottom),
+            )
+            return not is_fully_covered(handle, part)
+
         active = (
             active_handle
             if active_window and in_region(active_handle, active_window.bounding_box)
             else None
         )
-        others = [h for h in other_handles if in_region(h)]
-        others += [w.handle for w in windows if in_region(w.handle, w.bounding_box)]
+        others = [h for h in other_handles if seen_in_region(h)]
+        others += [w.handle for w in windows if seen_in_region(w.handle, w.bounding_box)]
         return active, others
 
     @staticmethod

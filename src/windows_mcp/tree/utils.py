@@ -74,6 +74,35 @@ def top_level_window_at(x: int, y: int) -> int:
     return win32gui.GetAncestor(hwnd, win32con.GA_ROOT) if hwnd else 0
 
 
+def z_order_rank() -> dict[int, int]:
+    """Top-level window handle -> position in z-order (0 = frontmost, topmost first)."""
+    handles: list[int] = []
+    win32gui.EnumWindows(lambda h, _: handles.append(h) or True, None)
+    return {h: i for i, h in enumerate(handles)}
+
+
+def is_fully_covered(
+    handle: int,
+    rect,
+    window_at: Callable[[int, int], int] = top_level_window_at,
+    steps: int = 8,
+) -> bool:
+    """True when other windows cover every sampled point of *rect* (a uia Rect).
+
+    Lets a region capture skip a window it cannot see before walking its tree.
+    """
+    # ponytail: an 8x8 point grid; a visible sliver narrower than one grid step
+    # (1/8 of the rect) is missed and the window skipped. Add steps if that bites.
+    width, height = rect.right - rect.left, rect.bottom - rect.top
+    for i in range(steps):
+        for j in range(steps):
+            x = rect.left + width * (2 * i + 1) // (2 * steps)
+            y = rect.top + height * (2 * j + 1) // (2 * steps)
+            if _same_window(handle, window_at(x, y)):
+                return False
+    return True
+
+
 def _same_window(handle: int, hit: int) -> bool:
     if hit == handle:
         return True
