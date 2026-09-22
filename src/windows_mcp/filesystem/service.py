@@ -30,18 +30,27 @@ def read_file(path: str, offset: int | None = None, limit: int | None = None, en
         return f'Error: File not found: {file_path}'
     if not file_path.is_file():
         return f'Error: Path is not a file: {file_path}'
-    if file_path.stat().st_size > MAX_READ_SIZE:
-        return f'Error: File too large ({file_path.stat().st_size:,} bytes). Maximum is {MAX_READ_SIZE:,} bytes. Use offset/limit parameters or the Shell tool for large files.'
+    too_large = f'Error: File too large ({file_path.stat().st_size:,} bytes). Maximum is {MAX_READ_SIZE:,} bytes. Use offset/limit to read part of it, or the PowerShell tool.'
+    partial = offset is not None or limit is not None
+    if not partial and file_path.stat().st_size > MAX_READ_SIZE:
+        return too_large
 
     try:
         with open(file_path, 'r', encoding=encoding, errors='replace') as f:
-            if offset is not None or limit is not None:
-                lines = f.readlines()
-                start = (offset or 1) - 1  # Convert 1-based to 0-based
-                start = max(0, start)
-                end = start + limit if limit else len(lines)
-                selected = lines[start:end]
-                total = len(lines)
+            if partial:
+                # Stream the lines: only the selected ones are kept, so a large file is fine
+                # as long as the selection itself stays under the cap.
+                start = max(0, (offset or 1) - 1)  # Convert 1-based to 0-based
+                end = start + limit if limit else None
+                selected, size, total = [], 0, 0
+                for total, line in enumerate(f, 1):
+                    if total > start and (end is None or total <= end):
+                        size += len(line)
+                        if size > MAX_READ_SIZE:
+                            return too_large
+                        selected.append(line)
+                if end is None:
+                    end = total
                 content = ''.join(selected)
                 return f'File: {file_path}\nLines {start + 1}-{min(end, total)} of {total}:\n{content}'
             else:

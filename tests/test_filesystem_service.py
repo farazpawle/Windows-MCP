@@ -38,6 +38,29 @@ class TestReadFile:
         assert "Error: Path is not a file" in result
 
 
+class TestReadLargeFile:
+    """Round-2 2.9: offset/limit read part of a file over the size cap."""
+
+    @pytest.fixture
+    def big(self, tmp_path, monkeypatch):
+        monkeypatch.setattr("windows_mcp.filesystem.service.MAX_READ_SIZE", 100)
+        f = tmp_path / "big.log"
+        f.write_text("".join(f"line{i}\n" for i in range(1, 51)), encoding="utf-8")
+        return f
+
+    def test_offset_and_limit_read_the_requested_lines(self, big):
+        result = read_file(str(big), offset=1, limit=2)
+        assert result.endswith("Lines 1-2 of 50:\nline1\nline2\n")
+
+    def test_whole_file_refusal_names_the_powershell_tool(self, big):
+        result = read_file(str(big))
+        assert result.startswith("Error: File too large")
+        assert "PowerShell tool" in result and "Shell tool" not in result.replace("PowerShell", "")
+
+    def test_offset_to_end_over_the_cap_is_refused(self, big):
+        assert read_file(str(big), offset=2).startswith("Error: File too large")
+
+
 class TestWriteFile:
     def test_write_new_file(self, tmp_path):
         f = tmp_path / "out.txt"
