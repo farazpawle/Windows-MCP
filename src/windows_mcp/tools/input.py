@@ -229,6 +229,9 @@ def _validate_wait_for_args(
     return normalized
 
 
+_CLICK_NAMES = {0: "Hover", 1: "Single", 2: "Double", 3: "Triple"}
+
+
 def register(
     mcp: Any,
     *,
@@ -240,7 +243,8 @@ def register(
         description=(
             "Performs mouse clicks at specified coordinates [x, y] or passing a UI element's label/id. "
             "Supports button types: 'left' for selection/activation, 'right' for context menus, 'middle'. "
-            "Supports clicks: 0=hover only (no click), 1=single click (select/focus), 2=double click (open/activate). "
+            "Supports clicks: 0=hover only (no click), 1=single click (select/focus), 2=double click (open/activate), "
+            "3=triple click (select a line/paragraph). "
             "Provide either loc or label."
         ),
         annotations=ToolAnnotations(
@@ -259,6 +263,8 @@ def register(
         clicks: int = 1,
         ctx: Context = None,
     ) -> str:
+        if type(clicks) is not int or clicks not in _CLICK_NAMES:
+            raise ValueError(f"clicks must be 0, 1, 2 or 3 (got {clicks!r})")
         desktop = get_desktop()
         loc = _as_loc(loc)
         if loc is None and label is None:
@@ -269,8 +275,7 @@ def register(
             raise ValueError("Location must be a list of exactly 2 integers [x, y]")
         x, y = loc[0], loc[1]
         desktop.click(loc=loc, button=button, clicks=clicks)
-        num_clicks = {0: "Hover", 1: "Single", 2: "Double"}
-        return f"{num_clicks.get(clicks)} {button} clicked at ({x},{y})."
+        return f"{_CLICK_NAMES[clicks]} {button} clicked at ({x},{y})."
 
     @mcp.tool(
         name="Type",

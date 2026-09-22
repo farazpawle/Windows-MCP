@@ -99,6 +99,7 @@ def _truncation_note(element_limit: int) -> str:
 # Semantic tree — full parent-child hierarchy (Option B)
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class SemanticNode:
     """A node in the semantic UI tree.
@@ -110,6 +111,7 @@ class SemanticNode:
       'interactive' — actionable element with (x,y) coords
       'scrollable'  — scrollable region with (x,y) coords
     """
+
     control_type: str
     element_type: str
     name: str = ""
@@ -123,7 +125,18 @@ class SemanticNode:
         self.children.append(child)
 
 
-def _format_semantic_node(node: SemanticNode) -> str:
+def _label_key(kind: str, node: Any) -> tuple:
+    center = node.center
+    return (
+        kind,
+        node.window_name,
+        center.x if center else None,
+        center.y if center else None,
+        node.name,
+    )
+
+
+def _format_semantic_node(node: SemanticNode, labels: dict[tuple, list[int]] | None = None) -> str:
     ctrl = node.control_type.lower()
     name = node.name
     if node.element_type == "window":
@@ -133,17 +146,29 @@ def _format_semantic_node(node: SemanticNode) -> str:
     if node.element_type in ("interactive", "scrollable"):
         coords = node.center.to_string() if node.center else "(?)"
         action = _action_for(ctrl)
-        meta = _node_meta_str(node.metadata) if node.element_type == "interactive" else _scroll_meta_str(node.metadata)
-        return f'{coords} {ctrl} "{name}"  [action: {action}]{meta}'
+        meta = (
+            _node_meta_str(node.metadata)
+            if node.element_type == "interactive"
+            else _scroll_meta_str(node.metadata)
+        )
+        queue = (labels or {}).get(_label_key(node.element_type, node))
+        label = f"[label:{queue.pop(0)}] " if queue else ""
+        return f'{label}{coords} {ctrl} "{name}"  [action: {action}]{meta}'
     return f'{ctrl} "{name}"'
 
 
-def _render_semantic_node(node: SemanticNode, lines: list[str], prefix: str, is_last: bool) -> None:
+def _render_semantic_node(
+    node: SemanticNode,
+    lines: list[str],
+    prefix: str,
+    is_last: bool,
+    labels: dict[tuple, list[int]] | None = None,
+) -> None:
     if node.element_type == "desktop":
         lines.append("desktop")
     else:
         connector = "└── " if is_last else "├── "
-        lines.append(f"{prefix}{connector}{_format_semantic_node(node)}")
+        lines.append(f"{prefix}{connector}{_format_semantic_node(node, labels)}")
 
     if not node.children:
         return
@@ -151,7 +176,7 @@ def _render_semantic_node(node: SemanticNode, lines: list[str], prefix: str, is_
     extension = "    " if is_last else "│   "
     new_prefix = prefix + extension
     for i, child in enumerate(node.children):
-        _render_semantic_node(child, lines, new_prefix, i == len(node.children) - 1)
+        _render_semantic_node(child, lines, new_prefix, i == len(node.children) - 1, labels)
 
 
 def _prune_structural(node: SemanticNode) -> bool:
@@ -186,11 +211,25 @@ class TreeState:
         if not self.semantic_tree_root:
             return "No elements"
         lines: list[str] = []
-        _render_semantic_node(self.semantic_tree_root, lines, "", is_last=True)
+        _render_semantic_node(self.semantic_tree_root, lines, "", True, self._label_lookup())
         text = "\n".join(lines)
         if self.truncated:
             text += "\n\n" + _truncation_note(self.element_limit)
         return text
+
+    def _label_lookup(self) -> dict[tuple, list[int]]:
+        """Map each element to the label id Click/Type ``label=`` resolves.
+
+        Labels index interactive_nodes then scrollable_nodes. The semantic tree holds
+        separate node objects (and filters rebuild both), so pair them by window,
+        centre and name; identical duplicates take their labels in order.
+        """
+        labels: dict[tuple, list[int]] = {}
+        flat = [("interactive", n) for n in self.interactive_nodes]
+        flat += [("scrollable", n) for n in self.scrollable_nodes]
+        for i, (kind, node) in enumerate(flat):
+            labels.setdefault(_label_key(kind, node), []).append(i)
+        return labels
 
     def interactive_elements_to_string(self) -> str:
         if not self.interactive_nodes:

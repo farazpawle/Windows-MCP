@@ -38,13 +38,13 @@ Total Tasks: 30
 - Tests as above. Live: `Get-Item` on a missing path shows the error; binary value read back with PowerShell; fake app id reported; grid visible in the returned image.
 
 ## 3. Section 3 — Low
-- [ ] 3.1 Click validates `clicks` (0–3) and names triple clicks.
-- [ ] 3.2 MultiSelect reply worded by mode.
-- [ ] 3.3 Snapshot text tree prints label ids.
-- [ ] 3.4 Reproduce the 500-cap case; fix or close as not-a-bug.
-- [ ] 3.5 App switch falls back to substring / process-name match.
-- [ ] 3.6 Update `Skills/Skill.md` for 3.1–3.5.
-- [ ] 3.7 Checkpoint commit for section 3.
+- [x] 3.1 Click validates `clicks` (0–3) and names triple clicks.
+- [x] 3.2 MultiSelect reply worded by mode.
+- [x] 3.3 Snapshot text tree prints label ids.
+- [x] 3.4 Reproduce the 500-cap case; fix or close as not-a-bug.
+- [x] 3.5 App switch falls back to substring / process-name match.
+- [x] 3.6 Update `Skills/Skill.md` for 3.1–3.5.
+- [x] 3.7 Checkpoint commit for section 3.
 
 ### Verification
 - Tests as above. Live: a label from the text tree clicks the right element (checked by Screenshot); `switch "Edge"` brings Edge up (checked by Screenshot).

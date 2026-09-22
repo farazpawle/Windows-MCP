@@ -44,6 +44,9 @@ logger.setLevel(logging.INFO)
 
 import windows_mcp.uia as uia  # noqa: E402
 
+# Invisible characters some apps put in window titles (Edge: "Microsoft​ Edge").
+_ZERO_WIDTH = re.compile("[​‌‍⁠﻿]")
+
 # Key name aliases for shortcut keys that differ from UIA SpecialKeyNames
 _KEY_ALIASES = {
     "backspace": "Back",
@@ -465,10 +468,25 @@ class Desktop:
 
         windows = {window.name: window for window in window_list}
         matched_window = process.extractOne(name, list(windows.keys()), score_cutoff=70)
-        if matched_window is None:
-            return None, f"Application {name.title()} not found."
-        window_name, _ = matched_window
-        return windows.get(window_name), ""
+        if matched_window is not None:
+            window_name, _ = matched_window
+            return windows.get(window_name), ""
+        # Short names score too low against long titles ("Edge" vs "... - Microsoft​ Edge",
+        # whose zero-width space also defeats the fuzzy match), so fall back to a plain
+        # substring of the title, then to the process name ("msedge", "notepad.exe").
+        query = name.casefold().strip()
+        for window in window_list:
+            if query in _ZERO_WIDTH.sub("", window.name).casefold():
+                return window, ""
+        query = query.removesuffix(".exe")
+        for window in window_list:
+            try:
+                exe = Process(window.process_id).name().casefold().removesuffix(".exe")
+            except Exception:
+                continue
+            if exe == query:
+                return window, ""
+        return None, f"Application {name.title()} not found."
 
     def resize_app(
         self, name: str | None = None, size: tuple[int, int] = None, loc: tuple[int, int] = None

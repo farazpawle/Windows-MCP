@@ -52,7 +52,8 @@ def register(mcp, *, get_desktop, get_analytics):
         press_ctrl = as_bool(press_ctrl, "press_ctrl")
         desktop.multi_select(press_ctrl, locs)
         elements_str = "\n".join([f"({loc[0]},{loc[1]})" for loc in locs])
-        return f"Multi-selected elements at:\n{elements_str}"
+        action = "Ctrl-selected elements" if press_ctrl else "Clicked in sequence"
+        return f"{action} at:\n{elements_str}"
 
     @mcp.tool(
         name="MultiEdit",
@@ -88,7 +89,7 @@ def register(mcp, *, get_desktop, get_analytics):
                     raise ValueError(f"Each label item must be [label, text]. Invalid: {item}")
                 try:
                     processed_labels.append((int(item[0]), item[1]))
-                except (ValueError, TypeError):
+                except ValueError, TypeError:
                     raise ValueError(f"Invalid label id in item: {item}")
 
             try:

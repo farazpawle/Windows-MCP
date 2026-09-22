@@ -1,7 +1,7 @@
 ---
 Title: Windows-MCP open issues backlog (from the 2026-09-22 tool testing)
 Description: Every failing behaviour and every change still needed after three test sessions of all 20 windows-mcp tools on 2026-09-22. Collected only, nothing fixed, as the user asked. Grouped by priority, plus test-coverage gaps and seven actions missing compared with Claude computer use (Cowork), with the tool, what happens, why it matters and the suggested change, plus a standing task to update Skills/Skill.md as each fix lands. No freeze or server-crash issue is open: the frozen-app hang and the Avast HTTPS crash were fixed and committed (bf0137f). Source: docs/testing/windows-mcp-tool-test-report.md and Plan/windows-mcp-testing-tasks.md.
-Total Tasks: 37
+Total Tasks: 38
 ---
 
 # Windows-MCP open issues
@@ -30,11 +30,12 @@ Total Tasks: 37
 
 ## 3. Low — replies and usability
 
-- [ ] 3.1 **Click with `clicks` outside 0–2** replies "None … clicked"; negative values single-click. Fix: validate the range and name 3+ correctly.
-- [ ] 3.2 **MultiSelect reply** says "multi-selected" even without Ctrl. Fix: word the reply by mode.
-- [ ] 3.3 **Snapshot text tree shows no label ids.** `label=N` can only be read from the annotated image. Fix: print the id next to each element.
-- [ ] 3.4 **Snapshot 500-element cap** is filled by a busy editor (VS Code) alone. Fix: prioritise the focused window before others.
-- [ ] 3.5 **App `switch`** needs a long title fragment to find a window. Fix: fall back to substring/process-name matching.
+- [x] 3.1 **Click with `clicks` outside 0–2** replies "None … clicked"; negative values single-click. Fix: validate the range and name 3+ correctly. Done 2026-09-22: 0-3 accepted (3 = triple click, verified in Notepad), anything else refused.
+- [x] 3.2 **MultiSelect reply** says "multi-selected" even without Ctrl. Fix: word the reply by mode. Done 2026-09-22.
+- [x] 3.3 **Snapshot text tree shows no label ids.** `label=N` can only be read from the annotated image. Fix: print the id next to each element. Done 2026-09-22: `[label:N]` printed on each element line; a label read from the text clicked the right Notepad menu.
+- [x] 3.4 **Snapshot 500-element cap** is filled by a busy editor (VS Code) alone. Fix: prioritise the focused window before others. Closed 2026-09-22, no code change: the focused window is already read first, and since 1.6 VS Code-family windows are not read at all. Reproduced with VS Code and Antigravity in the background: a small focused Notepad got all its elements although the cap was hit.
+- [x] 3.5 **App `switch`** needs a long title fragment to find a window. Fix: fall back to substring/process-name matching. Done 2026-09-22: title substring (invisible characters removed), then program name. "Edge" and "msedge" now switch to Edge.
+- [ ] 3.6 **Snapshot `region` still reads every window.** Found 2026-09-22: a Snapshot limited to a small Notepad area walked the whole desktop up to the 500-element cap, then trimmed to the region. Wasted time, and a busy background window can use up the cap. Fix idea: skip windows whose rectangle does not overlap the region before walking them.
 
 ## 4. Not yet tested / decisions
 
