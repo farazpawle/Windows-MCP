@@ -4,6 +4,7 @@ import asyncio
 from unittest.mock import MagicMock, patch
 
 import pytest
+from fastmcp.exceptions import ToolError
 
 from windows_mcp import process, registry
 from windows_mcp.filesystem.service import write_file
@@ -62,7 +63,8 @@ class TestWriteOverwrite:
         f = tmp_path / "a.txt"
         f.write_text("original", encoding="utf-8")
         tool = _filesystem_tool()
-        assert tool(mode="write", path=str(f), content="new").startswith("Error")
+        with pytest.raises(ToolError, match="already exists"):  # 2.13: failures are tool errors
+            tool(mode="write", path=str(f), content="new")
         tool(mode="write", path=str(f), content="new", overwrite=True)
         assert f.read_text(encoding="utf-8") == "new"
 

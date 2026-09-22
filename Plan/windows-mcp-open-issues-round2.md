@@ -166,7 +166,7 @@ Source: live tests on 2026-09-22 (Windows 11 Pro 26200, one 1920x1080 display at
   - **Result (2026-09-22):** done. The Wait tool passes `maximum=300` to the existing `_as_seconds` (the same path `hold` uses with 10), and its description now says "at most 300". 3 new unit tests: `301` and `1e9` refused with no sleep - both failed first, then passed; `300` accepted (passed from the start; `0.5` was already covered). Full suite 902 passed; lint unchanged at 53. Smoke test (real Wait tool through an in-process FastMCP client): `301` and `1e9` refused at once with "duration must be 0 or more and at most 300 seconds"; `0.5` waited 0.51 s.
 - [ ]  2.13 **Most tool failures are returned as successful results.** Tools: FileSystem, Registry, Process, App, PowerShell, Clipboard, Notification, Screenshot. Steps: a FastMCP script client called 13 failing operations (missing file, missing registry key, kill PID 4, unknown window/app, `exit 3`, PowerShell timeout, Clipboard set without text, bad app_id, display index 7, Click label 9999) and read `is_error`. Actual: 12 of 13 had `is_error=False` with the failure only in the text ("Error: File not found", "Status Code: 3", "Command execution timed out"); only Click raised a real error. Expected (and required by the computer-use reference): failures flagged `is_error: true`, so the client and the model can't mistake them for success.
 
-  - [ ]  a. FileSystem: raise a tool error on failure.
+  - [x]  a. FileSystem: raise a tool error on failure.
   - [ ]  b. Registry: raise a tool error on failure.
   - [ ]  c. Process: raise a tool error on failure.
   - [ ]  d. App: raise a tool error on failure.

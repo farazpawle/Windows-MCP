@@ -7,7 +7,7 @@ from mcp.types import ToolAnnotations
 from windows_mcp.infrastructure import with_analytics
 from windows_mcp import filesystem
 from windows_mcp.tools._args import as_bool
-from windows_mcp.tools._output import cap_text
+from windows_mcp.tools._output import cap_text, raise_error_replies
 from fastmcp import Context
 
 
@@ -24,6 +24,7 @@ def register(mcp, *, get_desktop, get_analytics):
         ),
     )
     @with_analytics(get_analytics(), "FileSystem-Tool")
+    @raise_error_replies
     def file_system_tool(
         mode: Literal['read', 'write', 'copy', 'move', 'delete', 'list', 'search', 'info'],
         path: str,
