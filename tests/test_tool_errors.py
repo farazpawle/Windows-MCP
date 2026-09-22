@@ -11,14 +11,15 @@ import pytest
 from fastmcp import FastMCP
 from fastmcp.exceptions import ToolError
 
-from windows_mcp.tools import filesystem, process, registry
+from windows_mcp.desktop.service import Desktop
+from windows_mcp.tools import app, filesystem, process, registry
 
 EXECUTE = "windows_mcp.powershell.PowerShellExecutor.execute_command"
 
 
-def _call(module, tool, **args):
+def _call(module, tool, desktop=None, **args):
     mcp = FastMCP("test")
-    module.register(mcp, get_desktop=lambda: None, get_analytics=lambda: None)
+    module.register(mcp, get_desktop=lambda: desktop, get_analytics=lambda: None)
     return asyncio.run(mcp.call_tool(tool, args))
 
 
@@ -50,3 +51,17 @@ def test_registry_failure_is_a_tool_error():
 def test_process_kill_failure_is_a_tool_error(args, message):
     with pytest.raises(ToolError, match=message):
         _call(process, "Process", mode="kill", **args)
+
+
+def test_app_switch_to_unknown_window_is_a_tool_error():
+    desktop = Desktop.__new__(Desktop)
+    desktop.get_windows = lambda: ([], set())
+    with pytest.raises(ToolError, match="No windows found"):
+        _call(app, "App", desktop, mode="switch", name="Nowhere")
+
+
+def test_app_launch_of_unknown_app_is_a_tool_error():
+    desktop = Desktop.__new__(Desktop)
+    desktop.get_apps_from_start_menu = lambda: {}
+    with pytest.raises(ToolError, match="not found in start menu"):
+        _call(app, "App", desktop, mode="launch", name="Nowhere")

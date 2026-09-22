@@ -556,7 +556,9 @@ class Desktop:
             case "launch":
                 response, status, pid = self.launch_app(name)
                 if status != 0:
-                    return response
+                    # Raised, not returned: a returned message reached the client as a
+                    # successful result (is_error=False).
+                    raise ValueError(response)
                 # On success launch_app returns the matched Start Menu name ("code" ->
                 # "visual studio code"); the window title contains that, not the typed text.
                 name = response
@@ -580,16 +582,11 @@ class Desktop:
                 return f"Launching {name.title()} sent, but window not detected yet."
             case "resize":
                 response, status = self.resize_app(name=name, size=size, loc=loc)
-                if status != 0:
-                    return response
-                else:
-                    return response
             case "switch":
                 response, status = self.switch_app(name)
-                if status != 0:
-                    return response
-                else:
-                    return response
+        if status != 0:
+            raise ValueError(response)
+        return response
 
     def _check_app_exists(self, app_id: str) -> bool:
         """Check if an app with the given AppID exists in shell:AppsFolder."""

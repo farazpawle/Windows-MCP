@@ -169,7 +169,7 @@ Source: live tests on 2026-09-22 (Windows 11 Pro 26200, one 1920x1080 display at
   - [x]  a. FileSystem: raise a tool error on failure.
   - [x]  b. Registry: raise a tool error on failure.
   - [x]  c. Process: raise a tool error on failure.
-  - [ ]  d. App: raise a tool error on failure.
+  - [x]  d. App: raise a tool error on failure.
   - [ ]  e. PowerShell: raise a tool error on a non-zero exit code and on a timeout (keeping the output in the message).
   - [ ]  f. Clipboard: raise a tool error on failure.
   - [ ]  g. Notification: raise a tool error on failure.
