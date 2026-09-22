@@ -918,6 +918,33 @@ class Desktop:
         if press_enter is True or (isinstance(press_enter, str) and press_enter.lower() == "true"):
             uia.SendKeys("{Enter}", waitTime=0.05)
 
+    def describe_focused_element(self) -> dict[str, object] | None:
+        """Name, control type and whether the focused element can take typed text.
+
+        Returns None when nothing has focus or UIA cannot be reached, so a caller
+        can fall back to a reply that makes no claim about the focus.
+        """
+        try:
+            focused = uia.GetFocusedControl()
+            if focused is None:
+                return None
+            value = focused.GetPattern(uia.PatternId.ValuePattern)
+            if value is not None:
+                # A read-only value (a label, a disabled box) takes no text either.
+                accepts_text = not value.IsReadOnly
+            else:
+                accepts_text = focused.GetPattern(uia.PatternId.TextPattern) is not None
+            # Localized name ("Button", "Edit") to match what Snapshot prints.
+            control_type = (focused.LocalizedControlType or "").title() or focused.ControlTypeName
+            return {
+                "name": focused.Name,
+                "control_type": control_type,
+                "accepts_text": accepts_text,
+            }
+        except Exception as e:
+            logger.debug("Could not describe the focused element: %s", e)
+            return None
+
     def _finish_clear(self) -> None:
         # Legacy Win32 EDIT boxes (no visual styles) ignore Ctrl+A, so the Back
         # above removed a single char. Empty any leftover through ValuePattern;

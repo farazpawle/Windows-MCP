@@ -91,6 +91,21 @@ def _as_modifiers(value: list | str | None) -> list[str]:
     return list(dict.fromkeys(names))
 
 
+def _focus_suffix(focus: object) -> str:
+    """End a focused-Type reply: name the element and warn when it takes no text."""
+    if not isinstance(focus, dict):
+        return "."
+    name = focus.get("name") or ""
+    control_type = focus.get("control_type") or "element"
+    described = f'{control_type} "{name}"' if name else control_type
+    if focus.get("accepts_text"):
+        return f" ({described})."
+    return (
+        f" ({described}). Warning: it takes no text (no ValuePattern or TextPattern), "
+        "so the text may have gone nowhere."
+    )
+
+
 def _held_suffix(modifiers: list[str]) -> str:
     return f" holding {'+'.join(modifiers)}" if modifiers else ""
 
@@ -371,6 +386,8 @@ def register(
             raise ValueError("Location must be a list of exactly 2 integers [x, y]")
         # Only a located Type clicks; typing into the focused element leaves a drag alone.
         released = release_held_button(desktop) if loc is not None else ""
+        # Read the focus before typing: typing can move it (Tab, Enter in a form).
+        focus = desktop.describe_focused_element() if loc is None else None
         desktop.type(
             loc=loc,
             text=text,
@@ -379,7 +396,7 @@ def register(
             press_enter=as_bool(press_enter, "press_enter"),
         )
         if loc is None:
-            return f"Typed {text} into the focused element."
+            return f"Typed {text} into the focused element{_focus_suffix(focus)}"
         return f"Typed {text} at ({loc[0]},{loc[1]}).{released}"
 
     @mcp.tool(

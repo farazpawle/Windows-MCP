@@ -216,12 +216,13 @@ Source: live tests on 2026-09-22 (Windows 11 Pro 26200, one 1920x1080 display at
 
   - **Verify:** Unit - `0` and `-3` refused.
   - **Result (2026-09-22):** done. Scroll refuses anything that is not a whole number of 1 or more ("wheel_times must be 1 or more (got -3)") before the Desktop is touched; the parameter description now says "1 or more". Note the guard uses `isinstance`, not `type()`: the tool's own `type` parameter shadows the builtin, and the first attempt with `type(...)` raised "'str' object is not callable" for every scroll - caught by the tests, not shipped. 10 new unit tests in `tests/test_scroll_wheel_times.py` failed first, then passed (0, -1, -3, 1.5, "3", None, True refused with no scroll sent; 1, 3, 20 still scroll). Full suite 953 passed; changed files lint- and format-clean (repo warnings unchanged at 53). Live smoke (in-process server, real Desktop, no input sent): `wheel_times=0` and `-3` both refused with the cursor unmoved.
-- [ ]  3.3 **Type without a location reports success when the focus can't take text.** Focus on a button; Type "abc" replied "Typed abc into the focused element."; nothing changed.
+- [x]  3.3 **Type without a location reports success when the focus can't take text.** Focus on a button; Type "abc" replied "Typed abc into the focused element."; nothing changed.
 
-  - [ ]  a. Name the focused element and its type in the reply.
-  - [ ]  b. Warn when the focused element has no ValuePattern/TextPattern.
+  - [x]  a. Name the focused element and its type in the reply.
+  - [x]  b. Warn when the focused element has no ValuePattern/TextPattern.
 
   - **Verify:** Live - focus a harness button, Type "abc": the reply names the button and warns it can't take text.
+  - **Result (2026-09-22):** done. New `Desktop.describe_focused_element()` reads the focused control once, **before** typing (typing can move the focus), and reports its name, control type and whether it can take text; it returns `None` when nothing has focus or UIA raises, so the reply then makes no claim. "Can take text" = a ValuePattern that is not read-only, else a TextPattern - a read-only value (a label, a disabled box) counts as taking none. The control type is UIA's localized name title-cased ("Button", "Edit"), the same vocabulary Snapshot prints, not "ButtonControl". A located Type is unchanged and does not read the focus at all. 14 new unit tests in `tests/test_type_focus_reply.py` failed first (9 of them), then passed; full suite 967 passed; changed files lint- and format-clean. Live, against a throwaway WinForms window (focus set through UIA `SetFocus`, so the button was never clicked - its click log stayed absent): with the button focused the reply was `Typed abc into the focused element (Button "ShowLater"). Warning: it takes no text (no ValuePattern or TextPattern), so the text may have gone nowhere.` and the text box was still empty; with the text box focused it was `Typed abc into the focused element (Edit "Field").` and the box really held "abc".
 - [ ]  3.4 **Shortcut error wording.** `hold=0` says "must be more than 0" while other hold errors say "must be 0 or more"; `shortcut=""` gives '"{" or "{}" is not valid...'; unknown keys give two different messages ('Unknown key name "x"' vs "Unknown key 'x'").
 
   - [ ]  a. Make the `hold` limit messages consistent.
