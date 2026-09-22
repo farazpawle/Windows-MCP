@@ -1,13 +1,15 @@
-""" PowerShell command executor service """
+"""PowerShell command executor service"""
 
 import base64
 import ctypes
 import ctypes.wintypes
 import logging
 import os
+import re
 import winreg
 import shutil
 import subprocess
+import xml.etree.ElementTree as ET
 
 from windows_mcp.desktop.utils import is_elevated
 from windows_mcp.powershell.utils import run_with_graceful_timeout
@@ -85,6 +87,37 @@ def _win32_name(dll: str, func: str) -> str:
     if getattr(fn, func)(buf, ctypes.byref(size)):
         return buf.value
     return ""
+
+
+_CLIXML_ESCAPE = re.compile(r"_x([0-9A-Fa-f]{4})_")
+_ANSI = re.compile(r"\x1b\[[0-9;]*[A-Za-z]")
+_CLIXML_STREAM_PREFIX = {"error": "", "warning": "WARNING: "}
+
+
+def decode_clixml(stderr: str) -> str:
+    """Turn PowerShell's CLIXML error stream into plain text.
+
+    When stdout/stderr are redirected, PowerShell writes its error, warning and
+    progress streams to stderr as serialized CLIXML. Keep error and warning
+    lines (warnings prefixed), drop progress noise, undo the ``_xHHHH_``
+    escaping and strip ANSI colours. Non-CLIXML stderr (a native exe's) is
+    returned as-is, trimmed.
+    """
+    text = stderr.strip()
+    if not text.startswith("#< CLIXML"):
+        return text
+    try:
+        root = ET.fromstring(text.split("\n", 1)[1])
+    except ET.ParseError, IndexError:
+        return text
+    parts = []
+    for node in root.iter():
+        prefix = _CLIXML_STREAM_PREFIX.get((node.get("S") or "").lower())
+        if prefix is None or not node.tag.endswith("}S") or node.text is None:
+            continue
+        line = _CLIXML_ESCAPE.sub(lambda m: chr(int(m.group(1), 16)), node.text)
+        parts.append(prefix + _ANSI.sub("", line))
+    return "".join(parts).replace("\r\n", "\n").strip()
 
 
 _FALLBACK_PATHEXT = ".COM;.EXE;.BAT;.CMD;.VBS;.VBE;.JS;.JSE;.WSF;.WSH;.MSC;.CPL;.PY;.PYW"
@@ -175,8 +208,18 @@ class PowerShellExecutor:
 
     @staticmethod
     def execute_command(
-            command: str, timeout: int = 10, shell: str | None = None
+        command: str,
+        timeout: int = 10,
+        shell: str | None = None,
+        include_errors: bool = False,
     ) -> tuple[str, int]:
+        """Run *command* and return (output, exit code).
+
+        Output is stdout, or the decoded error stream when stdout is empty. With
+        *include_errors*, errors are also appended when stdout is not empty:
+        non-terminating errors leave the exit code at 0 and were otherwise lost.
+        It is off by default because internal callers parse stdout exactly.
+        """
         try:
             # $OutputEncoding: controls how PS5.1 encodes output written to its stdout pipe.
             # Without this set to UTF-8, PS5.1 uses the system codepage and native process
@@ -218,7 +261,10 @@ class PowerShellExecutor:
                 stdout = stdout.decode("utf-8", errors="replace")
             if isinstance(stderr, bytes):
                 stderr = stderr.decode("utf-8", errors="replace")
+            stderr = decode_clixml(stderr)
             output = stdout or stderr
+            if include_errors and stdout.strip() and stderr:
+                output = f"{stdout.rstrip()}\n\nErrors:\n{stderr}"
             # If the command failed with "Access is denied" and we aren't elevated, add a helpful hint
             if result.returncode != 0 and "Access is denied" in output and not is_elevated():
                 output += (

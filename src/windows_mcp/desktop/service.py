@@ -73,6 +73,19 @@ def _snapshot_profile_enabled() -> bool:
     return value.strip().lower() in {"1", "true", "yes", "on"}
 
 
+def draw_grid(image: Image.Image, grid_lines: tuple[int, int]) -> None:
+    """Draw a reference grid in place: *grid_lines* = (columns, rows); 1 means no lines."""
+    draw = ImageDraw.Draw(image)
+    width, height = image.size
+    columns, rows = grid_lines
+    for i in range(1, columns):
+        x = width * i // columns
+        draw.line([(x, 0), (x, height)], fill=(200, 200, 200, 128), width=1)
+    for i in range(1, rows):
+        y = height * i // rows
+        draw.line([(0, y), (width, y)], fill=(200, 200, 200, 128), width=1)
+
+
 def _escape_text_for_sendkeys(text: str) -> str:
     """Escape special characters so uia.SendKeys types them correctly."""
     result = []
@@ -248,6 +261,8 @@ class Desktop:
                 )
             else:
                 screenshot = self.get_screenshot(capture_rect=capture_rect)
+                if grid_lines:
+                    draw_grid(screenshot, grid_lines)
 
             screenshot_original_size = Size(width=screenshot.width, height=screenshot.height)
 
@@ -1331,15 +1346,8 @@ class Desktop:
         else:
             left_offset, top_offset, _, _ = uia.GetVirtualScreenRect()
 
-        # Draw grid lines if requested
         if grid_lines:
-            w_count, h_count = grid_lines
-            for i in range(1, w_count):
-                x = image_width * i // w_count
-                draw.line([(x, 0), (x, image_height)], fill=(200, 200, 200, 128), width=1)
-            for i in range(1, h_count):
-                y = image_height * i // h_count
-                draw.line([(0, y), (image_width, y)], fill=(200, 200, 200, 128), width=1)
+            draw_grid(annotated_screenshot, grid_lines)
 
         def draw_annotation(label, node: TreeElementNode):
             box = node.bounding_box

@@ -21,6 +21,9 @@ logger = logging.getLogger(__name__)
 MAX_IMAGE_WIDTH, MAX_IMAGE_HEIGHT = 1920, 1080
 
 
+WINDOW_LIST_SKIPPED = "Skipped (screenshot-only; call Snapshot to list windows)"
+
+
 def _screenshot_scale() -> float:
     value = os.getenv("WINDOWS_MCP_SCREENSHOT_SCALE", "1.0")
     try:
@@ -70,9 +73,10 @@ def capture_desktop_state(
 
     display_indices = Desktop.parse_display_selection(display)
 
+    # Either reference line alone is enough; the missing direction gets no lines.
     grid_lines = None
-    if width_reference_line and height_reference_line:
-        grid_lines = (int(width_reference_line), int(height_reference_line))
+    if width_reference_line or height_reference_line:
+        grid_lines = (int(width_reference_line or 1), int(height_reference_line or 1))
 
     desktop_state = desktop.get_state(
         use_vision=use_vision,
@@ -93,8 +97,12 @@ def capture_desktop_state(
     interactive_elements = desktop_state.tree_state.interactive_elements_to_string()
     scrollable_elements = desktop_state.tree_state.scrollable_elements_to_string()
     semantic_tree = desktop_state.tree_state.semantic_tree_to_string()
-    windows = desktop_state.windows_to_string()
-    active_window = desktop_state.active_window_to_string()
+    if use_ui_tree:
+        windows = desktop_state.windows_to_string()
+        active_window = desktop_state.active_window_to_string()
+    else:
+        # Windows are not enumerated on the fast path; "No windows found" would be false.
+        windows = active_window = WINDOW_LIST_SKIPPED
     active_desktop = desktop_state.active_desktop_to_string()
     all_desktops = desktop_state.desktops_to_string()
     if profile_enabled:
@@ -209,7 +217,7 @@ def build_snapshot_response(
     if ui_detail_note:
         metadata_text += f"{ui_detail_note}\n"
 
-    response_text = dedent(f'''
+    response_text = dedent(f"""
     {metadata_text}
     Active Desktop:
     {active_desktop}
@@ -222,12 +230,12 @@ def build_snapshot_response(
 
     Opened Windows:
     {windows}
-    ''')
+    """)
     if include_ui_details:
-        response_text += dedent(f'''
+        response_text += dedent(f"""
 
     UI Tree:
-    {semantic_tree or "No elements found."}''')
+    {semantic_tree or "No elements found."}""")
 
     response = [response_text]
     if screenshot_bytes:

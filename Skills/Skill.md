@@ -28,8 +28,8 @@ Machine: 1 display 1920x1080, 100% scale (screen coords = image coords) · Power
 | Tool             | Use                                                | Notes                                                                                                                                                                                                                                         |
 | ------------------ | ---------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | DisplayInventory | monitor bounds, DPI, scale                         | Run first if coords look off. Scale 1.0 here.                                                                                                                                                                                                 |
-| Screenshot       | fast image only                                    | No UI tree. "No active window found / No windows found" means **not checked** (Screenshot skips window enumeration), NOT that nothing is open — use Snapshot for the window list. `display=[n]` with a bad index returns a clear error listing valid displays. Captures pending approval prompts.`*_reference_line` grid did NOT render.                                                                                                                       |
-| Snapshot         | UI tree with (x,y) centres, focused/opened windows | Numeric **label ids appear only on the annotated image** (use_vision=true), not in the text tree, and they do NOT follow the text tree's order (`label=0` was a window's Close button) — prefer `loc` from the text tree. `region` keeps only elements inside the rectangle. Local repo: elements of background windows that another window covers are left out (their click would hit the covering window); PyPI still lists them. Reads the focused window in depth; VS Code/Excel text areas emit one element per word and alone fill the 500-element cap (truncation message says so). `display=[0]` works. Reference-line grid renders here (with use_vision=true), unlike Screenshot.                  |
+| Screenshot       | fast image only                                    | No UI tree. It does not list windows: local repo says "Skipped (screenshot-only…)"; PyPI says "No active window found / No windows found", which means **not checked**, NOT that nothing is open — use Snapshot for the window list. `display=[n]` with a bad index returns a clear error listing valid displays. Captures pending approval prompts. `width_reference_line` / `height_reference_line` draw a grid (local repo; either one alone works). PyPI ignored them here.                                                                                                                       |
+| Snapshot         | UI tree with (x,y) centres, focused/opened windows | Numeric **label ids appear only on the annotated image** (use_vision=true), not in the text tree, and they do NOT follow the text tree's order (`label=0` was a window's Close button) — prefer `loc` from the text tree. `region` keeps only elements inside the rectangle. Local repo: elements of background windows that another window covers are left out (their click would hit the covering window); PyPI still lists them. Reads the focused window in depth; VS Code/Excel text areas emit one element per word and alone fill the 500-element cap (truncation message says so). `display=[0]` works. Reference-line grid renders with use_vision=true (local repo: either line alone works).                  |
 | WaitFor          | poll until a condition                             | Conditions:`active_window` (window_name), `text_exists` / `element_exists` / `element_enabled` / `focused_element` (text). Returns time + attempts; on timeout it errors and names the actual active window. Cheaper than repeated Snapshots. `text_exists` searches the active window, or the windows matching `window_name`, including plain labels ("Saved") — local repo only; the PyPI release sees only buttons/fields/titles and ignores `window_name` for it. |
 | Wait             | sleep N seconds                                    | Verified: `Wait(3)` took 3.4 s. Prefer WaitFor.                                                                                                                                                                                               |
 
@@ -63,10 +63,8 @@ Coordinates: use Snapshot centres. Re-snapshot after any window move, resize or 
 **PowerShell** (`command`, `timeout` s, default 30)
 
 - Output is UTF-8 and returns `Status Code`.
-- **Non-terminating errors are silently dropped and status stays 0.** Always wrap commands:
-  `$ErrorActionPreference='Stop'; try { ... } catch { "ERR: "+$_.Exception.Message; exit 1 }`
-- On timeout it returns "Command execution timed out" with status 1, and the command really is stopped (a timed-out script did not finish its work later). Raise `timeout` for long jobs. `timeout=0` fails every command — never use it.
-- Error text (as CLIXML) is only shown when the exit code is non-zero; `exit <n>` after `Write-Error` surfaces it.
+- Local repo: errors and warnings come back as plain text. When the command still succeeds (non-terminating errors, status 0), they follow the output under an `Errors:` heading — check for it. **PyPI release drops those errors silently** (status stays 0) and shows failures as raw CLIXML; there, wrap commands: `$ErrorActionPreference='Stop'; try { ... } catch { "ERR: "+$_.Exception.Message; exit 1 }`
+- On timeout it returns "Command execution timed out" with status 1, and the command really is stopped (a timed-out script did not finish its work later). Raise `timeout` for long jobs. `timeout` must be at least 1 (local repo rejects 0 or less with a clear error; on PyPI `timeout=0` fails every command).
 - Web requests work here (Invoke-WebRequest uses the Windows cert store), so use this as the fallback when Scrape fails.
 - Find notification AppIDs: `Get-StartApps`.
 
@@ -83,11 +81,11 @@ Coordinates: use Snapshot centres. Re-snapshot after any window move, resize or 
 
 - `get` / `list` / `set` (`type` String|ExpandString|Binary|DWord|MultiString|QWord) / `delete`.
 - `set` auto-creates the key. DWord is stored as a real Int32.
-- **Binary accepts only a single byte value** (e.g. `"255"`); `"01,02,ff"`, `"1 2 255"` and `"0102FF"` are all rejected. Use PowerShell `Set-ItemProperty ... -Value ([byte[]](1,2,255)) -Type Binary` for real byte arrays.
+- Binary, local repo: pass hex bytes `"01,02,ff"` / `"01 02 ff"` / `"0102ff"` or a decimal list `"[1, 2, 255]"`; anything else is refused before writing. **PyPI release accepts only a single byte** — there use PowerShell `Set-ItemProperty ... -Value ([byte[]](1,2,255)) -Type Binary`.
 - `list` shows ExpandString values already expanded (`%TEMP%` → full path); the stored raw value is intact.
 - **MultiString can't hold several items.** Commas and newlines both become ONE item. For real lists use PowerShell: `Set-ItemProperty -Path ... -Name X -Value @('a','b') -Type MultiString`.
 - `delete` WITH `name` removes one value. WITHOUT `name` it deletes the key and its values. Local repo: a key that has sub-keys is refused unless `recursive=true`. **PyPI release deletes the whole tree with no confirmation.**
-- A missing key returns a noisy CLIXML error string.
+- A missing key returns an error (plain text in the local repo, noisy CLIXML on PyPI).
 
 **Process**
 
@@ -96,14 +94,14 @@ Coordinates: use Snapshot centres. Re-snapshot after any window move, resize or 
 
 **Clipboard**: `get` / `set`; Unicode round-trips. Non-text content reads as "empty or non-text" and **can't be saved or restored**, so warn before overwriting.
 
-**Notification**: `title`, `message`, `app_id` (e.g. `Microsoft.Windows.Explorer`). **Reports success even for a fake app_id**; in a Claude Code test it reported success but the user saw no toast (Do Not Disturb is often on). Don't rely on it for alerts that matter.
+**Notification**: `title`, `message`, `app_id` — must be an installed app's AppID from `Get-StartApps`; Windows PowerShell's `{1AC14E77-02E7-4E5D-B744-2EB1AE5198B7}\WindowsPowerShell1.0\powershell.exe` was shown on screen on 2026-09-22. Local repo: an unknown app_id, or notifications turned off for the app / all apps / by policy, returns an error instead of "sent". Do Not Disturb (Focus) can't be read: with it on, a "sent" toast goes to the notification centre without popping up. **PyPI release reports success even for a fake app_id** (nothing is shown).
 
 ## 5. Web — `Scrape`
 
 - Default HTTP mode, **local repo (from 2026-09-22):** works on this PC; certificates are checked against the Windows store, so Avast's HTTPS inspection is accepted and bad certificates are still refused. Local/private addresses are blocked by design.
 - **PyPI release:** fails on this PC. Either CERTIFICATE_VERIFY_FAILED (Avast re-signs HTTPS), or with Python 3.14 the whole server **crashes** ("Connection closed" on every later call) because Avast injects `SSLKEYLOGFILE`. Use WebFetch or PowerShell Invoke-WebRequest there.
 - `use_dom=true` reads the **currently open browser tab**. The URL must match an open tab ("open it in browser first" otherwise).
-- It returns only the **visible viewport** text; scroll and scrape again for more. `use_sampling=false` gives raw text.
+- It returns only the **visible viewport** text; scroll and scrape again for more. `use_sampling=false` gives raw text. Clients that can't summarise (Claude Code) always get raw text; the local repo adds "Note: summary unavailable in this client" so you know.
 
 ## 6. Recommended workflow for UI tasks
 

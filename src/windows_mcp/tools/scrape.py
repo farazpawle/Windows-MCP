@@ -1,9 +1,13 @@
 """Scrape tool — fetch/scrape web page content."""
 
+import logging
+
 from mcp.types import ToolAnnotations
 from windows_mcp.infrastructure import with_analytics
 from fastmcp import Context
 from windows_mcp.tools._args import as_bool
+
+logger = logging.getLogger(__name__)
 
 
 def register(mcp, *, get_desktop, get_analytics):
@@ -38,9 +42,11 @@ def register(mcp, *, get_desktop, get_analytics):
             if not tree_state.dom_node:
                 return f"No DOM information found. Please open {url} in browser first."
             dom_node = tree_state.dom_node
-            vertical_scroll_percent = getattr(dom_node, 'vertical_scroll_percent', 0)
+            vertical_scroll_percent = getattr(dom_node, "vertical_scroll_percent", 0)
             content = "\n".join([node.text for node in tree_state.dom_informative_nodes])
-            header_status = "Reached top" if vertical_scroll_percent <= 0 else "Scroll up to see more"
+            header_status = (
+                "Reached top" if vertical_scroll_percent <= 0 else "Scroll up to see more"
+            )
             footer_status = (
                 "Reached bottom" if vertical_scroll_percent >= 100 else "Scroll down to see more"
             )
@@ -61,6 +67,13 @@ def register(mcp, *, get_desktop, get_analytics):
                 )
                 return f"URL: {url}\nContent:\n{result.text}"
             except Exception:
-                pass  # Fall through to raw content if sampling not supported by client
+                logger.debug("Scrape summary via sampling failed", exc_info=True)
 
+        if use_sampling:
+            # Clients without sampling (e.g. Claude Code) would otherwise get raw content
+            # with no hint that the default summary was skipped.
+            return (
+                f"URL: {url}\nNote: summary unavailable in this client; raw content returned.\n"
+                f"Content:\n{content}"
+            )
         return f"URL: {url}\nContent:\n{content}"

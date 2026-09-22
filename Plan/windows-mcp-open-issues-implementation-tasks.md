@@ -24,15 +24,15 @@ Total Tasks: 30
 - Live: write over an existing file then read it with PowerShell; bool "yes"/"maybe"; `list pwsh`; key-with-sub-keys delete checked with PowerShell `Test-Path`; Snapshot with a covered window checked against a Screenshot.
 
 ## 2. Section 2 — Medium
-- [ ] 2.1 PowerShell returns non-terminating errors as plain text.
-- [ ] 2.2 PowerShell rejects `timeout` below 1.
-- [ ] 2.3 Registry accepts multi-byte binary values.
-- [ ] 2.4 Notification checks the app id and the notification switches.
-- [ ] 2.5 Screenshot says window list skipped.
-- [ ] 2.6 Screenshot draws the grid.
-- [ ] 2.7 Scrape says when the summary was unavailable.
-- [ ] 2.8 Update `Skills/Skill.md` for 2.1–2.7.
-- [ ] 2.9 Checkpoint commit for section 2.
+- [x] 2.1 PowerShell returns non-terminating errors as plain text.
+- [x] 2.2 PowerShell rejects `timeout` below 1.
+- [x] 2.3 Registry accepts multi-byte binary values.
+- [x] 2.4 Notification checks the app id and the notification switches.
+- [x] 2.5 Screenshot says window list skipped.
+- [x] 2.6 Screenshot draws the grid.
+- [x] 2.7 Scrape says when the summary was unavailable.
+- [x] 2.8 Update `Skills/Skill.md` for 2.1–2.7.
+- [x] 2.9 Checkpoint commit for section 2.
 
 ### Verification
 - Tests as above. Live: `Get-Item` on a missing path shows the error; binary value read back with PowerShell; fake app id reported; grid visible in the returned image.

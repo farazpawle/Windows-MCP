@@ -19,14 +19,14 @@ Total Tasks: 37
 
 ## 2. Medium — wrong or misleading results
 
-- [ ] 2.1 **PowerShell drops errors when the exit code is 0.** Non-terminating errors (e.g. `Get-Item` on a missing path) vanish from the reply. Fix: include the error stream in the output.
-- [ ] 2.2 **PowerShell `timeout=0` fails every command.** Fix: treat 0 as "no timeout" or reject values below 1 with a clear message.
-- [ ] 2.3 **Registry binary values** accept a single byte only. Fix: accept a byte list or hex string.
-- [ ] 2.4 **Notification toasts never appeared** on the user's screen although the call reported success. It also reports success for a made-up `app_id`. Fix: check Do Not Disturb, and validate the app id or report delivery failure.
+- [x] 2.1 **PowerShell drops errors when the exit code is 0.** Non-terminating errors (e.g. `Get-Item` on a missing path) vanish from the reply. Fix: include the error stream in the output. Done 2026-09-22: error stream decoded from CLIXML to plain text; the PowerShell tool appends it under `Errors:` even at exit 0 (internal callers still get stdout only, since they parse it).
+- [x] 2.2 **PowerShell `timeout=0` fails every command.** Fix: treat 0 as "no timeout" or reject values below 1 with a clear message. Done 2026-09-22: values below 1 rejected with a clear error.
+- [x] 2.3 **Registry binary values** accept a single byte only. Fix: accept a byte list or hex string. Done 2026-09-22: hex list, hex string or decimal JSON list; bad input refused before writing. Checked with reg.exe.
+- [x] 2.4 **Notification toasts never appeared** on the user's screen although the call reported success. It also reports success for a made-up `app_id`. Fix: check Do Not Disturb, and validate the app id or report delivery failure. Done 2026-09-22: unknown app id and turned-off notification settings now return errors; reply notes Do Not Disturb can't be read. A real toast was seen on screen, so the original miss was most likely the app id.
 - [ ] 2.4b [User] Check whether Do Not Disturb / Focus was on during the toast test. Needs a person to look at the Windows notification settings.
-- [ ] 2.5 **Screenshot says "No windows found" / "No active window found"** when the window list was simply not checked. Fix: say "Window list skipped (screenshot-only)".
-- [ ] 2.6 **Screenshot ignores grid lines** (`width_reference_line` / `height_reference_line`). Fix: draw them, or remove the parameters from Screenshot.
-- [ ] 2.7 **Scrape summary silently skipped.** With the default summary mode, clients that cannot summarise (Claude Code) get the raw page with no note. Fix: add "summary unavailable, raw content returned".
+- [x] 2.5 **Screenshot says "No windows found" / "No active window found"** when the window list was simply not checked. Fix: say "Window list skipped (screenshot-only)". Done 2026-09-22.
+- [x] 2.6 **Screenshot ignores grid lines** (`width_reference_line` / `height_reference_line`). Fix: draw them, or remove the parameters from Screenshot. Done 2026-09-22: grid drawn on plain screenshots too; either reference line alone works.
+- [x] 2.7 **Scrape summary silently skipped.** With the default summary mode, clients that cannot summarise (Claude Code) get the raw page with no note. Fix: add "summary unavailable, raw content returned". Done 2026-09-22.
 
 ## 3. Low — replies and usability
 

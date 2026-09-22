@@ -20,8 +20,11 @@ def register(mcp, *, get_desktop, get_analytics):
     )
     @with_analytics(get_analytics(), "Powershell-Tool")
     def powershell_tool(command: str, timeout: int = 30, ctx: Context = None) -> str:
-        try:
-            response, status_code = PowerShellExecutor.execute_command(command, timeout)
-            return f"Response: {response}\nStatus Code: {status_code}"
-        except Exception as e:
-            raise
+        # 0 would time out every command; "no timeout" is not offered because a
+        # stuck command would then block the server forever.
+        if timeout < 1:
+            raise ValueError(f"timeout must be at least 1 second (got {timeout})")
+        response, status_code = PowerShellExecutor.execute_command(
+            command, timeout, include_errors=True
+        )
+        return f"Response: {response}\nStatus Code: {status_code}"

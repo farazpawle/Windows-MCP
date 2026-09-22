@@ -72,7 +72,7 @@ class TestRegistrySet:
     def test_all_valid_types(self):
         with patch(EXECUTE_COMMAND_PATH, return_value=("", 0)):
             for reg_type in ("String", "ExpandString", "Binary", "DWord", "MultiString", "QWord"):
-                result = registry.set_value(path="HKCU:\\Test", name="K", value="V", reg_type=reg_type)
+                result = registry.set_value(path="HKCU:\\Test", name="K", value="01", reg_type=reg_type)
                 assert 'Error' not in result
 
     def test_creates_key_if_missing(self):
