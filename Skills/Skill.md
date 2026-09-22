@@ -5,6 +5,8 @@ description: Use when controlling this Windows PC via the windows-mcp tools (lcl
 ---
 # Windows MCP — field-tested guide (tested 2026-09-22 in Claude Desktop, re-verified in Claude Code)
 
+
+Which server? Both Claude Code and (from 2026-09-22, after a Claude Desktop restart) Claude Desktop run the **local repo** (`uv --directory <repo> run windows-mcp serve`), so "Local repo" notes below apply to both. "PyPI" notes only matter for other machines or configs using `uvx windows-mcp`.
 Machine: 1 display 1920x1080, 100% scale (screen coords = image coords) · PowerShell 7.6 · Avast AV · OneDrive-synced Desktop.
 
 ## 0. Golden rules (learned the hard way)

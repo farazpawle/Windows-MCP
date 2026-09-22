@@ -67,7 +67,7 @@ Total Tasks: 30
 - [ ] [User] Reconnect windows-mcp in Claude Code (`/mcp`) after the session so the live tools run the new code — the agent cannot restart its own tool server.
 - [x] 2.4b Check whether Do Not Disturb / Focus was on during the toast test — done by the agent: it is off now; toasts appear.
 - [x] 4.1 / 5.2 Full browser-page reads — done by the agent on 2026-09-22 (new tab works; only new windows are blocked).
-- [ ] 4.2 Point Claude Desktop at the fixed server — the agent does it; needs the user's go-ahead first because Claude Desktop must be restarted.
+- [x] 4.2 Point Claude Desktop at the fixed server — done by the agent (config backed up); takes effect on the next Claude Desktop restart.
 
 # Implementation verification
 - `.venv/Scripts/python.exe -m pytest -q` green and `ruff check .` clean before every checkpoint.

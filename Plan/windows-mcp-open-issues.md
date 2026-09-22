@@ -40,7 +40,7 @@ Total Tasks: 38
 ## 4. Not yet tested / decisions
 
 - [x] 4.1 **Full Scrape `use_dom` read.** Done 2026-09-22 by the agent: the browser lock only blocks new *windows*; a new *tab* in the existing Edge window works (`msedge.exe <url>`). Scrape `use_dom` returned example.com's text; Snapshot `use_dom` listed the page's link, and Click by its label followed it. Found and fixed: the scroll status always said "Reached top ... Scroll down to see more" because the position was read from the wrong place; now it reports top / middle / bottom or "Whole page visible" (checked on example.com and a long Wikipedia page).
-- [ ] 4.2 **Claude Desktop still runs the PyPI server** without these fixes. Not a test: a settings change the agent can make (back up Claude Desktop's config, point windows-mcp at this repo). Needs the user's go-ahead because Claude Desktop must then be restarted, which ends any chat running in it.
+- [x] 4.2 **Claude Desktop now runs this repo** instead of the PyPI release. Done 2026-09-22 by the agent: its config (Store install: `%LOCALAPPDATA%\Packages\Claude_pzs8sxrjxfjjc\LocalCache\Roaming\Claude\claude_desktop_config.json`, backup `.bak-20260922-134438` beside it) now runs `uv --directory <repo> run --python 3.14 windows-mcp serve`, the same as Claude Code. The exact command was started and answered with all 20 tools in 2.6 s. It runs whatever branch is checked out in the repo. Takes effect when Claude Desktop is restarted.
 - [x] 4.3 [User] **Commit the report and plan updates.** Done 2026-09-22 (1cb7d91, a55962a); `Skills/` is still untracked.
 
 ## 5. Test coverage gaps (tested lightly or not at all)
