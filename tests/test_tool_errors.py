@@ -13,7 +13,16 @@ from fastmcp.exceptions import ToolError
 
 from windows_mcp.desktop.service import Desktop
 from windows_mcp.powershell import PowerShellExecutor
-from windows_mcp.tools import app, clipboard, filesystem, notification, process, registry, shell
+from windows_mcp.tools import (
+    app,
+    clipboard,
+    filesystem,
+    notification,
+    process,
+    registry,
+    shell,
+    snapshot,
+)
 
 EXECUTE = "windows_mcp.powershell.PowerShellExecutor.execute_command"
 
@@ -108,3 +117,13 @@ def test_notification_to_unknown_app_is_a_tool_error():
     with patch(EXECUTE, return_value=("UNKNOWN_APP_ID", 3)):  # no real toast is shown
         with pytest.raises(ToolError, match="not an installed app"):
             _call(notification, "Notification", title="T", message="M", app_id="Made.Up.App")
+
+
+@pytest.mark.parametrize(
+    ("tool", "message"), [("Screenshot", "screenshot"), ("Snapshot", "desktop")]
+)
+def test_capture_failure_is_a_tool_error(tool, message):
+    bad_display = ValueError("Invalid display index 7. Available displays: 0")
+    with patch.object(snapshot, "capture_desktop_state", side_effect=bad_display):
+        with pytest.raises(ToolError, match=f"Error capturing {message}.*Invalid display index 7"):
+            _call(snapshot, tool, object(), display=[7])

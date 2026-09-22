@@ -5,6 +5,7 @@ import logging
 from mcp.types import ToolAnnotations
 from windows_mcp.infrastructure import with_analytics
 from fastmcp import Context
+from fastmcp.exceptions import ToolError
 from windows_mcp.tools._args import as_bool
 
 from windows_mcp.tools._snapshot_helpers import (
@@ -69,7 +70,8 @@ def register(mcp, *, get_desktop, get_analytics):
                 use_dom if "use_dom" in locals() else None,
                 exc_info=True,
             )
-            return [f"Error capturing desktop state: {str(e)}. Please try again."]
+            # Raised, not returned: a returned message reached the client as a success.
+            raise ToolError(f"Error capturing desktop state: {e}. Please try again.") from e
 
         # Label clicks resolve against exactly the tree printed here, never a later capture.
         desktop.label_tree_state = capture_result["desktop_state"].tree_state
@@ -115,7 +117,7 @@ def register(mcp, *, get_desktop, get_analytics):
                 region,
                 exc_info=True,
             )
-            return [f"Error capturing screenshot: {str(e)}. Please try again."]
+            raise ToolError(f"Error capturing screenshot: {e}. Please try again.") from e
 
         return build_snapshot_response(
             capture_result,

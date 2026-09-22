@@ -173,7 +173,7 @@ Source: live tests on 2026-09-22 (Windows 11 Pro 26200, one 1920x1080 display at
   - [x]  e. PowerShell: raise a tool error on a non-zero exit code and on a timeout (keeping the output in the message).
   - [x]  f. Clipboard: raise a tool error on failure.
   - [x]  g. Notification: raise a tool error on failure.
-  - [ ]  h. Screenshot: raise a tool error on failure (e.g. bad display index).
+  - [x]  h. Screenshot: raise a tool error on failure (e.g. bad display index).
 
   - **Verify:** Unit - one failing case per tool asserts an error is raised. Live - re-run the 13-call FastMCP script client (with `SSLKEYLOGFILE` unset): all 13 return `is_error=True`, and the same calls' success cases still return `is_error=False`.
 - [ ]  2.14 **Type with 20+ characters wipes non-text clipboard content.** Tool: Type. Steps: put an image on the clipboard; Type a 46-character text into a field. Actual: the text arrived, but afterwards the clipboard was **empty** (`ContainsImage()` False, no text). The guide promises the clipboard is restored; that only holds for text. Expected: the clipboard is left exactly as it was (an image, files, rich text).
