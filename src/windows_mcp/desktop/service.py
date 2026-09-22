@@ -845,20 +845,14 @@ class Desktop:
             self._click_button(x, y, button, clicks)
 
     def _click_button(self, x: int, y: int, button: str, clicks: int) -> None:
-        match button:
-            case "left":
-                if clicks >= 2:
-                    dbl_wait = uia.GetDoubleClickTime() / 2000.0
-                    for i in range(clicks):
-                        uia.Click(x, y, waitTime=dbl_wait if i < clicks - 1 else 0.5)
-                else:
-                    uia.Click(x, y)
-            case "right":
-                for _ in range(clicks):
-                    uia.RightClick(x, y)
-            case "middle":
-                for _ in range(clicks):
-                    uia.MiddleClick(x, y)
+        press = {"left": uia.Click, "right": uia.RightClick, "middle": uia.MiddleClick}[button]
+        if clicks >= 2:
+            # Presses must fall inside GetDoubleClickTime(), or apps see separate single clicks.
+            dbl_wait = uia.GetDoubleClickTime() / 2000.0
+            for i in range(clicks):
+                press(x, y, waitTime=dbl_wait if i < clicks - 1 else 0.5)
+        else:
+            press(x, y)
 
     # Strings longer than this typed via clipboard paste instead of
     # per-key SendKeys. SendKeys at high cadence loses keystrokes on
