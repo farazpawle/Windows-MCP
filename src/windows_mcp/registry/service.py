@@ -48,8 +48,12 @@ def set_value(path: str, name: str, value: str, reg_type: RegistryType = 'String
     return f'Registry value [{path}] "{name}" set to "{value}" (type: {reg_type}).'
 
 
-def delete_entry(path: str, name: str | None = None) -> str:
-    """Delete a registry value when *name* is provided, otherwise remove the entire key."""
+def delete_entry(path: str, name: str | None = None, recursive: bool = False) -> str:
+    """Delete a registry value when *name* is provided, otherwise remove the key.
+
+    A key that has sub-keys is only removed with recursive=True, so a missing
+    ``name`` can no longer wipe a whole tree by accident.
+    """
     q_path = ps_quote(path)
     if name:
         q_name = ps_quote(name)
@@ -58,8 +62,21 @@ def delete_entry(path: str, name: str | None = None) -> str:
         if status != 0:
             return f'Error deleting registry value: {response.strip()}'
         return f'Registry value [{path}] "{name}" deleted.'
-    command = f"Remove-Item -Path {q_path} -Recurse -Force"
+    if recursive:
+        command = f"Remove-Item -Path {q_path} -Recurse -Force"
+    else:
+        command = (
+            f"$n = @(Get-ChildItem -Path {q_path} -ErrorAction Stop).Count; "
+            f"if ($n -gt 0) {{ Write-Output \"HAS_SUBKEYS:$n\"; exit 2 }}; "
+            f"Remove-Item -Path {q_path} -Force -ErrorAction Stop"
+        )
     response, status = PowerShellExecutor.execute_command(command)
+    if status == 2 and response.strip().startswith("HAS_SUBKEYS:"):
+        count = response.strip().split(":", 1)[1]
+        return (
+            f"Error: Registry key [{path}] has {count} sub-key(s); nothing was deleted. "
+            "Pass recursive=true to delete the key with all its sub-keys."
+        )
     if status != 0:
         return f'Error deleting registry key: {response.strip()}'
     return f'Registry key [{path}] deleted.'

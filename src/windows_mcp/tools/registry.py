@@ -7,12 +7,13 @@ from windows_mcp.infrastructure import with_analytics
 from windows_mcp import registry
 from windows_mcp.registry import RegistryType
 from fastmcp import Context
+from windows_mcp.tools._args import as_bool
 
 
 def register(mcp, *, get_desktop, get_analytics):
     @mcp.tool(
         name='Registry',
-        description='Read and write the Windows Registry. Keywords: regedit, registry key, HKEY, HKCU, HKLM, Windows settings, registry value. Use mode="get" to read a value, mode="set" to create/update a value, mode="delete" to remove a value or key, mode="list" to list values and sub-keys under a path. Paths use PowerShell format (e.g. "HKCU:\\Software\\MyApp", "HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion").',
+        description='Read and write the Windows Registry. Keywords: regedit, registry key, HKEY, HKCU, HKLM, Windows settings, registry value. Use mode="get" to read a value, mode="set" to create/update a value, mode="delete" to remove a value (with name) or a key (without name; a key that has sub-keys also needs recursive=true), mode="list" to list values and sub-keys under a path. Paths use PowerShell format (e.g. "HKCU:\\Software\\MyApp", "HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion").',
         annotations=ToolAnnotations(
             title="Registry",
             readOnlyHint=False,
@@ -28,6 +29,7 @@ def register(mcp, *, get_desktop, get_analytics):
         name: str | None = None,
         value: str | None = None,
         type: RegistryType = 'String',
+        recursive: bool | str = False,
         ctx: Context = None,
     ) -> str:
         try:
@@ -42,10 +44,12 @@ def register(mcp, *, get_desktop, get_analytics):
                     return 'Error: value parameter is required for set mode.'
                 return registry.set_value(path=path, name=name, value=value, reg_type=type)
             elif mode == 'delete':
-                return registry.delete_entry(path=path, name=name)
+                return registry.delete_entry(
+                    path=path, name=name, recursive=as_bool(recursive, 'recursive')
+                )
             elif mode == 'list':
                 return registry.list_key(path=path)
             else:
                 return 'Error: mode must be "get", "set", "delete", or "list".'
-        except Exception as e:
+        except Exception:
             raise

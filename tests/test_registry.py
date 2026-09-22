@@ -94,7 +94,7 @@ class TestRegistryDelete:
 
     def test_delete_key(self):
         with patch(EXECUTE_COMMAND_PATH, return_value=("", 0)) as mock_exec:
-            result = registry.delete_entry(path="HKCU:\\Software\\Test", name=None)
+            result = registry.delete_entry(path="HKCU:\\Software\\Test", name=None, recursive=True)
         assert 'key' in result.lower()
         assert 'deleted' in result
         cmd = mock_exec.call_args[0][0]

@@ -1,5 +1,13 @@
 import random
+from collections.abc import Callable
+
+import win32con
+import win32gui
+
 from windows_mcp.uia import Control
+
+# The desktop icons live in Progman on some builds and in a WorkerW on others.
+_DESKTOP_CLASSES = {"Progman", "WorkerW"}
 
 
 def random_point_within_bounding_box(node: Control, scale_factor: float = 1.0) -> tuple[int, int]:
@@ -21,3 +29,58 @@ def random_point_within_bounding_box(node: Control, scale_factor: float = 1.0) -
     x = random.randint(scaled_left, scaled_left + scaled_width)
     y = random.randint(scaled_top, scaled_top + scaled_height)
     return (x, y)
+
+
+def top_level_window_at(x: int, y: int) -> int:
+    """Handle of the top-level window that owns the screen point, or 0."""
+    hwnd = win32gui.WindowFromPoint((x, y))
+    return win32gui.GetAncestor(hwnd, win32con.GA_ROOT) if hwnd else 0
+
+
+def _same_window(handle: int, hit: int) -> bool:
+    if hit == handle:
+        return True
+    try:
+        classes = {win32gui.GetClassName(handle), win32gui.GetClassName(hit)}
+    except Exception:
+        return False
+    return classes <= _DESKTOP_CLASSES
+
+
+def drop_occluded(
+    handle: int,
+    interactive_nodes: list,
+    scrollable_nodes: list,
+    semantic_root,
+    window_at: Callable[[int, int], int] = top_level_window_at,
+) -> tuple[list, list]:
+    """Remove elements of a background window whose centre another window covers.
+
+    A click at such an element lands on the covering window, so listing it only
+    misleads. Filters the flat lists and, in place, the window's semantic tree.
+    """
+    cache: dict[tuple[int, int], bool] = {}
+
+    def visible(center) -> bool:
+        key = (center.x, center.y)
+        if key not in cache:
+            cache[key] = _same_window(handle, window_at(center.x, center.y))
+        return cache[key]
+
+    def prune(node) -> None:
+        node.children = [
+            child
+            for child in node.children
+            if child.center is None
+            or child.element_type not in ("interactive", "scrollable")
+            or visible(child.center)
+        ]
+        for child in node.children:
+            prune(child)
+
+    if semantic_root is not None:
+        prune(semantic_root)
+    return (
+        [n for n in interactive_nodes if visible(n.center)],
+        [n for n in scrollable_nodes if visible(n.center)],
+    )

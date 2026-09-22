@@ -6,13 +6,14 @@ from typing import Literal
 from mcp.types import ToolAnnotations
 from windows_mcp.infrastructure import with_analytics
 from windows_mcp import filesystem
+from windows_mcp.tools._args import as_bool
 from fastmcp import Context
 
 
 def register(mcp, *, get_desktop, get_analytics):
     @mcp.tool(
         name='FileSystem',
-        description="Manages file system operations with eight modes: 'read' (read text file contents with optional line offset/limit), 'write' (create or overwrite a file, set append=True to append), 'copy' (copy file or directory to destination), 'move' (move or rename file/directory), 'delete' (delete file or directory, set recursive=True for non-empty dirs), 'list' (list directory contents with optional pattern filter), 'search' (find files matching a glob pattern), 'info' (get file/directory metadata like size, dates, type). Relative paths are resolved from the user's Desktop folder. Use absolute paths to access other locations.",
+        description="Manages file system operations with eight modes: 'read' (read text file contents with optional line offset/limit), 'write' (create a file; an existing file is replaced only with overwrite=True, set append=True to append), 'copy' (copy file or directory to destination), 'move' (move or rename file/directory), 'delete' (delete file or directory, set recursive=True for non-empty dirs), 'list' (list directory contents with optional pattern filter), 'search' (find files matching a glob pattern), 'info' (get file/directory metadata like size, dates, type). Relative paths are resolved from the user's Desktop folder. Use absolute paths to access other locations.",
         annotations=ToolAnnotations(
             title="FileSystem",
             readOnlyHint=False,
@@ -45,10 +46,10 @@ def register(mcp, *, get_desktop, get_analytics):
             if destination and not os.path.isabs(destination):
                 destination = os.path.join(default_dir, destination)
 
-            recursive = recursive is True or (isinstance(recursive, str) and recursive.lower() == 'true')
-            append = append is True or (isinstance(append, str) and append.lower() == 'true')
-            overwrite = overwrite is True or (isinstance(overwrite, str) and overwrite.lower() == 'true')
-            show_hidden = show_hidden is True or (isinstance(show_hidden, str) and show_hidden.lower() == 'true')
+            recursive = as_bool(recursive, 'recursive')
+            append = as_bool(append, 'append')
+            overwrite = as_bool(overwrite, 'overwrite')
+            show_hidden = as_bool(show_hidden, 'show_hidden')
 
             match mode:
                 case 'read':
@@ -56,7 +57,9 @@ def register(mcp, *, get_desktop, get_analytics):
                 case 'write':
                     if content is None:
                         return 'Error: content parameter is required for write mode.'
-                    return filesystem.write_file(path, content, append=append, encoding=encoding)
+                    return filesystem.write_file(
+                        path, content, append=append, overwrite=overwrite, encoding=encoding
+                    )
                 case 'copy':
                     if destination is None:
                         return 'Error: destination parameter is required for copy mode.'
@@ -77,5 +80,5 @@ def register(mcp, *, get_desktop, get_analytics):
                     return filesystem.get_file_info(path)
                 case _:
                     return f'Error: Unknown mode "{mode}". Use: read, write, copy, move, delete, list, search, info.'
-        except Exception as e:
+        except Exception:
             raise

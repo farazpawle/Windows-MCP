@@ -1,0 +1,115 @@
+
+---
+name: windows-mcp
+description: Use when controlling this Windows PC via the windows-mcp tools (lcl-windows-mcp-*) — apps, UI clicks/typing, files, registry, processes, PowerShell, screenshots. Read before the first windows-mcp call.
+---
+# Windows MCP — field-tested guide (tested 2026-09-22 in Claude Desktop, re-verified in Claude Code)
+
+Machine: 1 display 1920x1080, 100% scale (screen coords = image coords) · PowerShell 7.6 · Avast AV · OneDrive-synced Desktop.
+
+## 0. Golden rules (learned the hard way)
+
+0. **A frozen app can stall Snapshot / WaitFor / App switch.** They query every open window; a "Not Responding" app (seen: Antigravity IDE) used to block them forever. Fixed in the local repo on 2026-09-22 (UIA timeouts + skip hung windows) and proven live: every WaitFor condition answered in ~0.2 s with a frozen app open. The PyPI release (`uvx windows-mcp`) may still hang. If one of these calls stalls, check with PowerShell: `Add-Type -Name U -Namespace W -MemberDefinition '[DllImport("user32.dll")] public static extern bool IsHungAppWindow(IntPtr h);'; Get-Process | ? { $_.MainWindowHandle -ne 0 -and [W.U]::IsHungAppWindow($_.MainWindowHandle) } | select Id,ProcessName,MainWindowTitle` — then ask the user to close/restart that app. Screenshot never hangs this way (it doesn't query windows).
+1. **Approval prompts steal focus (Claude Desktop only).** Each call the user approves in the Claude app brings Claude to the front, covering the target window. Not observed in Claude Code (no approval pop-ups). Unless windows-mcp is on "Always allow":
+   - Coordinate clicks and typing can land IN THE CLAUDE CHAT (a Type+Enter test sent a chat message).
+   - Shortcut goes to Claude, not the target.
+   - Mitigations: ask the user to Always-allow; for windows you create, set TopMost; prefer PowerShell/FileSystem/Registry over UI automation.
+   - Never use press_enter=true unless a fresh screenshot shows the target on top at that exact spot.
+2. **Verify by effect, never by tool output.** "Sent / Typed / Clicked" only means the call ran. Check the result: screenshot, file content, registry read, process list.
+3. **Kill by PID, not by name.** Notepad on Win11 runs every tab in one process, and a name kill ends *every* process with that name. Local repo: `list` filters by plain substring ("pwsh" → only pwsh.exe) and `kill` by name is exact with `.exe` optional. PyPI release: the list filter is fuzzy ("pwsh" also matched ShellExperienceHost.exe). List first, then kill by PID only a process you launched.
+4. **Absolute paths only.** Relative paths resolve to the user's OneDrive-synced Desktop (cloud-synced).
+5. Sandbox experiments in `%TEMP%\<name>` and `HKCU:\Software\<TestKey>`. Clean up and verify cleanup.
+6. **Boolean params: pass real `true`/`false`.** Local repo: every tool also accepts `"yes"/"no"/"1"/"0"/"on"/"off"` and rejects any other word with an error. PyPI release: strings other than `"true"` are silently false (FileSystem `recursive="yes"` searched only the top folder).
+7. **Screen-reading tools can freeze VS Code.** Snapshot, WaitFor and App switch ask every open window to describe all its elements; VS Code (and other Electron apps) answer on the thread that draws the screen, so repeated calls with a big VS Code window open turned it "Not Responding" (2026-09-22). Keep these calls few, use `region` around the target, and prefer Screenshot or PowerShell for checks.
+
+## 1. Observe
+
+
+| Tool             | Use                                                | Notes                                                                                                                                                                                                                                         |
+| ------------------ | ---------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| DisplayInventory | monitor bounds, DPI, scale                         | Run first if coords look off. Scale 1.0 here.                                                                                                                                                                                                 |
+| Screenshot       | fast image only                                    | No UI tree. "No active window found / No windows found" means **not checked** (Screenshot skips window enumeration), NOT that nothing is open — use Snapshot for the window list. `display=[n]` with a bad index returns a clear error listing valid displays. Captures pending approval prompts.`*_reference_line` grid did NOT render.                                                                                                                       |
+| Snapshot         | UI tree with (x,y) centres, focused/opened windows | Numeric **label ids appear only on the annotated image** (use_vision=true), not in the text tree, and they do NOT follow the text tree's order (`label=0` was a window's Close button) — prefer `loc` from the text tree. `region` keeps only elements inside the rectangle. Local repo: elements of background windows that another window covers are left out (their click would hit the covering window); PyPI still lists them. Reads the focused window in depth; VS Code/Excel text areas emit one element per word and alone fill the 500-element cap (truncation message says so). `display=[0]` works. Reference-line grid renders here (with use_vision=true), unlike Screenshot.                  |
+| WaitFor          | poll until a condition                             | Conditions:`active_window` (window_name), `text_exists` / `element_exists` / `element_enabled` / `focused_element` (text). Returns time + attempts; on timeout it errors and names the actual active window. Cheaper than repeated Snapshots. `text_exists` searches the active window, or the windows matching `window_name`, including plain labels ("Saved") — local repo only; the PyPI release sees only buttons/fields/titles and ignores `window_name` for it. |
+| Wait             | sleep N seconds                                    | Verified: `Wait(3)` took 3.4 s. Prefer WaitFor.                                                                                                                                                                                               |
+
+## 2. Apps and windows — `App`
+
+- `launch_executable`: `executable` = full path, `args` = argv **list**, optional `cwd`. Returns `{pid,...}`; **save the PID** for later kills. Tested: `C:\Program Files\PowerShell\7\pwsh.exe` with `["-NoProfile","-STA","-WindowStyle","Hidden","-File","<path>"]`.
+- `launch`: by Start Menu name (not tested directly).
+- `switch`: fuzzy match on **window title**, not a substring match.
+  - "Personal - Microsoft Edge" worked; "Microsoft Edge" and "Windows-MCP" failed.
+  - Edge titles contain a zero-width space ("Microsoft Edge"), so pass a longer title fragment.
+  - The approval click undoes the switch (see rule 1).
+- `resize`: `name`, `window_loc=[x,y]`, `window_size=[w,h]`. Works; the visible size is a few px smaller (invisible borders).
+
+## 3. Mouse and keyboard
+
+
+| Tool        | Verified behaviour                                                                                                                                                                                         |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Click       | `loc=[x,y]` or `label=<int>`. Verified: left/right/middle, `clicks` 0 (hover only), 1, 2, 3. Values outside 0–2 reply "None … clicked"; a negative value still single-clicks.                                 |
+| Type        | Clicks `loc` first, then types. `clear=true` empties the field first (local repo also clears old-style boxes that ignore Ctrl+A; PyPI deletes one char there and appends). `caret_position` start/end verified. `press_enter=true` sends Enter (dangerous, see rule 1). Accents and CJK OK. **Emoji: local repo OK; PyPI types a wrong character.** Text of 20+ chars is pasted via the clipboard, which is restored afterwards. Empty `text` with `clear=true` clears the field (PyPI then raises "string index out of range" even though it worked). |
+| MultiEdit   | `locs=[[x,y,"text"],...]` or `labels=[[id,"text"],...]`. **Clears each field before typing** (it overwrites, it doesn't append). Verified.                                                                   |
+| MultiSelect | `locs=[[x,y],...]`; `press_ctrl=true` gives Ctrl-multi-select (verified: 3 list items). `press_ctrl=false` means plain sequential clicks — in a list the last click wins. The reply says "multi-selected" either way. |
+| Scroll      | `loc`, `direction`, `wheel_times`. **1 wheel = 3 lines.** `type="horizontal"`: local repo scrolls sideways in any app; **PyPI uses Shift+wheel, which native apps treat as vertical** (it scrolled down instead of right). |
+| Move        | Hover with `loc`; drag with `from_loc` + `loc` + `drag=true` (optional `duration`), or `drag=true` from the current pointer. Verified pixel-exact.                                                        |
+| Shortcut    | e.g. `"ctrl+s"`, `"win+r"`. Hits whatever has focus, which after approval is Claude. **Unreliable unless Always-allow.** Local repo rejects a misspelled key before pressing anything; **PyPI presses Ctrl, fails, and leaves Ctrl held down** — if a shortcut errors there, release modifiers before continuing. |
+
+Coordinates: use Snapshot centres. Re-snapshot after any window move, resize or scroll, because coords go stale.
+
+## 4. System tools (most reliable, no focus issues)
+
+**PowerShell** (`command`, `timeout` s, default 30)
+
+- Output is UTF-8 and returns `Status Code`.
+- **Non-terminating errors are silently dropped and status stays 0.** Always wrap commands:
+  `$ErrorActionPreference='Stop'; try { ... } catch { "ERR: "+$_.Exception.Message; exit 1 }`
+- On timeout it returns "Command execution timed out" with status 1, and the command really is stopped (a timed-out script did not finish its work later). Raise `timeout` for long jobs. `timeout=0` fails every command — never use it.
+- Error text (as CLIXML) is only shown when the exit code is non-zero; `exit <n>` after `Write-Error` surfaces it.
+- Web requests work here (Invoke-WebRequest uses the Windows cert store), so use this as the fallback when Scrape fails.
+- Find notification AppIDs: `Get-StartApps`.
+
+**FileSystem** (`mode`, absolute `path`)
+
+- `write`: creates parent folders automatically; `append=true` appends. Local repo: an existing file is refused unless `overwrite=true`. **PyPI release silently overwrites it even with `overwrite=false`** — check `info` first there. Newlines are written as CRLF.
+- `search` without `recursive=true` only looks in the top folder ("No matches" even when subfolders have hits).
+- `read`: `offset` is a **1-based line number**, plus `limit`.
+- `copy` / `move`: refuse an existing destination unless `overwrite=true`. `move` also renames and creates target folders.
+- `delete`: refuses a non-empty dir unless `recursive=true`.
+- `list`: `pattern` filter. `search`: glob + `recursive=true`. `info`: size, dates, counts.
+
+**Registry** (PowerShell-style paths `HKCU:\...`)
+
+- `get` / `list` / `set` (`type` String|ExpandString|Binary|DWord|MultiString|QWord) / `delete`.
+- `set` auto-creates the key. DWord is stored as a real Int32.
+- **Binary accepts only a single byte value** (e.g. `"255"`); `"01,02,ff"`, `"1 2 255"` and `"0102FF"` are all rejected. Use PowerShell `Set-ItemProperty ... -Value ([byte[]](1,2,255)) -Type Binary` for real byte arrays.
+- `list` shows ExpandString values already expanded (`%TEMP%` → full path); the stored raw value is intact.
+- **MultiString can't hold several items.** Commas and newlines both become ONE item. For real lists use PowerShell: `Set-ItemProperty -Path ... -Name X -Value @('a','b') -Type MultiString`.
+- `delete` WITH `name` removes one value. WITHOUT `name` it deletes the key and its values. Local repo: a key that has sub-keys is refused unless `recursive=true`. **PyPI release deletes the whole tree with no confirmation.**
+- A missing key returns a noisy CLIXML error string.
+
+**Process**
+
+- `list`: `name` is a substring filter (fuzzy on PyPI); `sort_by` memory|cpu|name; `limit` (`limit=0` misleadingly says "No processes found"). CPU% is summed across cores (System Idle can show >1000%).
+- `kill`: prefer `pid`; by `name` it is an exact match (`.exe` optional) and ends every process with that name. `force` is available. Returns "Terminated: exe (PID)".
+
+**Clipboard**: `get` / `set`; Unicode round-trips. Non-text content reads as "empty or non-text" and **can't be saved or restored**, so warn before overwriting.
+
+**Notification**: `title`, `message`, `app_id` (e.g. `Microsoft.Windows.Explorer`). **Reports success even for a fake app_id**; in a Claude Code test it reported success but the user saw no toast (Do Not Disturb is often on). Don't rely on it for alerts that matter.
+
+## 5. Web — `Scrape`
+
+- Default HTTP mode, **local repo (from 2026-09-22):** works on this PC; certificates are checked against the Windows store, so Avast's HTTPS inspection is accepted and bad certificates are still refused. Local/private addresses are blocked by design.
+- **PyPI release:** fails on this PC. Either CERTIFICATE_VERIFY_FAILED (Avast re-signs HTTPS), or with Python 3.14 the whole server **crashes** ("Connection closed" on every later call) because Avast injects `SSLKEYLOGFILE`. Use WebFetch or PowerShell Invoke-WebRequest there.
+- `use_dom=true` reads the **currently open browser tab**. The URL must match an open tab ("open it in browser first" otherwise).
+- It returns only the **visible viewport** text; scroll and scrape again for more. `use_sampling=false` gives raw text.
+
+## 6. Recommended workflow for UI tasks
+
+1. DisplayInventory once, then Snapshot (use_vision=true if you need label ids).
+2. App switch or launch_executable (save the PID), then WaitFor `active_window`.
+3. Screenshot to confirm the target is ON TOP at the coordinates.
+4. Act with coordinates. No Enter or shortcuts unless focus is proven.
+5. Verify the effect (Screenshot, WaitFor text_exists, or a file/registry read).
+6. Clean up: kill only your own PIDs; remove sandbox files and keys; `Test-Path` to confirm.

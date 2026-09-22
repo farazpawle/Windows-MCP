@@ -9,6 +9,7 @@ from typing import Any, Literal
 from mcp.types import ToolAnnotations
 from windows_mcp.infrastructure import with_analytics
 from fastmcp import Context
+from windows_mcp.tools._args import as_bool
 
 
 WaitForCondition = Literal[
@@ -28,18 +29,6 @@ def _resolve_label(desktop: Any, label: int) -> list[int]:
         return list(desktop.get_coordinates_from_label(label))
     except Exception as e:
         raise ValueError(f"Failed to find element with label {label}: {e}")
-
-
-def _as_bool(value: bool | str, name: str) -> bool:
-    if isinstance(value, bool):
-        return value
-    if isinstance(value, str):
-        normalized = value.strip().casefold()
-        if normalized == "true":
-            return True
-        if normalized == "false":
-            return False
-    raise ValueError(f"{name} must be true or false")
 
 
 def _validate_finite_number(value: object, name: str) -> None:
@@ -317,8 +306,8 @@ def register(
             loc=loc,
             text=text,
             caret_position=caret_position,
-            clear=clear,
-            press_enter=press_enter,
+            clear=as_bool(clear, "clear"),
+            press_enter=as_bool(press_enter, "press_enter"),
         )
         return f"Typed {text} at ({x},{y})."
 
@@ -388,7 +377,7 @@ def register(
         desktop = get_desktop()
         loc = _as_loc(loc)
         from_loc = _as_loc(from_loc)
-        drag = _as_bool(drag, "drag")
+        drag = as_bool(drag, "drag")
         if loc is None and label is None:
             raise ValueError("Either loc or label must be provided.")
         if label is not None:
@@ -495,7 +484,7 @@ def register(
             interval=interval,
         )
         desktop = get_desktop()
-        use_dom_bool = _as_bool(use_dom, "use_dom")
+        use_dom_bool = as_bool(use_dom, "use_dom")
         started_at = time.monotonic()
         deadline = started_at + timeout
         attempts = 0

@@ -1,7 +1,7 @@
 ---
 Title: Windows-MCP open issues backlog (from the 2026-09-22 tool testing)
 Description: Every failing behaviour and every change still needed after three test sessions of all 20 windows-mcp tools on 2026-09-22. Collected only, nothing fixed, as the user asked. Grouped by priority, plus test-coverage gaps and seven actions missing compared with Claude computer use (Cowork), with the tool, what happens, why it matters and the suggested change, plus a standing task to update Skills/Skill.md as each fix lands. No freeze or server-crash issue is open: the frozen-app hang and the Avast HTTPS crash were fixed and committed (bf0137f). Source: docs/testing/windows-mcp-tool-test-report.md and Plan/windows-mcp-testing-tasks.md.
-Total Tasks: 36
+Total Tasks: 37
 ---
 
 # Windows-MCP open issues
@@ -10,11 +10,12 @@ Total Tasks: 36
 
 ## 1. High — can lose data or act on the wrong thing
 
-- [ ] 1.1 **FileSystem `write` ignores `overwrite=false`.** An existing file is replaced anyway. Fix: refuse the write when the file exists and `overwrite` is false.
-- [ ] 1.2 **FileSystem booleans:** the string `"yes"` counts as false. Fix: accept yes/no/1/0/on/off, or reject unknown strings with an error.
-- [ ] 1.3 **Process name filter is fuzzy.** "pwsh" matched ShellExperienceHost, so a kill by name could end the wrong process. Fix: exact (case-insensitive) name match for kill; keep fuzzy only for listing.
-- [ ] 1.4 **Registry key delete wipes all sub-keys** when `name` is omitted, with no warning. Fix: refuse to delete a key that has sub-keys unless an explicit `recursive=true` is passed.
-- [ ] 1.5 **Snapshot lists hidden elements.** Elements of background windows are listed even where another window covers them, so a click on one hits the covering window. Fix: drop or mark elements whose centre point belongs to another window (hit-test with WindowFromPoint).
+- [x] 1.1 **FileSystem `write` ignores `overwrite=false`.** An existing file is replaced anyway. Fix: refuse the write when the file exists and `overwrite` is false. Done 2026-09-22.
+- [x] 1.2 **FileSystem booleans:** the string `"yes"` counts as false. Fix: accept yes/no/1/0/on/off, or reject unknown strings with an error. Done 2026-09-22.
+- [x] 1.3 **Process name filter is fuzzy.** "pwsh" matched ShellExperienceHost, so a kill by name could end the wrong process. Fix: exact (case-insensitive) name match for kill; keep fuzzy only for listing. Done 2026-09-22.
+- [x] 1.4 **Registry key delete wipes all sub-keys** when `name` is omitted, with no warning. Fix: refuse to delete a key that has sub-keys unless an explicit `recursive=true` is passed. Done 2026-09-22.
+- [x] 1.5 **Snapshot lists hidden elements.** Elements of background windows are listed even where another window covers them, so a click on one hits the covering window. Fix: drop or mark elements whose centre point belongs to another window (hit-test with WindowFromPoint). Done 2026-09-22 (fix/open-issues-backlog).
+- [ ] 1.6 **Snapshot / WaitFor / App switch can freeze VS Code.** Repeated full-desktop reads made a large VS Code window go "Not Responding" on 2026-09-22: Electron answers every accessibility query on its UI thread. Fix idea: skip or cap the element walk of background Electron windows, or default to the focused window only.
 
 ## 2. Medium — wrong or misleading results
 

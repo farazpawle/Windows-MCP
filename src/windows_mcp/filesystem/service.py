@@ -16,7 +16,6 @@ from windows_mcp.filesystem.views import (
     MAX_RESULTS,
     File,
     Directory,
-    format_size,
 )
 
 logger = logging.getLogger(__name__)
@@ -59,9 +58,12 @@ def read_file(path: str, offset: int | None = None, limit: int | None = None, en
         return f'Error reading file: {e}'
 
 
-def write_file(path: str, content: str, append: bool = False, encoding: str = 'utf-8', create_parents: bool = True) -> str:
-    """Write or append text content to a file."""
+def write_file(path: str, content: str, append: bool = False, overwrite: bool = False, encoding: str = 'utf-8', create_parents: bool = True) -> str:
+    """Write or append text content to a file. An existing file is replaced only with overwrite=True."""
     file_path = Path(path).resolve()
+
+    if file_path.exists() and not append and not overwrite:
+        return f'Error: File already exists: {file_path}. Set overwrite=True to replace it or append=True to add to it.'
 
     try:
         if create_parents:
@@ -300,7 +302,7 @@ def get_file_info(path: str) -> str:
         if target.is_dir():
             try:
                 items = list(target.iterdir())
-                file.contents_dirs = sum(1 for i in items if i.is_dir())    
+                file.contents_dirs = sum(1 for i in items if i.is_dir())
                 file.contents_files = sum(1 for i in items if i.is_file())
             except PermissionError:
                 pass

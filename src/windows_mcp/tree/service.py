@@ -9,7 +9,7 @@ from windows_mcp.tree.cache_utils import (
     is_uia_dead_element_error,
 )
 from windows_mcp.tree.budget import TreeElementBudget, resolve_max_tree_elements
-from windows_mcp.tree.utils import random_point_within_bounding_box
+from windows_mcp.tree.utils import random_point_within_bounding_box, drop_occluded
 from windows_mcp.tree import ia2 as ia2_traversal
 from typing import TYPE_CHECKING,Optional,Any
 from time import sleep,perf_counter
@@ -198,6 +198,7 @@ class Tree:
             task_inputs.append((handle, is_browser))
 
         retry_counts = {handle: 0 for handle in windows_handles}
+        active_handle = windows_handles[0] if active_window_flag and windows_handles else None
         for handle, is_browser in task_inputs:
             if self.element_budget.exhausted:
                 logger.debug(
@@ -211,6 +212,11 @@ class Tree:
                     result = self.get_nodes(handle, is_browser, wait_time=0.5 * (2 ** (attempt - 1)) if attempt > 0 else 0, use_dom=use_dom)
                     if result:
                         element_nodes, scroll_nodes, info_nodes, win_sem_node = result
+                        if handle != active_handle:
+                            # Background window: other windows may cover parts of it.
+                            element_nodes, scroll_nodes = drop_occluded(
+                                handle, element_nodes, scroll_nodes, win_sem_node
+                            )
                         interactive_nodes.extend(element_nodes)
                         scrollable_nodes.extend(scroll_nodes)
                         dom_informative_nodes.extend(info_nodes)

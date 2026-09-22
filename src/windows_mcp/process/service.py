@@ -4,6 +4,11 @@ from typing import Literal
 __all__ = ["list_processes", "kill_process"]
 
 
+def _strip_exe(name: str) -> str:
+    name = name.strip().casefold()
+    return name.removesuffix(".exe")
+
+
 def list_processes(
     name: str | None = None,
     sort_by: Literal["memory", "cpu", "name"] = "memory",
@@ -28,9 +33,9 @@ def list_processes(
         except (psutil.NoSuchProcess, psutil.AccessDenied):
             continue
     if name:
-        from thefuzz import fuzz
-
-        procs = [p for p in procs if fuzz.partial_ratio(name.lower(), p["name"].lower()) > 60]
+        # Plain substring match: the old fuzzy score let "pwsh" match ShellExperienceHost.
+        needle = name.casefold()
+        procs = [p for p in procs if needle in p["name"].casefold()]
     sort_key = {
         "memory": lambda x: x["mem_mb"],
         "cpu": lambda x: x["cpu"],
@@ -70,9 +75,11 @@ def kill_process(
         except psutil.AccessDenied:
             return f"Access denied to kill PID {pid}. Try running as administrator."
     else:
+        # Exact name only; ".exe" is optional so "pwsh" and "pwsh.exe" both work.
+        wanted = _strip_exe(name)
         for p in psutil.process_iter(["pid", "name"]):
             try:
-                if p.info["name"] and p.info["name"].lower() == name.lower():
+                if p.info["name"] and _strip_exe(p.info["name"]) == wanted:
                     if force:
                         p.kill()
                     else:
