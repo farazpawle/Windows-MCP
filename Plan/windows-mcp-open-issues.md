@@ -39,7 +39,7 @@ Total Tasks: 36
 
 - [ ] 4.1 [User] **Full Scrape `use_dom` read.** A browser-lock extension on the user's Edge replaces new windows with an error page, and the agent will not work around it. Needs the user to open a test page in a browser tab.
 - [ ] 4.2 [User] **Claude Desktop still runs the PyPI server** without these fixes. Only the user can change or approve its config.
-- [ ] 4.3 [User] **Commit the report and plan updates** (docs report changed; `Plan/` and `Skills/` are untracked). Needs the user's go-ahead to commit.
+- [x] 4.3 [User] **Commit the report and plan updates.** Done 2026-09-22 (1cb7d91, a55962a); `Skills/` is still untracked.
 
 ## 5. Test coverage gaps (tested lightly or not at all)
 
