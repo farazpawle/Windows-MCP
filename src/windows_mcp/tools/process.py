@@ -7,7 +7,7 @@ from windows_mcp.infrastructure import with_analytics
 from fastmcp import Context
 from windows_mcp import process
 from windows_mcp.tools._args import as_bool
-from windows_mcp.tools._output import cap_text
+from windows_mcp.tools._output import cap_text, raise_error_replies
 
 
 def register(mcp, *, get_desktop, get_analytics):
@@ -23,6 +23,7 @@ def register(mcp, *, get_desktop, get_analytics):
         ),
     )
     @with_analytics(get_analytics(), "Process-Tool")
+    @raise_error_replies
     def process_tool(
         mode: Literal["list", "kill"],
         name: str | None = None,

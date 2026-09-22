@@ -71,9 +71,9 @@ def kill_process(
                 p.terminate()
             killed.append(f"{pname} (PID {pid})")
         except psutil.NoSuchProcess:
-            return f"No process with PID {pid} found."
+            return f"Error: No process with PID {pid} found."
         except psutil.AccessDenied:
-            return f"Access denied to kill PID {pid}. Try running as administrator."
+            return f"Error: Access denied to kill PID {pid}. Try running as administrator."
     else:
         # Exact name only; ".exe" is optional so "pwsh" and "pwsh.exe" both work.
         wanted = _strip_exe(name)
@@ -88,5 +88,5 @@ def kill_process(
             except (psutil.NoSuchProcess, psutil.AccessDenied):
                 continue
     if not killed:
-        return f'No process matching "{name}" found or access denied.'
+        return f'Error: No process matching "{name}" found or access denied.'
     return f"{'Force killed' if force else 'Terminated'}: {', '.join(killed)}"

@@ -11,7 +11,7 @@ import pytest
 from fastmcp import FastMCP
 from fastmcp.exceptions import ToolError
 
-from windows_mcp.tools import filesystem, registry
+from windows_mcp.tools import filesystem, process, registry
 
 EXECUTE = "windows_mcp.powershell.PowerShellExecutor.execute_command"
 
@@ -38,3 +38,15 @@ def test_registry_failure_is_a_tool_error():
     with patch(EXECUTE, return_value=("Property Nope does not exist", 1)):
         with pytest.raises(ToolError, match="Error reading registry"):
             _call(registry, "Registry", mode="get", path=r"HKCU:\Software", name="Nope")
+
+
+@pytest.mark.parametrize(
+    ("args", "message"),
+    [
+        ({"pid": 999_999_999}, "No process with PID"),
+        ({"name": "no-such-process-wmcp"}, "No process matching"),
+    ],
+)
+def test_process_kill_failure_is_a_tool_error(args, message):
+    with pytest.raises(ToolError, match=message):
+        _call(process, "Process", mode="kill", **args)
