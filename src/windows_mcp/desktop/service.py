@@ -523,29 +523,36 @@ class Desktop:
         except Exception:
             return False
 
-    def _find_window_by_name(self, name: str) -> tuple["Window | None", str]:
-        """Find a window by fuzzy name match. Returns (window, error_msg).
-        If the returned window is None, error_msg describes the failure reason.
+    def _find_windows_by_name(self, name: str | None) -> tuple[list["Window"], str]:
+        """Find the windows matching a name, best match first. Returns (windows, error_msg).
+        If no window matches, the list is empty and error_msg describes the failure reason.
 
         Reads the live window list: the last capture's list misses windows opened since,
         and a full get_state() (UI tree + screenshot) is far more than a lookup needs.
         """
+        if not name or not name.strip():
+            # "" is a substring of every title, so it picked an arbitrary window.
+            return [], "Provide the name of a window (the name was empty)."
         window_list, _ = self.get_windows()
         if not window_list:
-            return None, "No windows found on the desktop."
+            return [], "No windows found on the desktop."
 
-        windows = {window.name: window for window in window_list}
-        matched_window = process.extractOne(name, list(windows.keys()), score_cutoff=70)
-        if matched_window is not None:
-            window_name, _ = matched_window
-            return windows.get(window_name), ""
+        # Keyed by position, not title: two windows can share a title.
+        titles = {index: window.name for index, window in enumerate(window_list)}
+        matches = process.extractBests(name, titles, score_cutoff=70, limit=None)
+        found = [window_list[index] for _, _, index in matches]
         # Short names score too low against long titles ("Edge" vs "... - Microsoft\u200b Edge",
-        # whose zero-width space also defeats the fuzzy match), so fall back to a plain
-        # substring of the title, then to the process name ("msedge", "notepad.exe").
+        # whose zero-width space also defeats the fuzzy match), so plain title substrings are
+        # added after the fuzzy matches - "h" fuzzy-matched only "Shell" and hid "WMCP Harness".
+        # The process name ("msedge", "notepad.exe") is the last resort.
         query = name.casefold().strip()
-        for window in window_list:
-            if query in _ZERO_WIDTH.sub("", window.name).casefold():
-                return window, ""
+        found += [
+            w
+            for w in window_list
+            if w not in found and query in _ZERO_WIDTH.sub("", w.name).casefold()
+        ]
+        if found:
+            return found, ""
         query = query.removesuffix(".exe")
         for window in window_list:
             try:
@@ -553,16 +560,36 @@ class Desktop:
             except Exception:
                 continue
             if exe == query:
-                return window, ""
-        return None, f"Application {name.title()} not found."
+                found.append(window)
+        if found:
+            return found, ""
+        return [], f'Window "{name}" not found.'
+
+    @staticmethod
+    def _other_matches_note(windows: list["Window"]) -> str:
+        """Name the windows a vague name also matched, so a wrong pick is visible."""
+        others = [window.name for window in windows[1:]]
+        if not others:
+            return ""
+        shown = ", ".join(f'"{title}"' for title in others[:5])
+        more = f" and {len(others) - 5} more" if len(others) > 5 else ""
+        return f" Also matched {shown}{more}; use a longer name to pick another."
 
     def resize_app(
         self, name: str | None = None, size: tuple[int, int] = None, loc: tuple[int, int] = None
     ) -> tuple[str, int]:
+        # [0, -5] was applied (the window shrank to its minimum) and a one-number list
+        # failed with "not enough values to unpack".
+        if size is not None and not (len(size) == 2 and all(v > 0 for v in size)):
+            return f"window_size must be two positive numbers [width, height], got {list(size)}", 1
+        if loc is not None and len(loc) != 2:
+            return f"window_loc must be two numbers [x, y], got {list(loc)}", 1
+        note = ""
         if name is not None:
-            target_window, error = self._find_window_by_name(name)
-            if target_window is None:
+            windows, error = self._find_windows_by_name(name)
+            if not windows:
                 return error, 1
+            target_window, note = windows[0], self._other_matches_note(windows)
         else:
             # If no name provided, try to resize the active window
             target_window = self.desktop_state.active_window if self.desktop_state else None
@@ -572,9 +599,13 @@ class Desktop:
 
         # target_window is guaranteed to be non-None here
         if target_window.status == Status.MINIMIZED:
-            return f"{target_window.name} is minimized", 1
+            return f"Cannot resize {target_window.name}: it is minimized. Switch to it first.", 1
         elif target_window.status == Status.MAXIMIZED:
-            return f"{target_window.name} is maximized", 1
+            return (
+                f"Cannot resize {target_window.name}: it is maximized. "
+                "Restore it first (e.g. Shortcut win+down).",
+                1,
+            )
         else:
             window_control = uia.ControlFromHandle(target_window.handle)
             if loc is None:
@@ -587,8 +618,22 @@ class Desktop:
                 size = (width, height)
             x, y = loc
             width, height = size
+            # A window fully off every display is unreachable by mouse and looks lost.
+            displays = self.get_displays()
+            if displays and not any(
+                x < d.rect.right
+                and d.rect.left < x + width
+                and y < d.rect.bottom
+                and d.rect.top < y + height
+                for d in displays
+            ):
+                return (
+                    f"window_loc {[x, y]} with size {width}x{height} puts "
+                    f"{target_window.name} fully off every display.",
+                    1,
+                )
             window_control.MoveWindow(x, y, width, height)
-            return (f"{target_window.name} resized to {width}x{height} at {x},{y}.", 0)
+            return (f"{target_window.name} resized to {width}x{height} at {x},{y}.{note}", 0)
 
     def app(
         self,
@@ -609,22 +654,24 @@ class Desktop:
                 name = response
 
                 # Smart wait using UIA Exists (avoids manual Python loops)
-                launched = False
+                window = None
                 if pid > 0:
-                    if uia.WindowControl(ProcessId=pid).Exists(maxSearchSeconds=10):
-                        launched = True
+                    control = uia.WindowControl(ProcessId=pid)
+                    if control.Exists(maxSearchSeconds=10):
+                        window = control
 
-                if not launched:
+                if window is None:
                     # Fallback: Regex search for the window title
                     safe_name = re.escape(name)
-                    if uia.WindowControl(RegexName=f"(?i).*{safe_name}.*").Exists(
-                        maxSearchSeconds=10
-                    ):
-                        launched = True
+                    control = uia.WindowControl(RegexName=f"(?i).*{safe_name}.*")
+                    if control.Exists(maxSearchSeconds=10):
+                        window = control
 
-                if launched:
-                    return f"{name.title()} launched."
-                return f"Launching {name.title()} sent, but window not detected yet."
+                # The window's own title: the Start Menu name is lower-cased, and
+                # str.title() re-capitalised names wrongly ("Wmcp Harness").
+                if window is not None:
+                    return f"{window.Name or name} launched."
+                return f"Launching {name} sent, but window not detected yet."
             case "resize":
                 response, status = self.resize_app(name=name, size=size, loc=loc)
             case "switch":
@@ -643,15 +690,17 @@ class Desktop:
         response, status = PowerShellExecutor.execute_command(command)
         return status == 0 and response.strip().lower() == "true"
 
-    def launch_app(self, name: str) -> tuple[str, int, int]:
+    def launch_app(self, name: str | None) -> tuple[str, int, int]:
+        if not name or not name.strip():
+            return ("Provide the name of an app to launch (the name was empty).", 1, 0)
         apps_map = self.get_apps_from_start_menu()
         matched_app = process.extractOne(name, apps_map.keys(), score_cutoff=70)
         if matched_app is None:
-            return (f"{name.title()} not found in start menu.", 1, 0)
+            return (f'"{name}" not found in start menu.', 1, 0)
         app_name, _ = matched_app
         appid = apps_map.get(app_name)
         if appid is None:
-            return (f"{name.title()} not found in start menu.", 1, 0)
+            return (f'"{name}" not found in start menu.', 1, 0)
 
         pid = 0
         if os.path.exists(appid) or "\\" in appid:
@@ -671,21 +720,22 @@ class Desktop:
 
         return (app_name if status == 0 else response), status, pid
 
-    def switch_app(self, name: str):
+    def switch_app(self, name: str | None):
         try:
-            window, error = self._find_window_by_name(name)
-            if window is None:
+            windows, error = self._find_windows_by_name(name)
+            if not windows:
                 return error, 1
+            window = windows[0]
 
             target_handle = window.handle
 
             was_minimized = uia.IsIconic(target_handle)
             self.bring_window_to_top(target_handle)
             if was_minimized:
-                content = f"Restored {window.name.title()} from minimized and switched to it."
+                content = f"Restored {window.name} from minimized and switched to it."
             else:
-                content = f"Switched to {window.name.title()} window."
-            return content, 0
+                content = f"Switched to {window.name} window."
+            return content + self._other_matches_note(windows), 0
         except Exception as e:
             return (f"Error switching app: {str(e)}", 1)
 

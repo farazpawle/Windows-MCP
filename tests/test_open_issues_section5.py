@@ -20,7 +20,7 @@ def test_app_launch_names_the_matched_start_menu_app(monkeypatch: pytest.MonkeyP
 
     def window_control(**kwargs):
         searched.append(kwargs.get("RegexName", ""))
-        return MagicMock(Exists=MagicMock(return_value=True))
+        return MagicMock(Exists=MagicMock(return_value=True), Name="Visual Studio Code")
 
     with patch("windows_mcp.desktop.service.uia.WindowControl", side_effect=window_control):
         reply = desktop.app("launch", name="code")

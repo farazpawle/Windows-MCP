@@ -1,6 +1,8 @@
 """App tool — launch, resize, switch applications."""
 
 import json
+import os
+import shutil
 import subprocess
 from pathlib import Path
 from typing import Literal
@@ -23,6 +25,13 @@ def _as_args(value: list[str] | str | None) -> list[str]:
 
 
 def _resolve_executable(executable: str) -> Path:
+    # A bare name ("notepad.exe") was looked up in the server's own folder; search
+    # PATH like a shell does. Anything with a folder or drive part stays a path.
+    if os.path.basename(executable) == executable:
+        found = shutil.which(executable)
+        if found is None:
+            raise ValueError(f"Executable not found on PATH: {executable}")
+        executable = found
     path = Path(executable).expanduser().resolve()
     if not path.is_file():
         raise ValueError(f"Executable does not exist: {path}")
@@ -73,9 +82,9 @@ def register(mcp, *, get_desktop, get_analytics):
         description=(
             "Open/start/launch applications and manage windows. Keywords: open, start, launch, program, "
             "application, window, foreground, focus, resize. Four modes: 'launch' (opens an application "
-            "by Start Menu name), 'launch_executable' (strictly launches one executable path with separated "
-            "argv and optional cwd), 'resize' (adjusts a named or active window), and 'switch' (brings a "
-            "specific window into focus)."
+            "by Start Menu name), 'launch_executable' (strictly launches one executable - a path, or a "
+            "bare name found on PATH - with separated argv and optional cwd), 'resize' (adjusts a named "
+            "or active window), and 'switch' (brings a specific window into focus)."
         ),
         annotations=ToolAnnotations(
             title="App",

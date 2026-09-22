@@ -155,7 +155,8 @@ class TestFindWindowFallbacks:
             "windows_mcp.desktop.service.Process",
             side_effect=lambda pid: SimpleNamespace(name=lambda: self.PROCESSES[pid]),
         ):
-            return desktop._find_window_by_name(query)
+            windows, error = desktop._find_windows_by_name(query)
+        return (windows[0] if windows else None), error
 
     @pytest.mark.parametrize(
         ("query", "pid"),
@@ -180,9 +181,9 @@ class TestFindWindowFallbacks:
         desktop.get_windows = lambda: (list(self.TITLES) + [harness], set())
         desktop.get_state = lambda *a, **k: pytest.fail("full capture (tree + screenshot)")
 
-        window, error = desktop._find_window_by_name("WMCP Harness")
+        windows, error = desktop._find_windows_by_name("WMCP Harness")
 
-        assert (window, error) == (harness, "")
+        assert (windows[0], error) == (harness, "")
 
 
 # 1.6 follow-up: Antigravity's process is "Antigravity IDE.exe" on this PC
