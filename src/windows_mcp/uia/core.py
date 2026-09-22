@@ -1483,9 +1483,14 @@ def SendUnicodeChar(char: str, charMode: bool = True) -> int:
                 KeyboardInput(vk, 0, KeyboardEventFlag.KeyDown),
                 KeyboardInput(vk, 0, KeyboardEventFlag.KeyUp),
             )
+    return SendInput(*_unicode_key_events(char))
+
+
+def _unicode_key_events(text: str) -> list[INPUT]:
+    """Key down/up pairs that type *text* regardless of keyboard layout."""
     # KEYEVENTF_UNICODE carries one UTF-16 unit, so a char outside the BMP
     # (emoji) must be sent as its surrogate pair or it arrives truncated.
-    data = char.encode("utf-16-le")
+    data = text.encode("utf-16-le")
     inputs = []
     for i in range(0, len(data), 2):
         unit = int.from_bytes(data[i : i + 2], "little")
@@ -1495,7 +1500,31 @@ def SendUnicodeChar(char: str, charMode: bool = True) -> int:
         inputs.append(
             KeyboardInput(0, unit, KeyboardEventFlag.KeyUnicode | KeyboardEventFlag.KeyUp)
         )
-    return SendInput(*inputs)
+    return inputs
+
+
+def _send_inputs(inputs: list[INPUT]) -> int:
+    """Insert *inputs* in one SendInput call: one uninterrupted block in the input stream."""
+    array = (INPUT * len(inputs))(*inputs)
+    return ctypes.windll.user32.SendInput(len(inputs), array, ctypes.sizeof(INPUT))
+
+
+def SendUnicodeText(text: str, chunkSize: int = 32, interval: float = 0.01) -> None:
+    """Type *text* as Unicode key events, without the clipboard.
+
+    Each chunk of *chunkSize* characters goes in one SendInput call, so other input
+    can't interleave and drop keys (seen with per-key sends on slow VMs); the pause
+    between chunks lets the target app drain its queue. Chunks split on characters,
+    never inside a surrogate pair.
+    """
+    for start in range(0, len(text), chunkSize):
+        inputs = _unicode_key_events(text[start : start + chunkSize])
+        if _send_inputs(inputs) != len(inputs):
+            # 0 means UIPI blocked it: the target runs elevated and this process doesn't.
+            raise OSError(
+                "Typing was blocked by Windows; the target window may be running as administrator."
+            )
+        time.sleep(interval)
 
 
 _SCKeys = {

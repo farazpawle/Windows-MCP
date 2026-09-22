@@ -831,15 +831,15 @@ class Desktop:
         for i in range(clicks):
             press(x, y, waitTime=dbl_wait if i < clicks - 1 else 0)
 
-    # Strings longer than this typed via clipboard paste instead of
-    # per-key SendKeys. SendKeys at high cadence loses keystrokes on
+    # Strings this long are typed as chunked Unicode events (uia.SendUnicodeText)
+    # instead of per-key SendKeys. SendKeys at high cadence loses keystrokes on
     # slower / loaded systems (Win11 VMs in particular) — observed
     # "hello from windows-mcp drive test" rendering as
-    # "hello tttttttttttttttttttttttttt" on a 4-core Win11 VM. The
-    # paste path is reliable because it bypasses the scan-code queue
-    # entirely. Plain-text only; control chars route through SendKeys
-    # so escape sequences ({Enter}, {Tab}, …) still work.
-    _LONG_TEXT_PASTE_THRESHOLD = 20
+    # "hello tttttttttttttttttttttttttt" on a 4-core Win11 VM. This used to paste
+    # through the clipboard, which lost any image or file list on it (round-2 2.14).
+    # Plain-text only; control chars route through SendKeys so escape sequences
+    # ({Enter}, {Tab}, …) still work.
+    _LONG_TEXT_THRESHOLD = 20
 
     def type(
         self,
@@ -865,10 +865,10 @@ class Desktop:
             uia.SendKeys("{Back}", waitTime=0.05)
             self._finish_clear()
         # Per-key SendKeys for short text (so escape sequences keep working);
-        # clipboard paste for long text (so the scan-code queue can't race).
+        # chunked Unicode events for long text (so the scan-code queue can't race).
         has_control_chars = any(c in text for c in ("\n", "\t", "{", "}"))
-        if len(text) >= self._LONG_TEXT_PASTE_THRESHOLD and not has_control_chars:
-            self._paste_text(text)
+        if len(text) >= self._LONG_TEXT_THRESHOLD and not has_control_chars:
+            uia.SendUnicodeText(text)
         else:
             escaped_text = _escape_text_for_sendkeys(text)
             # Bump interval from 0.02 → 0.04. Keeps short-text speed acceptable
@@ -888,28 +888,6 @@ class Desktop:
                 pattern.SetValue("")
         except Exception as e:
             logger.debug("ValuePattern clear fallback failed: %s", e)
-
-    def _paste_text(self, text: str):
-        """Stash text on the clipboard, Ctrl+V, restore prior clipboard.
-        Plain-text only — control chars (newlines, tabs, braces) need to
-        route through SendKeys instead so escape sequences are honored.
-        """
-        prior = None
-        try:
-            prior = uia.GetClipboardText()
-        except Exception:
-            pass
-        uia.SetClipboardText(text)
-        # Tiny pause so the OS clipboard write settles before Ctrl+V reads.
-        sleep(0.05)
-        uia.SendKeys("{Ctrl}v", waitTime=0.05)
-        # Restore prior clipboard so we don't surprise other tools.
-        if prior is not None:
-            sleep(0.05)
-            try:
-                uia.SetClipboardText(prior)
-            except Exception:
-                pass
 
     def scroll(
         self,
