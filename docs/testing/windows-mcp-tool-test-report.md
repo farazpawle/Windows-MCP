@@ -1,6 +1,6 @@
 ---
 Title: Windows-MCP tool test report (2026-09-22)
-Description: Live test results for all 20 windows-mcp tools on the maintainer's Windows 11 PC, run from Claude Code against the local repo over two sessions on 2026-09-22. Gives a pass/fail verdict per tool, the ten bugs found and fixed (frozen-app hang, emoji typing and paste, empty Type text, stuck Ctrl after a bad shortcut, horizontal scroll, WaitFor text_exists missing static text and ignoring window_name, clear on legacy edit boxes, OpenSSL abort from Avast's SSLKEYLOGFILE, Scrape HTTPS rejected under Avast), the issues still open, and how each result was verified.
+Description: Live test results for all 20 windows-mcp tools on the maintainer's Windows 11 PC, run from Claude Code against the local repo over two sessions on 2026-09-22. Gives a pass/fail verdict per tool, the ten bugs found and fixed (frozen-app hang, emoji typing and paste, empty Type text, stuck Ctrl after a bad shortcut, horizontal scroll, WaitFor text_exists missing static text and ignoring window_name, clear on legacy edit boxes, OpenSSL abort from Avast's SSLKEYLOGFILE, Scrape HTTPS rejected under Avast), the issues still open, the post-restart re-tests (emoji typing and Scrape pass; use_dom only partly tested), and how each result was verified.
 Tags: testing, qa, windows-mcp
 Updated: 2026-09-22
 ---
@@ -34,7 +34,7 @@ Updated: 2026-09-22
 | Process | Pass, with notes | The name filter is fuzzy ("pwsh" matched ShellExperienceHost). Kill by PID. |
 | Clipboard | Pass | Unicode and multi-line text round-trip. Uses pywin32, so it was never affected by the emoji paste bug. |
 | Notification | **Fail (unconfirmed display)** | The call reported success, but the user saw no toast. It also reports success for a fake `app_id`. |
-| Scrape | Pass after fixes | HTTPS aborted the whole server, then failed certificate checks under Avast (both fixed). Verified: a real page loads, an expired certificate is refused, loopback is blocked. `use_dom` not yet re-tested. |
+| Scrape | Pass after fixes | HTTPS aborted the whole server, then failed certificate checks under Avast (both fixed). Verified: a real page loads, an expired certificate is refused, loopback is blocked. `use_dom` checked only for its "page not open" reply (see Post-restart re-tests). |
 
 ## Bugs fixed (uncommitted, tests added)
 
@@ -59,4 +59,12 @@ Every fix was also checked live against the real desktop. The full suite passes 
 2. **FileSystem `write` ignores `overwrite=false`.** Not fixed yet.
 3. **Hidden elements in the tree.** Snapshot lists elements of background windows even where another window covers them, so clicking one hits the covering window. This is not region-specific.
 4. **Minor replies.** `Click` with `clicks` outside 0–2 replies "None … clicked"; negative values single-click. `MultiSelect` says "multi-selected" even without Ctrl.
-5. **Re-test after restart.** Emoji typing through the Type tool and Scrape (HTTP and `use_dom`) need a restarted Claude Code. The running server predates part of the fixes.
+
+## Post-restart re-tests (session 3, 2026-09-22)
+
+Run against the restarted server (local repo, truststore installed):
+
+- **Type, emoji.** Short text `Hi 😀👍🏽 café ✓` (typed key by key) and a 43-unit mixed emoji/CJK string (clipboard paste path) both arrived exactly, compared UTF-16 unit by unit through the harness. The user's clipboard was restored after the paste test.
+- **Scrape HTTP/HTTPS.** `http://` and `https://example.com` load with `use_sampling=false`; `expired.badssl.com` is refused with a Windows certificate-store error (truststore active). The server stayed up.
+- **Scrape sampling.** With the default `use_sampling=true`, Claude Code does not support MCP sampling, so the tool silently returns the raw page. Expected fallback, but the reply does not say the summary was skipped.
+- **Scrape `use_dom`.** With no tab on the URL, it returns a clean "open the page in the browser first" message. A full DOM read was not possible: a browser-lock extension on the user's Edge replaces new windows with an error page.
