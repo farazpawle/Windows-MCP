@@ -69,6 +69,7 @@ The codebase follows a layered service architecture under `src/windows_mcp/`:
 - The server supports stdio, SSE, and streamable HTTP transports
 - `serve()` drops `SSLKEYLOGFILE` at startup (`_drop_ssl_keylog_env`): Avast/AVG inject it into every process, and this Python's OpenSSL then aborts the whole server on the first HTTPS request. Keep it. Test scripts that act as HTTP(S) clients (e.g. the FastMCP client) hit the same abort (`OPENSSL_Uplink ... no OPENSSL_Applink`); run them with `SSLKEYLOGFILE` unset (`env -u SSLKEYLOGFILE ...`).
 - Docs live in `docs/` (test reports in `docs/testing/`); plans and task files in `Plan/`.
+- A local, unversioned `.git/hooks/post-commit` refreshes the GitNexus index in the background after each commit (`gitnexus analyze --skip-agents-md --skip-skills`; log `.git/gitnexus-analyze.log`, lock dir `.git/gitnexus-analyze.lock`). A fresh clone does not have it.
 
 ## Environment Variables
 

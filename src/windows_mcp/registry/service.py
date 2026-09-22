@@ -51,9 +51,7 @@ def get_value(path: str, name: str) -> str:
     """Read a registry value at *path* with the given *name*."""
     q_path = ps_quote(path)
     q_name = ps_quote(name)
-    command = (
-        f"Get-ItemProperty -Path {q_path} -Name {q_name} | Select-Object -ExpandProperty {q_name}"
-    )
+    command = f"Get-ItemProperty -LiteralPath {q_path} -Name {q_name} | Select-Object -ExpandProperty {q_name}"
     response, status = PowerShellExecutor.execute_command(command)
     if status != 0:
         return f"Error reading registry: {response.strip()}"
@@ -79,8 +77,8 @@ def set_value(path: str, name: str, value: str, reg_type: RegistryType = "String
     else:
         q_value = ps_quote(value)
     command = (
-        f"if (-not (Test-Path {q_path})) {{ New-Item -Path {q_path} -Force | Out-Null }}; "
-        f"Set-ItemProperty -Path {q_path} -Name {q_name} -Value {q_value} -Type {reg_type} -Force"
+        f"if (-not (Test-Path -LiteralPath {q_path})) {{ New-Item -Path {q_path} -Force | Out-Null }}; "
+        f"Set-ItemProperty -LiteralPath {q_path} -Name {q_name} -Value {q_value} -Type {reg_type} -Force"
     )
     response, status = PowerShellExecutor.execute_command(command)
     if status != 0:
@@ -92,23 +90,29 @@ def delete_entry(path: str, name: str | None = None, recursive: bool = False) ->
     """Delete a registry value when *name* is provided, otherwise remove the key.
 
     A key that has sub-keys is only removed with recursive=True, so a missing
-    ``name`` can no longer wipe a whole tree by accident.
+    ``name`` can no longer wipe a whole tree by accident. Paths holding ``*`` or
+    ``?`` are refused: a wildcard delete could wipe many keys at once.
     """
+    if "*" in path or "?" in path:
+        return (
+            f"Error: Registry path [{path}] contains a wildcard (* or ?); nothing was deleted. "
+            "Give the exact key path."
+        )
     q_path = ps_quote(path)
     if name:
         q_name = ps_quote(name)
-        command = f"Remove-ItemProperty -Path {q_path} -Name {q_name} -Force"
+        command = f"Remove-ItemProperty -LiteralPath {q_path} -Name {q_name} -Force"
         response, status = PowerShellExecutor.execute_command(command)
         if status != 0:
             return f"Error deleting registry value: {response.strip()}"
         return f'Registry value [{path}] "{name}" deleted.'
     if recursive:
-        command = f"Remove-Item -Path {q_path} -Recurse -Force"
+        command = f"Remove-Item -LiteralPath {q_path} -Recurse -Force"
     else:
         command = (
-            f"$n = @(Get-ChildItem -Path {q_path} -ErrorAction Stop).Count; "
+            f"$n = @(Get-ChildItem -LiteralPath {q_path} -ErrorAction Stop).Count; "
             f'if ($n -gt 0) {{ Write-Output "HAS_SUBKEYS:$n"; exit 2 }}; '
-            f"Remove-Item -Path {q_path} -Force -ErrorAction Stop"
+            f"Remove-Item -LiteralPath {q_path} -Force -ErrorAction Stop"
         )
     response, status = PowerShellExecutor.execute_command(command)
     if status == 2 and response.strip().startswith("HAS_SUBKEYS:"):
@@ -126,9 +130,9 @@ def list_key(path: str) -> str:
     """List values and sub-keys under *path*."""
     q_path = ps_quote(path)
     command = (
-        f"$values = (Get-ItemProperty -Path {q_path} -ErrorAction Stop | "
+        f"$values = (Get-ItemProperty -LiteralPath {q_path} -ErrorAction Stop | "
         f"Select-Object * -ExcludeProperty PS* | Format-List | Out-String).Trim(); "
-        f"$subkeys = (Get-ChildItem -Path {q_path} -ErrorAction SilentlyContinue | "
+        f"$subkeys = (Get-ChildItem -LiteralPath {q_path} -ErrorAction SilentlyContinue | "
         f'Select-Object -ExpandProperty PSChildName) -join "`n"; '
         f'if ($values) {{ Write-Output "Values:`n$values" }}; '
         f'if ($subkeys) {{ Write-Output "`nSub-Keys:`n$subkeys" }}; '
