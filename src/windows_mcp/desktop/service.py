@@ -787,6 +787,33 @@ class Desktop:
             results.append((element_node.center.x, element_node.center.y))
         return results
 
+    def _require_on_screen(self, points: list[tuple[int, int]]) -> None:
+        """Refuse points that lie outside every display, before any input is sent.
+
+        Windows clamps an off-screen point to the nearest screen edge and acts
+        there (e.g. the show-desktop corner), so the action would land somewhere
+        the caller never named. Checked per display, not against the virtual
+        screen box, so gaps between displays of different sizes are refused too.
+        """
+        rects = [display.rect for display in self.get_displays()]
+        if not rects:  # monitor enumeration failed: fall back to the virtual screen
+            box = self.get_screen_box()
+            rects = [uia.Rect(box.left, box.top, box.right, box.bottom)]
+        bad = [
+            (i, x, y)
+            for i, (x, y) in enumerate(points, start=1)
+            if not any(rect.contains(x, y) for rect in rects)
+        ]
+        if not bad:
+            return
+        screens = ", ".join(f"({r.left},{r.top})-({r.right - 1},{r.bottom - 1})" for r in rects)
+        if len(points) == 1:
+            targets = f"({bad[0][1]},{bad[0][2]}) is"
+        else:
+            targets = ", ".join(f"target {i} ({x},{y})" for i, x, y in bad)
+            targets += " is" if len(bad) == 1 else " are"
+        raise ValueError(f"{targets} outside every display; no input was sent. Displays: {screens}")
+
     def click(
         self,
         loc: tuple[int, int] | list[int],
@@ -798,6 +825,7 @@ class Desktop:
             x, y = loc[0], loc[1]
         else:
             x, y = loc
+        self._require_on_screen([(x, y)])
         if clicks == 0:
             uia.SetCursorPos(x, y)
             return
@@ -842,6 +870,7 @@ class Desktop:
         # move the caret or drop the selection.
         if loc is not None:
             x, y = loc
+            self._require_on_screen([(x, y)])
             uia.Click(x, y)
         if caret_position == "start":
             uia.SendKeys("{Home}", waitTime=0.05)
@@ -990,6 +1019,7 @@ class Desktop:
             None if from_loc is None else self._normalize_drag_point(from_loc, "from_loc")
         )
         effective_duration = self._normalize_drag_duration(duration)
+        self._require_on_screen([(x, y)] + ([normalized_from_loc] if normalized_from_loc else []))
         sleep(0.5)
         if normalized_from_loc is None:
             cx, cy = uia.GetCursorPos()
@@ -1005,11 +1035,13 @@ class Desktop:
 
     def move(self, loc: tuple[int, int]):
         x, y = loc
+        self._require_on_screen([(x, y)])
         uia.MoveTo(x, y, moveSpeed=10)
 
     def mouse_button(self, loc: tuple[int, int] | list[int], action: Literal["down", "up"]):
         """Press or release the left button at *loc*, for drags one straight move can't do."""
         x, y = loc
+        self._require_on_screen([(x, y)])
         if action == "down":
             uia.PressMouse(x, y, waitTime=0.05)
         else:
@@ -1038,6 +1070,7 @@ class Desktop:
         press_ctrl = press_ctrl is True or (
             isinstance(press_ctrl, str) and press_ctrl.lower() == "true"
         )
+        self._require_on_screen([(loc[0], loc[1]) for loc in locs])
         if press_ctrl:
             uia.PressKey(uia.Keys.VK_CONTROL, waitTime=0.05)
         for loc in locs:
@@ -1047,9 +1080,17 @@ class Desktop:
         uia.ReleaseKey(uia.Keys.VK_CONTROL, waitTime=0.05)
 
     def multi_edit(self, locs: list[tuple[int, int, str]]):
-        for loc in locs:
-            x, y, text = loc
-            self.type((x, y), text=text, clear=True)
+        points = [(loc[0], loc[1]) for loc in locs]
+        self._require_on_screen(points)
+        for i, (x, y, text) in enumerate(locs):
+            try:
+                self.type((x, y), text=text, clear=True)
+            except Exception as e:
+                done = ", ".join(f"({px},{py})" for px, py in points[:i]) or "none"
+                not_done = ", ".join(f"({px},{py})" for px, py in points[i:])
+                raise RuntimeError(
+                    f"MultiEdit stopped at ({x},{y}): {e}. done: {done}; not done: {not_done}"
+                ) from e
 
     def scrape(self, url: str) -> str:
         current_url = url
