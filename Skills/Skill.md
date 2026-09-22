@@ -98,7 +98,7 @@ Coordinates: use Snapshot centres. Re-snapshot after any window move, resize or 
 
 - Default HTTP mode, **local repo (from 2026-09-22):** works on this PC; certificates are checked against the Windows store, so Avast's HTTPS inspection is accepted and bad certificates are still refused. Local/private addresses are blocked by design.
 - **PyPI release:** fails on this PC. Either CERTIFICATE_VERIFY_FAILED (Avast re-signs HTTPS), or with Python 3.14 the whole server **crashes** ("Connection closed" on every later call) because Avast injects `SSLKEYLOGFILE`. Use WebFetch or PowerShell Invoke-WebRequest there.
-- `use_dom=true` reads the **currently open browser tab**. The URL must match an open tab ("open it in browser first" otherwise).
+- `use_dom=true` reads the **active tab of the focused browser** (verified 2026-09-22 in Edge; Snapshot `use_dom=true` lists the page's links/fields with labels that Click accepts). To open a page, start `msedge.exe <url>` (opens a new tab; this PC's browser lock blocks new *windows*, not tabs), then App switch to it. Close only your own tab afterwards (Ctrl+W while it is active). Local repo: the first/last line says top / middle / bottom, or "Whole page visible"; **PyPI always says "Reached top … Scroll down"** — ignore it there.
 - It returns only the **visible viewport** text; scroll and scrape again for more. `use_sampling=false` gives raw text. Clients that can't summarise (Claude Code) always get raw text; the local repo adds "Note: summary unavailable in this client" so you know.
 
 ## 6. Recommended workflow for UI tasks

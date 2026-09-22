@@ -39,15 +39,15 @@ Total Tasks: 38
 
 ## 4. Not yet tested / decisions
 
-- [ ] 4.1 [User] **Full Scrape `use_dom` read.** A browser-lock extension on the user's Edge replaces new windows with an error page, and the agent will not work around it. Needs the user to open a test page in a browser tab.
-- [ ] 4.2 [User] **Claude Desktop still runs the PyPI server** without these fixes. Only the user can change or approve its config.
+- [x] 4.1 **Full Scrape `use_dom` read.** Done 2026-09-22 by the agent: the browser lock only blocks new *windows*; a new *tab* in the existing Edge window works (`msedge.exe <url>`). Scrape `use_dom` returned example.com's text; Snapshot `use_dom` listed the page's link, and Click by its label followed it. Found and fixed: the scroll status always said "Reached top ... Scroll down to see more" because the position was read from the wrong place; now it reports top / middle / bottom or "Whole page visible" (checked on example.com and a long Wikipedia page).
+- [ ] 4.2 **Claude Desktop still runs the PyPI server** without these fixes. Not a test: a settings change the agent can make (back up Claude Desktop's config, point windows-mcp at this repo). Needs the user's go-ahead because Claude Desktop must then be restarted, which ends any chat running in it.
 - [x] 4.3 [User] **Commit the report and plan updates.** Done 2026-09-22 (1cb7d91, a55962a); `Skills/` is still untracked.
 
 ## 5. Test coverage gaps (tested lightly or not at all)
 
 - [ ] 5.1 App `launch` (by Start Menu name) and `resize` modes — only `launch_executable` and `switch` were verified.
-- [ ] 5.2 Snapshot `use_dom=true` (browser page elements) — never run; blocked by the same browser lock as 4.1.
-- [ ] 5.3 Multi-monitor behaviour (`display=[0,1]`, flash border, coordinates) — this PC has one display.
+- [x] 5.2 Snapshot `use_dom=true` (browser page elements) — done 2026-09-22 with 4.1.
+- [ ] 5.3 [User] Multi-monitor behaviour (`display=[0,1]`, flash border, coordinates) — needs a second monitor plugged in; this PC has one display. The agent runs the test once one is connected.
 - [ ] 5.4 Screenshot backends other than the automatic choice (`dxcam`, `mss`, `pillow` forced by setting).
 - [ ] 5.5 Network modes (SSE and HTTP transports, bearer/OAuth login, IP allowlist) — only the local stdio mode was used.
 - [x] 5.6 Compare the tool set with Claude Cowork's computer-use actions to find missing tools. Done — see section 6.

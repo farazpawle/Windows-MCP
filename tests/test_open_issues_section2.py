@@ -3,6 +3,7 @@
 import asyncio
 import inspect
 import subprocess
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -264,3 +265,32 @@ class TestScrapeSummaryNote:
 
     def test_no_note_when_raw_requested(self):
         assert "summary unavailable" not in self._scrape(MagicMock(), use_sampling=False)
+
+
+# 4.1 follow-up: Scrape use_dom reads the page's scroll position from the DOM node metadata
+class TestScrapeDomScrollStatus:
+    def _scrape(self, metadata):
+        mcp = FakeMCP()
+        desktop = MagicMock()
+        tree = desktop.get_state.return_value.tree_state
+        tree.dom_node = SimpleNamespace(metadata=metadata)
+        tree.dom_informative_nodes = [SimpleNamespace(text="page text")]
+        scrape_tool_module.register(mcp, get_desktop=lambda: desktop, get_analytics=lambda: None)
+        return asyncio.run(
+            mcp.tools["Scrape"](url="https://x", use_dom=True, use_sampling=False, ctx=None)
+        )
+
+    def test_page_without_scrolling(self):
+        reply = self._scrape({"vertical_scrollable": False, "vertical_scroll_percent": 0})
+        assert "Whole page visible" in reply
+        assert "Scroll down" not in reply
+
+    def test_middle_of_page(self):
+        reply = self._scrape({"vertical_scrollable": True, "vertical_scroll_percent": 40})
+        assert "Scroll up to see more" in reply and "Scroll down to see more" in reply
+
+    def test_top_and_bottom(self):
+        top = self._scrape({"vertical_scrollable": True, "vertical_scroll_percent": 0})
+        bottom = self._scrape({"vertical_scrollable": True, "vertical_scroll_percent": 100})
+        assert "Reached top" in top and "Scroll down to see more" in top
+        assert "Scroll up to see more" in bottom and "Reached bottom" in bottom
