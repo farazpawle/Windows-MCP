@@ -510,14 +510,15 @@ Each item: what windows-mcp does today, what computer use / Cowork does, and the
   - [ ]  d. Scroll: report the scroll position after scrolling.
 
   - **Verify:** Live - each reply names the real element/value/position seen in the harness state file.
-- [ ]  B.11 **Output caps everywhere.**
+- [x]  B.11 **Output caps everywhere.**
 
   - PowerShell, FileSystem read, Process list: done together with 2.10.
 
-  - [ ]  a. Apply the shared cap to Scrape.
-  - [ ]  b. Apply the shared cap to Snapshot text.
+  - [x]  a. Apply the shared cap to Scrape.
+  - [x]  b. Apply the shared cap to Snapshot text.
 
   - **Verify:** Unit - a long Scrape and a long Snapshot text are cut with the note.
+  - **Result (2026-09-23):** done. `cap_text` (50,000 characters, "[truncated - N more characters]") now wraps Scrape's raw reply (the sampled summary is already short) and Snapshot/Screenshot's text part in `build_snapshot_response` (the image is untouched). 4 tests in `tests/test_reply_cap_scrape_snapshot.py` (the two long cases failed first); suite 1274 passed. Guide's Scrape section notes the cap.
 - [ ]  B.12 **Scrape robustness.**
 
   - User-Agent: done with 2.16. Absolute links: done with 3.17. DOM link text: done with 3.12.

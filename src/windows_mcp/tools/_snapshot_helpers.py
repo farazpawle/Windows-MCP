@@ -15,6 +15,7 @@ from textwrap import dedent
 from windows_mcp.desktop.service import Desktop, Size
 from windows_mcp.desktop.utils import remove_private_use_chars, repair_surrogates
 from windows_mcp.tools._coords import coordinate_scale, raw_coordinates, to_screen
+from windows_mcp.tools._output import cap_text
 
 
 logger = logging.getLogger(__name__)
@@ -351,7 +352,7 @@ def build_snapshot_response(
     UI Tree:
     {semantic_tree or "No elements found."}""")
 
-    response = [response_text]
+    response = [cap_text(response_text)]
     if screenshot_bytes:
         response.append(Image(data=screenshot_bytes, format="png"))
     return response

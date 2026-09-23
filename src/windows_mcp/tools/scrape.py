@@ -6,6 +6,7 @@ from mcp.types import ToolAnnotations
 from windows_mcp.infrastructure import with_analytics
 from fastmcp import Context
 from windows_mcp.tools._args import as_bool
+from windows_mcp.tools._output import cap_text
 
 logger = logging.getLogger(__name__)
 
@@ -76,4 +77,4 @@ def register(mcp, *, get_desktop, get_analytics):
         if query:
             notes.append("query ignored (it only focuses the summary)")
         note = f"Note: {'; '.join(notes)}.\n" if notes else ""
-        return f"URL: {url}\n{note}Content:\n{content}"
+        return cap_text(f"URL: {url}\n{note}Content:\n{content}")
