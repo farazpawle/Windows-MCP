@@ -86,7 +86,10 @@ Helpers (`scripts/livetest.py`):
 | `read_settled(path)` | Reads the log once it stops changing and retries while the file is locked. The window lags behind fast input, so an early read under-counts. |
 | `center`, `on_window`, `close_window`, `mcp_client` | Window centre point, the WindowFromPoint check, clean close by own handle, in-process client. |
 
-Read-only calls (Snapshot, WaitFor, DisplayInventory) need no `points`. Give Snapshot a
+Read-only calls (Snapshot, WaitFor, DisplayInventory, FindText) need no `points`. For pixel
+checks (WaitFor `screen_changed` / `screen_idle`, FindText), open a plain test window first and
+give a `region` inside its client area: anything else on screen (the Claude Code panel's
+spinner, a clock) changes pixels and spoils the result. Give Snapshot a
 `region` around the test window so it does not read other apps. Snapshot, WaitFor and App
 always skip VS Code-family windows; never set `WINDOWS_MCP_READ_VSCODE`, because one read
 freezes VS Code until restart.

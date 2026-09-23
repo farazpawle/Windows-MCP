@@ -12,7 +12,8 @@ from pydantic import AliasChoices, Field
 from windows_mcp.infrastructure import with_analytics
 from fastmcp import Context
 from windows_mcp.tools._args import as_bool
-from windows_mcp.tools import find_text as find_text_tools
+from windows_mcp.tools._screen_wait import SCREEN_CONDITIONS, screen_check
+from windows_mcp.tools.find_text import screen_rect
 from windows_mcp.tools._coords import to_model, to_screen
 from windows_mcp.tree.utils import describe_point, find_element, focused_value, scroll_position
 
@@ -24,6 +25,8 @@ WaitForCondition = Literal[
     "element_enabled",
     "focused_element",
     "screen_text",
+    "screen_changed",
+    "screen_idle",
 ]
 
 
@@ -366,12 +369,12 @@ def _validate_wait_for_args(
         "element_exists",
         "element_enabled",
         "focused_element",
-        "screen_text",
+        *SCREEN_CONDITIONS,
     }
     if normalized not in valid_conditions:
         raise ValueError(
             "condition must be one of: text_exists, active_window, element_exists, "
-            "element_enabled, focused_element, screen_text"
+            "element_enabled, focused_element, screen_text, screen_changed, screen_idle"
         )
 
     if timeout <= 0 or timeout > 120:
@@ -381,10 +384,12 @@ def _validate_wait_for_args(
 
     if normalized in {"text_exists", "screen_text"} and not (text and text.strip()):
         raise ValueError(f"text is required when condition is {normalized}")
-    if normalized == "screen_text" and window_name is not None:
+    if normalized in {"screen_changed", "screen_idle"} and text is not None:
+        raise ValueError(f"text is not used with {normalized} (screen_text finds text).")
+    if normalized in SCREEN_CONDITIONS and window_name is not None:
         raise ValueError(
-            "screen_text reads the screen's pixels, not windows; limit it with region instead "
-            "of window_name."
+            f"{normalized} reads the screen's pixels, not windows; limit it with region "
+            "instead of window_name."
         )
     if normalized == "active_window" and not (text or window_name):
         raise ValueError("text or window_name is required when condition is active_window")
@@ -749,7 +754,11 @@ def register(
             "active_window, element_exists, element_enabled, focused_element. Provide text "
             "and/or window_name depending on the condition. Set use_dom=True for browser DOM text. "
             "screen_text instead reads the screen's pixels (Windows OCR, ~2.5 s per full-screen look, under 1 s for a small region) for apps "
-            "with no accessibility data, and reports where the text is; limit it with "
+            "with no accessibility data, and reports where the text is. screen_changed waits "
+            "for the screen to change from how it looked when WaitFor started (it misses a "
+            "change that already happened) and says where; screen_idle waits until nothing "
+            "has changed for settle seconds (default 1), e.g. after a click. Tiny changes such "
+            "as a blinking caret are ignored. The screen conditions watch every screen, or "
             "region=[left, top, right, bottom]."
         ),
         annotations=ToolAnnotations(
@@ -769,6 +778,7 @@ def register(
         interval: float = 0.25,
         use_dom: bool | str = False,
         region: list[int] | str | None = None,
+        settle: float | None = None,
         ctx: Context = None,
     ) -> str:
         normalized = _validate_wait_for_args(
@@ -778,11 +788,37 @@ def register(
             timeout=timeout,
             interval=interval,
         )
-        if region is not None and normalized != "screen_text":
-            raise ValueError("region only goes with condition='screen_text'.")
+        if region is not None and normalized not in SCREEN_CONDITIONS:
+            raise ValueError("region only goes with screen_text, screen_changed or screen_idle.")
+        if settle is not None and normalized != "screen_idle":
+            raise ValueError("settle only goes with condition='screen_idle'.")
+        settle = 1.0 if settle is None else _as_seconds(settle, "settle", maximum=60, above=0)
+        if normalized == "screen_idle" and settle >= timeout:
+            raise ValueError(
+                f"settle ({_seconds_text(settle)}) must be shorter than timeout "
+                f"({_seconds_text(timeout)}), or the screen can never count as still."
+            )
         desktop = get_desktop()
         use_dom_bool = as_bool(use_dom, "use_dom")
-        rect = find_text_tools.screen_rect(desktop, region) if normalized == "screen_text" else None
+        if normalized in SCREEN_CONDITIONS:
+            check = screen_check(desktop, normalized, text, screen_rect(desktop, region), settle)
+        else:
+
+            def check() -> tuple[bool, str]:
+                desktop_state = desktop.get_state(
+                    use_vision=False,
+                    use_dom=use_dom_bool,
+                    use_ui_tree=True,
+                    use_annotation=False,
+                )
+                return _matches_wait_condition(
+                    desktop_state=desktop_state,
+                    condition=normalized,
+                    text=text,
+                    window_name=window_name,
+                    desktop=desktop,
+                )
+
         started_at = time.monotonic()
         deadline = started_at + timeout
         attempts = 0
@@ -790,28 +826,7 @@ def register(
 
         while True:
             attempts += 1
-            if rect is not None:
-                spots = find_text_tools.find_on_screen(text, rect)
-                matched = bool(spots)
-                last_detail = (
-                    find_text_tools.describe_matches(desktop, text, spots)
-                    if spots
-                    else f"text {text!r} was not on screen"
-                )
-            else:
-                desktop_state = desktop.get_state(
-                    use_vision=False,
-                    use_dom=use_dom_bool,
-                    use_ui_tree=True,
-                    use_annotation=False,
-                )
-                matched, last_detail = _matches_wait_condition(
-                    desktop_state=desktop_state,
-                    condition=normalized,
-                    text=text,
-                    window_name=window_name,
-                    desktop=desktop,
-                )
+            matched, last_detail = check()
             if matched:
                 elapsed = time.monotonic() - started_at
                 return (
