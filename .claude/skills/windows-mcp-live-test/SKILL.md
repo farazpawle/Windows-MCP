@@ -77,7 +77,7 @@ Helpers (`scripts/livetest.py`):
 
 | Helper | What it does |
 |---|---|
-| `start_window(title, log, rect=, textbox=, seconds=)` | Opens `scripts/test_harness.ps1`: a visible TopMost window that logs every key, click and wheel with the modifiers held (`key F5 held=[ctrl]`, `hwheel -120 held=[alt]`). `textbox=True` adds a text box whose content goes to `<log>.text`. It closes itself after `seconds`. |
+| `start_window(title, log, rect=, textbox=, seconds=)` | Opens `scripts/test_harness.ps1`: a visible TopMost window that logs every key, click and wheel with the modifiers held (`key F5 held=[ctrl]`, `hwheel -120 held=[alt]`). `textbox=True` adds a text box whose content goes to `<log>.text`; there, clicks and vertical wheel are still logged but horizontal wheel is not, and a double-click shows as two `lbutton` lines. Typed Unicode text logs as `key Packet` lines, so check the text in `<log>.text`. It closes itself after `seconds`. |
 | `guarded_call(c, hwnd, tool, args, points=, keyboard=)` | Calls the tool only if every point is on the test window and, for keyboard input, the window is in front; otherwise aborts. Use it for **every** input call. |
 | `read_settled(path)` | Reads the log once it stops changing and retries while the file is locked. The window lags behind fast input, so an early read under-counts. |
 | `center`, `on_window`, `close_window`, `mcp_client` | Window centre point, the WindowFromPoint check, clean close by own handle, in-process client. |

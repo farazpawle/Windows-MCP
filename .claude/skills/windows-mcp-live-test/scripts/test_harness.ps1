@@ -63,6 +63,14 @@ if ($TextBox) {
     $box.Dock = "Fill"
     $textPath = "$Log.text"
     $box.Add_TextChanged({ try { [IO.File]::WriteAllText($textPath, $box.Text) } catch {} })
+    # Clicks and wheel on the box never reach the form's WndProc, so log them here.
+    # (Horizontal wheel has no TextBox event: test it without -TextBox.)
+    $box.Add_MouseDown({
+        param($s, $e)
+        $name = @{ Left = "lbutton"; Right = "rbutton"; Middle = "mbutton" }[$e.Button.ToString()]
+        if ($name) { $form.Write($name) }
+    })
+    $box.Add_MouseWheel({ param($s, $e) $form.Write("wheel " + $e.Delta) })
     $form.Controls.Add($box)
 }
 $timer = New-Object Windows.Forms.Timer
