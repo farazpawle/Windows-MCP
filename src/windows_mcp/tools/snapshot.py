@@ -91,7 +91,7 @@ def register(mcp, *, get_desktop, get_analytics):
 
     @mcp.tool(
         name="Screenshot",
-        description="Captures a fast screenshot-first desktop snapshot with cursor position, desktop/window summaries, and an image. This path skips UI tree extraction for speed. Use Snapshot when you need interactive element ids, scrollable regions, or browser DOM extraction. Set display=[0] or display=[0,1] using zero-based active Windows display indices to capture only those monitors. Set region=[left, top, right, bottom] (same coordinates as Click; see the reply's Coordinates line) to capture only that rectangle instead of the whole screen/display — useful when you already know which area matters and want to save tokens; region takes precedence over display when both are given, and an invalid or out-of-bounds region raises an error rather than silently capturing something else. The image may be downscaled for efficiency; a full (non-region) screenshot makes its own pixels the coordinates every loc takes, so click where you see things. A region image is a close-up: its reply says how its pixels map (server setting WINDOWS_MCP_RAW_COORDINATES=1 keeps plain screen pixels).",
+        description="Captures a fast screenshot-first desktop snapshot with cursor position, desktop/window summaries, and an image. This path skips UI tree extraction for speed. Use Snapshot when you need interactive element ids, scrollable regions, or browser DOM extraction. Set display=[0] or display=[0,1] using zero-based active Windows display indices to capture only those monitors. Set region=[left, top, right, bottom] (same coordinates as Click; see the reply's Coordinates line) to capture only that rectangle instead of the whole screen/display — useful when you already know which area matters and want to save tokens; region takes precedence over display when both are given, and an invalid or out-of-bounds region raises an error rather than silently capturing something else. The image may be downscaled for efficiency; a full (non-region) screenshot makes its own pixels the coordinates every loc takes, so click where you see things. Set zoom=True with a region to enlarge it to about 1280 px wide at full resolution, so small text is legible. A region image is a close-up: its reply says how its pixels map (server setting WINDOWS_MCP_RAW_COORDINATES=1 keeps plain screen pixels).",
         annotations=ToolAnnotations(
             title="Screenshot",
             readOnlyHint=True,
@@ -107,12 +107,17 @@ def register(mcp, *, get_desktop, get_analytics):
         height_reference_line: int | None = None,
         display: list[int] | None = None,
         region: list[int] | str | None = None,
+        zoom: bool | str = False,
         ctx: Context = None,
     ):
         if as_bool(use_annotation, "use_annotation"):
             raise ValueError(
                 "use_annotation needs UI elements, which Screenshot skips; use Snapshot instead"
             )
+        zoom = as_bool(zoom, "zoom")
+        region = _as_region(region)
+        if zoom and region is None:
+            raise ValueError("zoom needs a region=[left, top, right, bottom] to enlarge")
         try:
             capture_result = capture_desktop_state(
                 get_desktop(),
@@ -123,8 +128,9 @@ def register(mcp, *, get_desktop, get_analytics):
                 width_reference_line=width_reference_line,
                 height_reference_line=height_reference_line,
                 display=display,
-                region=_as_region(region),
+                region=region,
                 tool_name="Screenshot tool",
+                zoom=zoom,
             )
         except Exception as e:
             logger.warning(

@@ -20,6 +20,17 @@ from windows_mcp.tools._coords import coordinate_scale, raw_coordinates, to_scre
 logger = logging.getLogger(__name__)
 
 MAX_IMAGE_WIDTH, MAX_IMAGE_HEIGHT = 1920, 1080
+ZOOM_WIDTH = 1280  # a zoomed region is fitted into ZOOM_WIDTH x MAX_IMAGE_HEIGHT
+
+
+def _zoom_scale(region: list | None) -> float:
+    """Factor that fits a screen-pixel region into the zoom box (up or down)."""
+    if not (isinstance(region, list) and len(region) == 4):
+        return 1.0  # malformed: get_state reports it
+    left, top, right, bottom = region
+    if not all(isinstance(v, int) for v in region) or right <= left or bottom <= top:
+        return 1.0
+    return min(ZOOM_WIDTH / (right - left), MAX_IMAGE_HEIGHT / (bottom - top))
 
 
 WINDOW_LIST_SKIPPED = "Skipped (screenshot-only; call Snapshot to list windows)"
@@ -89,6 +100,7 @@ def capture_desktop_state(
     display: list[int] | None,
     region: list[int] | None,
     tool_name: str,
+    zoom: bool = False,
 ):
     profile_enabled = _snapshot_profile_enabled()
     profile_started_at = time.perf_counter()
@@ -109,17 +121,25 @@ def capture_desktop_state(
     if width_reference_line or height_reference_line:
         grid_lines = (width_reference_line or 1, height_reference_line or 1)
 
+    screen_region = to_screen(desktop, region, count=4)
+    image_scale = _screenshot_scale()
+    max_image_size = Size(width=MAX_IMAGE_WIDTH, height=MAX_IMAGE_HEIGHT)
+    if zoom:
+        # Round-2 B.4: full resolution, enlarged so small text is legible; the size cap
+        # would clamp the enlargement back to 1.
+        image_scale, max_image_size = _zoom_scale(screen_region), None
+
     desktop_state = desktop.get_state(
         use_vision=use_vision,
         use_dom=use_dom,
         use_annotation=use_annotation,
         use_ui_tree=use_ui_tree,
         as_bytes=False,
-        scale=_screenshot_scale(),
+        scale=image_scale,
         grid_lines=grid_lines,
         display_indices=display_indices,
-        region=to_screen(desktop, region, count=4),
-        max_image_size=Size(width=MAX_IMAGE_WIDTH, height=MAX_IMAGE_HEIGHT),
+        region=screen_region,
+        max_image_size=max_image_size,
     )
     if profile_enabled:
         desktop_state_ms = (time.perf_counter() - stage_started_at) * 1000
@@ -270,7 +290,8 @@ def build_snapshot_response(
     else:
         cursor = (round(cursor[0] * scale), round(cursor[1] * scale))
     metadata_text = f"Cursor Position: {cursor}\n"
-    if desktop_state.screenshot_original_size and not raw_coordinates():
+    zoomed = (desktop_state.screenshot_scale or 1.0) > 1.0  # the old hint only covers shrinking
+    if desktop_state.screenshot_original_size and (zoomed or not raw_coordinates()):
         metadata_text += _image_mapping_text(
             desktop_state, capture_result.get("image_origin") or (0, 0), scale
         )
