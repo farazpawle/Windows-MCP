@@ -73,3 +73,14 @@ def test_capture_failure_still_suggests_retry(tool):
 
     with pytest.raises(Exception, match="Please try again"):
         asyncio.run(mcp.tools[tool]())
+
+
+def test_snapshot_refuses_no_tree_and_no_image():
+    # Round-2 3.19: with both off there is nothing to return.
+    mcp = FakeMCP()
+    desktop = MagicMock()
+    register(mcp, get_desktop=lambda: desktop, get_analytics=lambda: None)
+
+    with pytest.raises(ValueError, match="use_ui_tree and use_vision"):
+        asyncio.run(mcp.tools["Snapshot"](use_ui_tree=False, use_vision="false"))
+    desktop.get_state.assert_not_called()

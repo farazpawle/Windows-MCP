@@ -52,14 +52,21 @@ def register(mcp, *, get_desktop, get_analytics):
         region: list[int] | str | None = None,
         ctx: Context = None,
     ):
+        use_vision = as_bool(use_vision, "use_vision")
+        use_ui_tree = as_bool(use_ui_tree, "use_ui_tree")
+        if not use_vision and not use_ui_tree:
+            raise ValueError(
+                "use_ui_tree and use_vision cannot both be false: that returns neither "
+                "elements nor an image"
+            )
         desktop = get_desktop()
         try:
             capture_result = capture_desktop_state(
                 desktop,
-                use_vision=as_bool(use_vision, "use_vision"),
+                use_vision=use_vision,
                 use_dom=as_bool(use_dom, "use_dom"),
                 use_annotation=as_bool(use_annotation, "use_annotation"),
-                use_ui_tree=as_bool(use_ui_tree, "use_ui_tree"),
+                use_ui_tree=use_ui_tree,
                 width_reference_line=width_reference_line,
                 height_reference_line=height_reference_line,
                 display=display,
