@@ -1,6 +1,7 @@
 """Scrape tool — fetch/scrape web page content."""
 
 import logging
+import re
 
 from mcp.types import ToolAnnotations
 from windows_mcp.infrastructure import with_analytics
@@ -10,11 +11,33 @@ from windows_mcp.tools._output import cap_text
 
 logger = logging.getLogger(__name__)
 
+# ponytail: a fixed English filler list; a query in another language keeps its filler
+# words as keywords, which only makes the filter keep more.
+_FILLER = {"the", "and", "for", "with", "what", "which", "who", "how", "are", "was", "does"}
+_FILLER |= {"this", "that", "from", "about", "into", "can", "any", "all", "you", "our"}
+
+
+def _filter_paragraphs(content: str, query: str) -> tuple[str, str]:
+    """Keep the paragraphs that mention a word of *query* (round-2 B.12).
+
+    Stands in for the summary that query would steer, when none was made. Returns the
+    content and a note; with no match the whole content stays, so nothing is lost.
+    """
+    keywords = {w for w in re.findall(r"\w+", query.lower()) if len(w) > 2} - _FILLER
+    parts = [p for p in re.split(r"\n\s*\n", content) if p.strip()]
+    if len(parts) < 2:  # no blank lines (DOM mode): one line is one paragraph
+        parts = [line for line in content.splitlines() if line.strip()]
+    kept = [p for p in parts if any(k in p.lower() for k in keywords)]
+    if not kept:
+        return content, f"no paragraph mentions {query!r}, so all content is shown"
+    note = f"showing {len(kept)} of {len(parts)} paragraphs that mention {query!r}"
+    return "\n\n".join(kept), note
+
 
 def register(mcp, *, get_desktop, get_analytics):
     @mcp.tool(
         name="Scrape",
-        description="Fetch/scrape web page content from a URL. Keywords: scrape, fetch, browse, web, URL, extract, download, read webpage. By default (use_dom=False), performs a lightweight HTTP request to the URL and returns a clean LLM-processed summary of the page to avoid context bloat. Provide query to focus extraction on specific information. Set use_dom=True to extract from the active browser tab's DOM instead (required when site blocks HTTP requests; supported in Chrome, Edge, and Firefox). Set use_sampling=False to get raw content without LLM processing.",
+        description="Fetch/scrape web page content from a URL. Keywords: scrape, fetch, browse, web, URL, extract, download, read webpage. By default (use_dom=False), performs a lightweight HTTP request to the URL and returns a clean LLM-processed summary of the page to avoid context bloat. Provide query to focus extraction on specific information; when no summary is made (use_sampling=False, or a client that cannot summarise), query keeps only the paragraphs that mention its words, and the note says how many. Set use_dom=True to extract from the active browser tab's DOM instead (required when site blocks HTTP requests; supported in Chrome, Edge, and Firefox). Set use_sampling=False to get raw content without LLM processing.",
         annotations=ToolAnnotations(
             title="Scrape",
             readOnlyHint=True,
@@ -72,9 +95,10 @@ def register(mcp, *, get_desktop, get_analytics):
                 logger.debug("Scrape summary via sampling failed", exc_info=True)
 
         # Clients without sampling (e.g. Claude Code) would otherwise get raw content
-        # with no hint that the default summary was skipped, or that query only steers it.
+        # with no hint that the default summary was skipped.
         notes = ["summary unavailable in this client; raw content returned"] if use_sampling else []
         if query:
-            notes.append("query ignored (it only focuses the summary)")
+            content, query_note = _filter_paragraphs(content, query)
+            notes.append(query_note)
         note = f"Note: {'; '.join(notes)}.\n" if notes else ""
         return cap_text(f"URL: {url}\n{note}Content:\n{content}")

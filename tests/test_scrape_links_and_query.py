@@ -60,17 +60,18 @@ def _scrape_tool(ctx, **kwargs) -> str:
 
 
 @pytest.mark.parametrize("use_sampling", [True, False])
-def test_query_ignored_is_noted_when_not_summarised(use_sampling):
+def test_unmatched_query_is_noted_when_not_summarised(use_sampling):
+    # B.12 replaced "query ignored" with a keyword filter; nothing matches "raw page".
     reply = _scrape_tool(None, query="which domains", use_sampling=use_sampling)
-    assert "query ignored" in reply
+    assert "no paragraph mentions" in reply
     assert "raw page" in reply
 
 
 def test_no_query_note_when_summarised():
     ctx = MagicMock()
     ctx.sample = AsyncMock(return_value=MagicMock(text="short summary"))
-    assert "query ignored" not in _scrape_tool(ctx, query="which domains")
+    assert "paragraph" not in _scrape_tool(ctx, query="which domains")
 
 
 def test_no_query_note_without_query():
-    assert "query ignored" not in _scrape_tool(None)
+    assert "paragraph" not in _scrape_tool(None)

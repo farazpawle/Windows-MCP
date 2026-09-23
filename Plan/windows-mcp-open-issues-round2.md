@@ -528,13 +528,14 @@ Each item: what windows-mcp does today, what computer use / Cowork does, and the
 
   - **Verify:** Unit - a long Scrape and a long Snapshot text are cut with the note.
   - **Result (2026-09-23):** done. `cap_text` (50,000 characters, "[truncated - N more characters]") now wraps Scrape's raw reply (the sampled summary is already short) and Snapshot/Screenshot's text part in `build_snapshot_response` (the image is untouched). 4 tests in `tests/test_reply_cap_scrape_snapshot.py` (the two long cases failed first); suite 1274 passed. Guide's Scrape section notes the cap.
-- [ ]  B.12 **Scrape robustness.**
+- [x]  B.12 **Scrape robustness.**
 
   - User-Agent: done with 2.16. Absolute links: done with 3.17. DOM link text: done with 3.12.
 
-  - [ ]  a. Keyword filter of paragraphs for `query` when summarising isn't possible.
+  - [x]  a. Keyword filter of paragraphs for `query` when summarising isn't possible.
 
   - **Verify:** Unit - a page with a matching paragraph returns only matching paragraphs plus a note.
+  - **Result (2026-09-23):** done. `tools/scrape.py` `_filter_paragraphs`: when no summary is made and `query` is given, keywords are the query's words over 2 letters minus a short English filler list; paragraphs are blank-line blocks (lines when there are none, as in DOM mode); any-keyword, case-insensitive match. The note says 'showing N of M paragraphs that mention ...', or with no match 'no paragraph mentions ..., so all content is shown' (nothing lost). Replaces 3.17's 'query ignored' note (its tests updated). 5 tests in `tests/test_scrape_query_filter.py` (all failed first); suite 1317 passed. Smoke (real HTTP, example.com, use_sampling=false): 'domain' kept 4 of 4 (every block, even the link URL, has it); 'warranty' returned the page with the no-match note.
 - [x]  B.13 **Hit-testing everywhere.** Any listed element should be really clickable.
 
   - Done together with 1.5 (always-on-top windows), 1.6 (pop-up menus) and 2.3 (DOM mode).
