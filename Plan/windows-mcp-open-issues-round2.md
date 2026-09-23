@@ -351,12 +351,13 @@ Source: live tests on 2026-09-22 (Windows 11 Pro 26200, one 1920x1080 display at
 
   - **Verify:** Unit - both false is refused.
   - **Result (2026-09-23):** done. Snapshot parses `use_vision`/`use_ui_tree` first and, when both are false, raises "use_ui_tree and use_vision cannot both be false: that returns neither elements nor an image" before any capture. 1 unit test in `tests/test_screenshot_region_args.py` (failed first, also asserts no capture); suite 1160 passed; lint clean on changed files. Live (real Snapshot tool): both false refused; `use_ui_tree=false, use_vision=true` still returns an image.
-- [ ]  3.20 **Annotated Snapshot image: badges sit outside their boxes and can hide each other.** Region of three stacked fields: badge "3" sat between EditA and EditB, "1" above EditC, and "2" was not visible at all.
+- [x]  3.20 **Annotated Snapshot image: badges sit outside their boxes and can hide each other.** Region of three stacked fields: badge "3" sat between EditA and EditB, "1" above EditC, and "2" was not visible at all.
 
-  - [ ]  a. Draw each badge inside its box's top-left corner.
-  - [ ]  b. Shift badges that would overlap another badge.
+  - [x]  a. Draw each badge inside its box's top-left corner.
+  - [x]  b. Shift badges that would overlap another badge.
 
   - **Verify:** Live - annotated Snapshot of the three stacked harness fields shows badges 1-3 each inside its own field (screenshot check).
+  - **Result (2026-09-23):** done. New module function `place_badge` (`desktop/service.py`) puts each badge 2 px inside its box's top-left corner; a badge that would cover an already placed one moves right past it, then down a row when the box runs out of width, always clamped inside the image. `get_annotated_screenshot` now draws every outline first and every badge after, so a later box's outline can no longer paint over an earlier number (the cause of the hidden "2"). 5 unit tests in `tests/test_annotation_badges.py` (failed first); suite 1165 passed; lint clean. GitNexus impact LOW (one caller, `get_state`). Live (real Snapshot tool via in-process FastMCP client, flash off, no input): region over a TopMost WinForms window with three stacked text boxes 24 px apart - badges 6/5/4 each inside EditA/EditB/EditC, title-bar badges 0-3 inside their buttons, none hidden. Side finding (not changed): text boxes with no accessible name are left out of the Snapshot tree entirely; the fields only appeared once `AccessibleName` was set.
 - [ ]  3.21 **App `launch_executable` error messages.** `args` as plain text ("-n 30 127.0.0.1", allowed by the schema) fails with "Expecting value: line 1 column 1 (char 0)"; a `.ps1` path gives the raw "[WinError 193] %1 is not a valid Win32 application".
 
   - [ ]  a. Accept `args` as a plain string, split with Windows command-line rules.

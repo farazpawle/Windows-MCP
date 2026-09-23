@@ -175,6 +175,39 @@ def draw_grid(image: Image.Image, grid_lines: tuple[int, int]) -> None:
         draw.line([(0, y), (width, y)], fill=(200, 200, 200, 128), width=1)
 
 
+def place_badge(
+    box: tuple[int, int, int, int],
+    size: tuple[int, int],
+    placed: list[tuple[int, int, int, int]],
+    image_size: tuple[int, int],
+) -> tuple[int, int]:
+    """Top-left corner for an element's number badge, inside its box's top-left corner.
+
+    Badges outside the box (the old spot, above it) landed in the gap between
+    stacked fields and read as the neighbour's number. A badge that would cover
+    an already *placed* badge moves right past it, then down a row when the box
+    runs out of width. The result is always wholly inside the image.
+    """
+    left, top, right, _ = box
+    width, height = size
+    image_width, image_height = image_size
+    x, y = left + 2, top + 2  # just inside the 2 px outline
+    # ponytail: greedy scan, O(n^2) over badges; fine for a few hundred elements.
+    for _ in range(2 * len(placed) + 1):
+        x = max(0, min(x, image_width - width))
+        y = max(0, min(y, image_height - height))
+        hit = next(
+            (p for p in placed if x < p[2] and p[0] < x + width and y < p[3] and p[1] < y + height),
+            None,
+        )
+        if hit is None:
+            break
+        x = hit[2] + 1
+        if x + width > max(right, left + 2 + width):
+            x, y = left + 2, hit[3] + 1
+    return max(0, min(x, image_width - width)), max(0, min(y, image_height - height))
+
+
 def _escape_text_for_sendkeys(text: str) -> str:
     """Escape special characters so uia.SendKeys types them correctly."""
     result = []
@@ -1598,10 +1631,8 @@ class Desktop:
         if grid_lines:
             draw_grid(annotated_screenshot, grid_lines)
 
-        def draw_annotation(label, node: TreeElementNode):
+        def clip_box(node: TreeElementNode) -> tuple[int, int, int, int] | None:
             box = node.bounding_box
-            color = get_random_color()
-
             adjusted_left = int(box.left - left_offset)
             adjusted_top = int(box.top - top_offset)
             adjusted_right = int(box.right - left_offset)
@@ -1614,22 +1645,26 @@ class Desktop:
             )
             left, top, right, bottom = clipped_box
             if right <= left or bottom <= top:
-                return
-
-            draw.rectangle(clipped_box, outline=color, width=2)
-
-            label_text = str(label)
-            label_width, label_height = get_label_size(label_text)
-            label_x = right - label_width
-            label_y = top - label_height - 2
-            if label_y < 0:
-                label_y = bottom + 2
-            draw_label(label_text, label_x, label_y, color)
+                return None
+            return clipped_box
 
         # Draw annotations sequentially: PIL ImageDraw is not thread-safe and
         # drawing is GIL-bound, so parallel execution adds risk without speed.
-        for i, node in enumerate(nodes):
-            draw_annotation(i, node)
+        # All outlines go down before any badge so a later box's outline can
+        # never paint over an earlier element's number.
+        boxes = [(i, clip_box(node), get_random_color()) for i, node in enumerate(nodes)]
+        boxes = [(i, box, color) for i, box, color in boxes if box is not None]
+        for _, box, color in boxes:
+            draw.rectangle(box, outline=color, width=2)
+        placed: list[tuple[int, int, int, int]] = []
+        for i, box, color in boxes:
+            label_text = str(i)
+            label_width, label_height = get_label_size(label_text)
+            label_x, label_y = place_badge(
+                box, (label_width, label_height), placed, (image_width, image_height)
+            )
+            placed.append((label_x, label_y, label_x + label_width, label_y + label_height))
+            draw_label(label_text, label_x, label_y, color)
 
         # Draw cursor highlight if pos provided
         if cursor_pos:
