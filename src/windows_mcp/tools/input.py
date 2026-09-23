@@ -221,6 +221,29 @@ def _text_window_handles(desktop_state: Any, window_name: str | None) -> list[in
     return list(dict.fromkeys(handles))
 
 
+def _off_screen_hint(desktop_state: Any, handles: list[int], desktop: Any) -> str:
+    """Flag a match found only in windows parked outside every display.
+
+    Tree elements are clipped to the displays, but the targeted text search and
+    the active-window check read a window wherever it sits (e.g. at x=-3000),
+    where nothing can be clicked.
+    """
+    if desktop is None or not handles:
+        return ""
+    windows = [
+        getattr(desktop_state, "active_window", None),
+        *getattr(desktop_state, "windows", []),
+    ]
+    # ponytail: judged by the window's center; a window mostly off-screen is flagged
+    # even if an edge is still visible.
+    centers = [
+        w.bounding_box.get_center() for w in windows if w is not None and w.handle in handles
+    ]
+    if not centers or any(desktop.is_on_screen(c.x, c.y) for c in centers):
+        return ""
+    return " (window is off-screen)"
+
+
 def _matches_wait_condition(
     desktop_state: Any,
     condition: WaitForCondition,
@@ -243,10 +266,10 @@ def _matches_wait_condition(
         for source in sources:
             if _text_matches(source, text):
                 return True, f"text {text!r} appeared"
-        if desktop is not None and desktop.find_text(
-            text, _text_window_handles(desktop_state, window_name)
-        ):
-            return True, f"text {text!r} appeared"
+        handles = _text_window_handles(desktop_state, window_name)
+        if desktop is not None and desktop.find_text(text, handles):
+            hint = _off_screen_hint(desktop_state, handles, desktop)
+            return True, f"text {text!r} appeared{hint}"
         return False, f"text {text!r} was absent"
 
     if condition == "active_window":
@@ -254,7 +277,8 @@ def _matches_wait_condition(
         active_window = getattr(desktop_state, "active_window", None)
         active_name = active_window.name if active_window else ""
         if _text_matches(active_name, expected):
-            return True, f"active window matched {active_name!r}"
+            hint = _off_screen_hint(desktop_state, [active_window.handle], desktop)
+            return True, f"active window matched {active_name!r}{hint}"
         return False, f"active window was {active_name!r}"
 
     if condition in {"element_exists", "element_enabled"}:

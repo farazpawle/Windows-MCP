@@ -901,6 +901,14 @@ class Desktop:
             targets += " is" if len(bad) == 1 else " are"
         raise ValueError(f"{targets} outside every display; no input was sent. Displays: {screens}")
 
+    def is_on_screen(self, x: int, y: int) -> bool:
+        """True when the point lies on some display (the same test input tools apply)."""
+        try:
+            self._require_on_screen([(x, y)])
+        except ValueError:
+            return False
+        return True
+
     def click(
         self,
         loc: tuple[int, int] | list[int],

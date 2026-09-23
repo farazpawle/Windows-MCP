@@ -34,6 +34,9 @@ class FakeDesktop:
         self.find_text_calls.append((text, handles))
         return text.casefold() in self.static_text.casefold()
 
+    def is_on_screen(self, x: int, y: int) -> bool:
+        return x >= 0 and y >= 0
+
     def get_state(self, **kwargs: object) -> DesktopState:
         self.calls.append(kwargs)
         if self.states:
@@ -43,17 +46,20 @@ class FakeDesktop:
         return self.desktop_state
 
 
-def _box() -> BoundingBox:
-    return BoundingBox(left=0, top=0, right=100, bottom=40, width=100, height=40)
+def _box(left: int = 0) -> BoundingBox:
+    return BoundingBox(left=left, top=0, right=left + 100, bottom=40, width=100, height=40)
 
 
-def _window(name: str, handle: int = 123) -> Window:
+OFF_SCREEN = -3000
+
+
+def _window(name: str, handle: int = 123, left: int = 0) -> Window:
     return Window(
         name=name,
         is_browser=False,
         depth=0,
         status=Status.NORMAL,
-        bounding_box=_box(),
+        bounding_box=_box(left),
         handle=handle,
         process_id=456,
     )
@@ -81,8 +87,9 @@ def _state(
     elements: list[TreeElementNode] | None = None,
     dom_texts: list[str] | None = None,
     windows: list[Window] | None = None,
+    active_left: int = 0,
 ) -> DesktopState:
-    active_window = _window(active_window_name)
+    active_window = _window(active_window_name, left=active_left)
     return DesktopState(
         active_desktop={"name": "Desktop 1"},
         all_desktops=[],
@@ -304,3 +311,27 @@ def test_wait_for_timeout_reports_last_observed_state() -> None:
                 interval=0.001,
             )
         )
+
+
+@pytest.mark.parametrize(("left", "hinted"), [(OFF_SCREEN, True), (0, False)])
+def test_wait_for_text_in_window_flags_off_screen(left: int, hinted: bool) -> None:
+    # The targeted text search reads a window wherever it sits; one parked at
+    # x=-3000 matches, but nothing in it can be clicked.
+    desktop = FakeDesktop([_state(active_left=left)], static_text="Saved")
+    tools = _register_tools(desktop)
+
+    result = asyncio.run(tools["WaitFor"](condition="text_exists", text="saved", timeout=1))
+
+    assert result.endswith("(window is off-screen).") is hinted
+
+
+@pytest.mark.parametrize(("left", "hinted"), [(OFF_SCREEN, True), (0, False)])
+def test_wait_for_active_window_flags_off_screen(left: int, hinted: bool) -> None:
+    desktop = FakeDesktop([_state(active_window_name="Harness", active_left=left)])
+    tools = _register_tools(desktop)
+
+    result = asyncio.run(
+        tools["WaitFor"](condition="active_window", window_name="harness", timeout=1)
+    )
+
+    assert result.endswith("(window is off-screen).") is hinted
