@@ -6,7 +6,7 @@ description: Use when controlling this Windows PC via the windows-mcp tools (lcl
 
 
 Which server? Both Claude Code and (from 2026-09-22, after a Claude Desktop restart) Claude Desktop run the **local repo** (`uv --directory <repo> run windows-mcp serve`), so "Local repo" notes below apply to both. "PyPI" notes only matter for other machines or configs using `uvx windows-mcp`.
-Machine: 1 display 1920x1080, 100% scale (screen coords = image coords) · PowerShell 7.6 · Avast AV · OneDrive-synced Desktop.
+Machine: 1 display 2560x1440 (was 1920x1080 until 2026-09-22), 100% scale. Screenshots are shrunk to 1920x1080 (x0.75): local repo coordinates follow the image, PyPI's do not (see "Shrunk screenshots" below) · PowerShell 7.6 · Avast AV · OneDrive-synced Desktop.
 
 ## 0. Golden rules (learned the hard way)
 
