@@ -1,7 +1,7 @@
 ---
 Title: Windows-MCP open issues backlog - round 2 (2026-09-22)
 Description: Findings of the second round of live testing of all 20 windows-mcp tools on 2026-09-22, turned into a task file. Part A Bugs - 7 High (registry paths act as wildcards and reach the file system; WaitFor renumbers Snapshot labels; off-screen points are clamped and clicked; an on-top unfocused window gets no Snapshot elements; pop-up menus don't hide covered elements; region clipping moves a click point under a covering window), 16 Medium, 27 Low. Part B Improvements to reach Claude Cowork computer-use behaviour. Part C New tools/abilities (each needs the user's design approval first). Part D Skills/Skill.md corrections and one optional [User] high-DPI test. Items 3.28-3.33 were found while fixing other items (all done); 3.34 (horizontal Scroll read VS Code unguarded) was found during B.10 and is done. Every item keeps its finding, then lists single-action fix subtasks and its own Verify line; the file ends with the overall verification rules.
-Total Tasks: 186
+Total Tasks: 187
 ---
 # Windows-MCP open issues - round 2
 
@@ -568,15 +568,17 @@ Each is a new feature: the first subtask is the user's approval of the design.
   - **Result (2026-09-23):** user chose Shortcut `release_all=true`. `Desktop.release_all` (`desktop/service.py`) checks left/right Shift, Ctrl, Alt, Win, then left/right/middle button with `GetAsyncKeyState` and sends up only for what is down (keys first: a drop with Ctrl down would copy); the left button this server holds via `mouse_button="down"` is released even if the state read misses it, and forgotten. Alt/Win go through the existing menu mask, now shared as `_release_key` with `_keys_held`. `shortcut` became optional; `release_all` refuses `shortcut`/`repeat`/`hold`. Known ceiling (ponytail note): with swapped mouse buttons `GetAsyncKeyState` reads physical buttons. 11 tests in `tests/test_release_all.py` (all failed first); suite 1331 passed. Live (harness + `GetAsyncKeyState` poll): after Move down and a left Shift down, held = LSHIFT, LBUTTON; reply "Released: left Shift, left mouse button."; held after = none; a second call replied "Nothing was held; nothing was sent."
 - [ ]  C.3 **Window management.** App has launch/switch/resize only. Missing: minimise, maximise, restore, close (gracefully), move a window to another monitor, list windows with handle, PID and state (a window list with PIDs also allows killing by PID after App `launch`, which returns no PID).
 
-  - [ ]  a. [User] Approve the modes and names (design choice).
-  - [ ]  b. Add `mode="minimize"`.
-  - [ ]  c. Add `mode="maximize"`.
-  - [ ]  d. Add `mode="restore"`.
-  - [ ]  e. Add `mode="close"` (graceful close message, not a kill).
-  - [ ]  f. Add a window list with handle, PID and state.
-  - [ ]  g. Add moving a window to another monitor.
+  - [x]  a. [User] Approve the modes and names (design choice).
+  - [x]  b. Add `mode="minimize"`.
+  - [x]  c. Add `mode="maximize"`.
+  - [x]  d. Add `mode="restore"`.
+  - [x]  e. Add `mode="close"` (graceful close message, not a kill).
+  - [x]  f. Add a window list with handle, PID and state.
+  - [x]  g. Add moving a window to another monitor.
+  - [ ]  h. [User] Be signed in at the PC itself (not Remote Desktop) so the live two-screen move check can run: an RDP session hides the virtual screen. The virtual screen is installed and left in place for this (2026-09-23); remove it afterwards with `virtual_display.ps1 -Remove` (one UAC click).
 
-  - **Verify:** Live - each mode on the harness, confirmed by the window's state; the list shows the harness PID; the monitor move is checked on the virtual second monitor (see memory note on the temporary 2nd screen).
+  - **Verify:** Live - each mode on the harness, confirmed by the window's state; the list shows the harness PID; the monitor move is checked on the virtual second monitor (`.claude/skills/windows-mcp-live-test/scripts/virtual_display.ps1`).
+  - **Result (2026-09-23):** user approved App modes, close needing a name or handle, and a `handle` input on every window mode. New `desktop/window_control.py` (`show`, `close`, `format_list`, `move_to_display`); `Desktop.pick_window` (handle / name / live front window, or refused when `required`) now also backs `switch` and `resize`, so both take `handle`, and a nameless `resize` uses the live front window instead of the last capture's. `close` posts WM_CLOSE and waits ~2 s, then says "Closed X." or that it is still open; min/max/restore report the state read back; hung windows are refused (ShowWindow/MoveWindow would block). `move` keeps the offset from the source display's work area, shrinks to fit, re-maximizes a maximized window, refuses a minimized one. `tools/_args.py` `as_whole_number` parses `handle`/`display` (numbers, text, "0x.."). 29 tests in `tests/test_app_window_modes.py` (collection failed first); `tests/test_app_tool.py`'s fake desktop takes the new keywords; suite 1361 passed. Live on the harness (by handle, real state read with IsIconic/IsZoomed): list line `handle=2559562 pid=21952 powershell.exe Normal "LiveTestC3"` (pid = GetWindowThreadProcessId); minimize / restore / maximize / restore and minimize by name each matched the real state; move to display 0 kept (300,300); display 1 refused (one screen); close with no target refused and the window stayed; close by handle -> "Closed LiveTestC3.", window gone, process exited. Two-screen move pending (h).
 - [ ]  C.4 **Clipboard beyond text.** Clipboard reads and writes text only; non-text is reported as "empty or non-text".
 
   - [ ]  a. [User] Approve the scope (design choice).

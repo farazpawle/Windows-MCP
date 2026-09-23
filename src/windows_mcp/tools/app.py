@@ -1,4 +1,4 @@
-"""App tool — launch, resize, switch applications."""
+"""App tool — launch applications and manage their windows."""
 
 import ctypes
 import json
@@ -10,7 +10,11 @@ from typing import Literal
 
 from mcp.types import ToolAnnotations
 from windows_mcp.infrastructure import with_analytics
+from windows_mcp.tools._args import as_whole_number
 from fastmcp import Context
+
+_NEW_WINDOW_MODES = {"minimize", "maximize", "restore", "close", "list", "move"}
+_WINDOW_MODES = (_NEW_WINDOW_MODES - {"list"}) | {"resize", "switch"}
 
 
 def _split_command_line(text: str) -> list[str]:
@@ -123,7 +127,12 @@ def register(mcp, *, get_desktop, get_analytics):
             "by Start Menu name), 'launch_executable' (strictly launches one executable - a path, or a "
             "bare name found on PATH - with args as a list or plain command-line text and optional "
             "cwd; a .ps1 script is run through PowerShell), 'resize' (adjusts a named "
-            "or active window; window_loc and window_size are real screen pixels, not screenshot pixels), and 'switch' (brings a specific window into focus)."
+            "or active window; window_loc and window_size are real screen pixels, not screenshot pixels), 'switch' (brings a specific window into focus), "
+            "'minimize' / 'maximize' / 'restore' (named or active window), 'close' (asks a named "
+            "window to close, like its X button; name or handle required), 'list' (every window "
+            "with its handle, process id, program and state) and 'move' (to display N, numbered "
+            "as in DisplayInventory; named or active window). Every window mode also takes "
+            "handle=<number from 'list'> instead of name, to pick one of several same-named windows."
         ),
         annotations=ToolAnnotations(
             title="App",
@@ -135,15 +144,40 @@ def register(mcp, *, get_desktop, get_analytics):
     )
     @with_analytics(get_analytics(), "App-Tool")
     def app_tool(
-        mode: Literal["launch", "launch_executable", "resize", "switch"] = "launch",
+        mode: Literal[
+            "launch",
+            "launch_executable",
+            "resize",
+            "switch",
+            "minimize",
+            "maximize",
+            "restore",
+            "close",
+            "list",
+            "move",
+        ] = "launch",
         name: str | None = None,
         window_loc: list[int] | None = None,
         window_size: list[int] | None = None,
         executable: str | None = None,
         args: list[str] | str | None = None,
         cwd: str | None = None,
+        handle: int | str | None = None,
+        display: int | str | None = None,
         ctx: Context = None,
     ):
+        handle = as_whole_number(handle, "handle")
+        display = as_whole_number(display, "display")
+        if handle is not None and mode not in _WINDOW_MODES:
+            raise ValueError(f"handle only applies to window modes, not mode={mode!r}")
+        if (display is None) != (mode != "move"):
+            raise ValueError("display is required for mode='move' and only applies to it")
+        if mode in _NEW_WINDOW_MODES:
+            if window_loc is not None or window_size is not None:
+                raise ValueError("window_loc and window_size only apply to mode='resize'")
+            if mode == "list" and name is not None:
+                raise ValueError("mode='list' takes no name; it lists every window")
+
         exact_launch_inputs = (executable, args, cwd)
         if mode != "launch_executable" and any(value is not None for value in exact_launch_inputs):
             raise ValueError('executable, args, and cwd require mode="launch_executable"')
@@ -158,4 +192,6 @@ def register(mcp, *, get_desktop, get_analytics):
                 )
             return _launch_executable(executable, args, cwd)
 
-        return get_desktop().app(mode, name, window_loc, window_size)
+        return get_desktop().app(
+            mode, name, window_loc, window_size, handle=handle, display=display
+        )

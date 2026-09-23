@@ -22,3 +22,20 @@ def as_bool(value: object, name: str) -> bool:
         if normalized in _FALSE:
             return False
     raise ValueError(f"{name} must be true or false (got {value!r})")
+
+
+def as_whole_number(value: object, name: str) -> int | None:
+    """Parse an optional non-negative whole number sent as a number or text ("0x1A2B" too)."""
+    if value is None:
+        return None
+    if isinstance(value, int) and not isinstance(value, bool) and value >= 0:
+        return value
+    if isinstance(value, str):
+        try:
+            number = int(value.strip(), 0)
+        except ValueError:
+            pass
+        else:
+            if number >= 0:
+                return number
+    raise ValueError(f"{name} must be a whole number (got {value!r})")

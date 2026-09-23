@@ -34,7 +34,11 @@ class FakeDesktop:
         name: str | None,
         window_loc: list[int] | None,
         window_size: list[int] | None,
+        *,
+        handle: int | None = None,
+        display: int | None = None,
     ) -> str:
+        assert handle is None and display is None
         self.app_calls.append((mode, name, window_loc, window_size))
         return "legacy app result"
 

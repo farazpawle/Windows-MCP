@@ -21,6 +21,7 @@ from PIL import ImageFont, ImageDraw, Image
 from windows_mcp.tree.service import Tree
 from windows_mcp.desktop import screenshot as screenshot_capture
 from windows_mcp.desktop import flash_overlay
+from windows_mcp.desktop import window_control
 from windows_mcp.infrastructure import validate_url
 from importlib import metadata
 from urllib.parse import urljoin
@@ -669,8 +670,42 @@ class Desktop:
         more = f" and {len(others) - 5} more" if len(others) > 5 else ""
         return f" Also matched {shown}{more}; use a longer name to pick another."
 
+    def pick_window(
+        self, name: str | None, handle: int | None, *, required: bool = False
+    ) -> tuple["Window", str]:
+        """The window an App window mode acts on, and a note naming other name matches.
+
+        By handle (exact, from App mode='list'), by name, or else the live foreground
+        window unless *required*. Raises ValueError when there is no such window.
+        """
+        if name is not None and handle is not None:
+            raise ValueError("Give the window's name or its handle, not both.")
+        if handle is not None:
+            windows, _ = self.get_windows()
+            for window in windows:
+                if window.handle == handle:
+                    return window, ""
+            raise ValueError(
+                f"No window has handle {handle}; App mode='list' shows the current ones."
+            )
+        if name is not None:
+            windows, error = self._find_windows_by_name(name)
+            if not windows:
+                raise ValueError(error)
+            return windows[0], self._other_matches_note(windows)
+        if required:
+            raise ValueError("Give the window's name or handle (App mode='list' shows handles).")
+        window = self.get_active_window()
+        if window is None:
+            raise ValueError("No active window found")
+        return window, ""
+
     def resize_app(
-        self, name: str | None = None, size: tuple[int, int] = None, loc: tuple[int, int] = None
+        self,
+        name: str | None = None,
+        size: tuple[int, int] = None,
+        loc: tuple[int, int] = None,
+        handle: int | None = None,
     ) -> tuple[str, int]:
         # [0, -5] was applied (the window shrank to its minimum) and a one-number list
         # failed with "not enough values to unpack".
@@ -678,20 +713,11 @@ class Desktop:
             return f"window_size must be two positive numbers [width, height], got {list(size)}", 1
         if loc is not None and len(loc) != 2:
             return f"window_loc must be two numbers [x, y], got {list(loc)}", 1
-        note = ""
-        if name is not None:
-            windows, error = self._find_windows_by_name(name)
-            if not windows:
-                return error, 1
-            target_window, note = windows[0], self._other_matches_note(windows)
-        else:
-            # If no name provided, try to resize the active window
-            target_window = self.desktop_state.active_window if self.desktop_state else None
-
-            if target_window is None:
-                return "No active window found", 1
-
-        # target_window is guaranteed to be non-None here
+        try:
+            # No name or handle: the live foreground window (the last capture's could be stale).
+            target_window, note = self.pick_window(name, handle)
+        except ValueError as e:
+            return str(e), 1
         if target_window.status == Status.MINIMIZED:
             return f"Cannot resize {target_window.name}: it is minimized. Switch to it first.", 1
         elif target_window.status == Status.MAXIMIZED:
@@ -731,12 +757,27 @@ class Desktop:
 
     def app(
         self,
-        mode: Literal["launch", "switch", "resize"],
+        mode: str,
         name: str | None = None,
         loc: tuple[int, int] | None = None,
         size: tuple[int, int] | None = None,
+        *,
+        handle: int | None = None,
+        display: int | None = None,
     ):
         match mode:
+            case "minimize" | "maximize" | "restore":
+                window, note = self.pick_window(name, handle)
+                return window_control.show(window, mode) + note
+            case "close":
+                # Required: the foreground window is often the client itself.
+                window, note = self.pick_window(name, handle, required=True)
+                return window_control.close(window) + note
+            case "list":
+                return window_control.format_list(self.get_windows()[0])
+            case "move":
+                window, note = self.pick_window(name, handle)
+                return window_control.move_to_display(window, self.get_displays(), display) + note
             case "launch":
                 response, status, pid = self.launch_app(name)
                 if status != 0:
@@ -767,9 +808,9 @@ class Desktop:
                     return f"{window.Name or name} launched."
                 return f"Launching {name} sent, but window not detected yet."
             case "resize":
-                response, status = self.resize_app(name=name, size=size, loc=loc)
+                response, status = self.resize_app(name=name, size=size, loc=loc, handle=handle)
             case "switch":
-                response, status = self.switch_app(name)
+                response, status = self.switch_app(name, handle)
         if status != 0:
             raise ValueError(response)
         return response
@@ -814,12 +855,12 @@ class Desktop:
 
         return (app_name if status == 0 else response), status, pid
 
-    def switch_app(self, name: str | None):
+    def switch_app(self, name: str | None, handle: int | None = None):
         try:
-            windows, error = self._find_windows_by_name(name)
-            if not windows:
-                return error, 1
-            window = windows[0]
+            try:
+                window, note = self.pick_window(name, handle, required=True)
+            except ValueError as e:
+                return str(e), 1
 
             target_handle = window.handle
 
@@ -829,7 +870,7 @@ class Desktop:
                 content = f"Restored {window.name} from minimized and switched to it."
             else:
                 content = f"Switched to {window.name} window."
-            return content + self._other_matches_note(windows), 0
+            return content + note, 0
         except Exception as e:
             return (f"Error switching app: {str(e)}", 1)
 
