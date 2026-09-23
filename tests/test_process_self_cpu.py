@@ -52,3 +52,14 @@ def test_cpu_is_sampled_over_a_fresh_short_window(monkeypatch):
     assert events[0] == ("iter", ("cpu_percent",))
     assert events[1] == ("sleep", 0.5)
     assert events[2][0] == "iter" and "cpu_percent" in events[2][1]
+
+
+def test_cpu_is_a_share_of_the_whole_machine(monkeypatch):
+    # Round-2 3.32: psutil counts per core, so idle read ~1900% on 20 threads.
+    monkeypatch.setattr(psutil, "process_iter", lambda attrs: [_fake(4242, "busy.exe", 400.0)])
+    monkeypatch.setattr(psutil, "cpu_count", lambda logical=True: 4)
+    monkeypatch.setattr("windows_mcp.process.service.time.sleep", lambda s: None)
+
+    row = list_processes(sort_by="cpu").splitlines()[3]
+
+    assert "100.0%" in row

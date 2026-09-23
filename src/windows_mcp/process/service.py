@@ -26,6 +26,9 @@ def list_processes(
     for _ in psutil.process_iter(["cpu_percent"]):
         pass
     time.sleep(0.5)
+    # psutil counts per core (100% = one core); show a share of the whole machine
+    # like Task Manager, or idle reads ~1900% on a 20-thread PC.
+    cores = psutil.cpu_count() or 1
     procs = []
     for p in psutil.process_iter(["pid", "name", "cpu_percent", "memory_info"]):
         try:
@@ -38,7 +41,7 @@ def list_processes(
                     "name": f"{info['name'] or 'Unknown'}{' (this server)' if is_self else ''}",
                     # The server's own sample covers the moment it builds this list
                     # (~96%), so it looked like a runaway process an agent might kill.
-                    "cpu": None if is_self else info["cpu_percent"] or 0,
+                    "cpu": None if is_self else (info["cpu_percent"] or 0) / cores,
                     "mem_mb": round(mem_mb, 1),
                 }
             )

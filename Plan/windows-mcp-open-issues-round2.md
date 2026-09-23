@@ -421,11 +421,12 @@ Source: live tests on 2026-09-22 (Windows 11 Pro 26200, one 1920x1080 display at
 
   - **Verify:** Unit - two sampling passes with a wait between them. Live - the first CPU-sorted list after server start shows non-zero values.
   - **Result (2026-09-23):** done. `list_processes` first iterates `psutil.process_iter(["cpu_percent"])` to prime every (cached) process, sleeps 0.5 s (`time.sleep`, as the Wait tool does), then builds the list - so CPU% always covers the last half second. Every `list` call is now ~0.5 s slower. 1 unit test in `tests/test_process_self_cpu.py` (failed first); suite 1182 passed; lint clean. Live (real Process tool, fresh in-process server): the first CPU-sorted list showed msedge 15.4%, System 14.9% etc. instead of all 0.0%; the server's own row is still marked "(this server)" with "-".
-- [ ]  3.32 **"System Idle Process" shows ~1900% CPU.** Tool: Process. Found on 2026-09-23 while live-testing 3.23. psutil reports each process in per-core units (100% = one core), so on this 20-thread PC idle reads 1909.8%.
+- [x]  3.32 **"System Idle Process" shows ~1900% CPU.** Tool: Process. Found on 2026-09-23 while live-testing 3.23. psutil reports each process in per-core units (100% = one core), so on this 20-thread PC idle reads 1909.8%.
 
-  - [ ]  a. Divide by the logical CPU count so CPU% is a share of the whole machine (0-100, like Task Manager).
+  - [x]  a. Divide by the logical CPU count so CPU% is a share of the whole machine (0-100, like Task Manager).
 
   - **Verify:** Unit - a 400% per-core sample on 4 CPUs shows 100.0%. Live - no process shows more than 100%.
+  - **Result (2026-09-23):** done. `list_processes` divides each sample by `psutil.cpu_count()` (logical, fallback 1). Note: a process using one full core now reads 5% on this 20-thread PC, as in Task Manager. 1 unit test in `tests/test_process_self_cpu.py` (failed first); suite 1183 passed; lint clean. Live (real Process tool, all 499 rows): System Idle Process 95.1%, highest other 0.4%, all rows together 96.6%.
 
 # Part B - Improvements (to work like Claude Cowork)
 
