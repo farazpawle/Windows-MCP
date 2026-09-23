@@ -21,6 +21,11 @@ state_tool = None
 screenshot_tool = None
 
 
+def _retry_hint(error: Exception) -> str:
+    """Suggest a retry only for capture failures; a bad option fails the same way again."""
+    return "" if isinstance(error, ValueError) else " Please try again."
+
+
 def register(mcp, *, get_desktop, get_analytics):
     global state_tool, screenshot_tool
 
@@ -71,7 +76,7 @@ def register(mcp, *, get_desktop, get_analytics):
                 exc_info=True,
             )
             # Raised, not returned: a returned message reached the client as a success.
-            raise ToolError(f"Error capturing desktop state: {e}. Please try again.") from e
+            raise ToolError(f"Error capturing desktop state: {e}.{_retry_hint(e)}") from e
 
         # Label clicks resolve against exactly the tree printed here, never a later capture.
         desktop.label_tree_state = capture_result["desktop_state"].tree_state
@@ -121,7 +126,7 @@ def register(mcp, *, get_desktop, get_analytics):
                 region,
                 exc_info=True,
             )
-            raise ToolError(f"Error capturing screenshot: {e}. Please try again.") from e
+            raise ToolError(f"Error capturing screenshot: {e}.{_retry_hint(e)}") from e
 
         return build_snapshot_response(
             capture_result,
