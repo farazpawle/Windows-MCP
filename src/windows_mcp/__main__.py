@@ -1,5 +1,6 @@
 from contextlib import asynccontextmanager
 from windows_mcp.config import enable_debug
+from windows_mcp.infrastructure import action_log as action_log_module
 from windows_mcp.infrastructure import (
     AuthKeyMiddleware,
     OAuthOnlyMiddleware,
@@ -332,6 +333,7 @@ _LEGACY_SERVE_FLAGS = {
     "--tools",
     "--exclude-tools",
     "--allow-insecure-remote",
+    "--action-log",
     "--debug",
 }
 
@@ -586,6 +588,15 @@ def main():
     envvar="WINDOWS_MCP_STATELESS_HTTP",
     show_default=True,
 )
+@click.option(
+    "--action-log",
+    help="Keep a log of every tool call, one readable line each, with secret-looking values "
+    "hidden. 'on' writes ~/.windows-mcp/actions.log; or give a file path. Off by default.",
+    default=None,
+    envvar="WINDOWS_MCP_ACTION_LOG",
+    type=str,
+    show_default=False,
+)
 def serve(
     ctx,
     transport,
@@ -604,6 +615,7 @@ def serve(
     oauth_client_id,
     oauth_client_secret,
     stateless_http,
+    action_log,
 ):
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
     install_selfpipe_guard()
@@ -694,6 +706,13 @@ def serve(
             "  Use --auth-key <token> or --oauth-client-id/--oauth-client-secret.\n"
             "  Or pass --allow-insecure-remote to explicitly allow unauthenticated access (not recommended)."
         )
+
+    try:
+        log_path = action_log_module.configure(action_log)
+    except OSError as exc:
+        raise click.ClickException(f"Cannot use action log {action_log!r}: {exc}")
+    if log_path:
+        logger.info("Action log: %s", log_path)
 
     if (auth_key or cli_allowlist) and transport == Transport.STDIO.value:
         logger.warning("--auth-key / --ip-allowlist have no effect on stdio transport")

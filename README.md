@@ -490,6 +490,13 @@ windows-mcp serve --tools "Screenshot,Click,Snapshot"   # Enable only these tool
 windows-mcp serve --exclude-tools "PowerShell,Registry" # Disable specific tools
 ```
 
+### Action Log
+Off by default. `--action-log on` (or `WINDOWS_MCP_ACTION_LOG=on`) appends one readable line per tool call to `~/.windows-mcp/actions.log`: time, tool, arguments, ok/error, duration and the first 300 characters of the reply. Give a file path instead of `on` to write elsewhere. Secret-looking values (arguments named like passwords or tokens, `-Password x`, `password=x`, `Bearer x`, known key prefixes, long random tokens) are replaced with `[hidden]`; other text, including what the agent types, is kept. The file is never rotated or trimmed.
+
+```text
+2026-09-23 23:50:29  PowerShell  command="Write-Output 'password=[hidden] done'" timeout=30  -> ok 0.42s: Response: password=[hidden] done | Status Code: 0
+```
+
 ### TLS/HTTPS
 ```shell
 openssl req -x509 -newkey rsa:4096 -keyout key.pem -out cert.pem -days 365 -nodes
@@ -642,6 +649,7 @@ All variables are optional unless noted. Set them via the `env` key in `claude_d
 | `WINDOWS_MCP_CORS_ORIGINS` | _(none)_ | Comma-separated list of origins permitted to make cross-origin browser requests (e.g., `https://my-client.example.com`). No CORS headers are emitted when unset. Alternative to `--cors-origins` CLI flag. |
 | `WINDOWS_MCP_TOOLS` | _(all enabled)_ | Comma-separated explicit list of tools to enable (e.g., `Screenshot,Click,Snapshot`). Alternative to `--tools` CLI flag. |
 | `WINDOWS_MCP_EXCLUDE_TOOLS` | _(none)_ | Comma-separated list of tools to disable (e.g., `PowerShell,Registry`). Alternative to `--exclude-tools` CLI flag. |
+| `WINDOWS_MCP_ACTION_LOG` | _(off)_ | `on` to log every tool call to `~/.windows-mcp/actions.log`, or a file path. Secret-looking values are hidden. Alternative to `--action-log` CLI flag. |
 | `WINDOWS_MCP_SSL_CERTFILE` | _(none)_ | Path to TLS certificate file (.pem) for HTTPS. Must be provided with `WINDOWS_MCP_SSL_KEYFILE`. |
 | `WINDOWS_MCP_SSL_KEYFILE` | _(none)_ | Path to TLS private key file (.pem) for HTTPS. Must be provided with `WINDOWS_MCP_SSL_CERTFILE`. |
 | `WINDOWS_MCP_OAUTH_CLIENT_ID` | _(none)_ | OAuth client ID for HTTP transports. Must be provided with `WINDOWS_MCP_OAUTH_CLIENT_SECRET`. |

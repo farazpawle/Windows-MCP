@@ -56,7 +56,7 @@ The codebase follows a layered service architecture under `src/windows_mcp/`:
 
 **Domain services** — thin packages backing the system tools: `filesystem/` (read/write/copy/move/delete/list/search/info), `registry/` (get/set/delete/list, implemented via PowerShell cmdlets), `powershell/` (`PowerShellExecutor` plus environment resolution), `process/` (list/kill), `notifications/`, `clipboard/` (text, images, file lists; pywin32's `CountClipboardFormats` raises on an empty clipboard, so emptiness is checked with `EnumClipboardFormats(0)`). Registry and PowerShell tools shell out, so their latency is dominated by process startup. `ocr/` (FindText, WaitFor `screen_text`) runs `Windows.Media.Ocr` through Windows PowerShell 5.1 on a temporary PNG, pinned to `powershell` because pwsh 7 cannot load WinRT types (no WinRT Python package is installed).
 
-**Infrastructure** — `infrastructure/`: cross-cutting concerns. `analytics.py` (optional PostHog telemetry, disabled with `ANONYMIZED_TELEMETRY=false`; records tool names and errors only, never arguments or outputs), `auth.py` and `oauth.py` (bearer-token and OAuth middleware for HTTP transports), `security.py` (SSRF validation, IP allowlist middleware), `config.py` (server configuration). Note `windows_mcp/config.py` at the package root is unrelated — it only holds the `WINDOWS_MCP_DEBUG` helpers.
+**Infrastructure** — `infrastructure/`: cross-cutting concerns. `analytics.py` (optional PostHog telemetry, disabled with `ANONYMIZED_TELEMETRY=false`; records tool names and errors only, never arguments or outputs), `auth.py` and `oauth.py` (bearer-token and OAuth middleware for HTTP transports), `security.py` (SSRF validation, IP allowlist middleware), `config.py` (server configuration), `action_log.py` (opt-in per-call log; `with_analytics` labels differ from four tool names, so the log maps them back). Note `windows_mcp/config.py` at the package root is unrelated — it only holds the `WINDOWS_MCP_DEBUG` helpers.
 
 ## Code Style
 
@@ -95,7 +95,7 @@ The codebase follows a layered service architecture under `src/windows_mcp/`:
 | `WINDOWS_MCP_READ_VSCODE` | _(off)_ | Set to `1`/`true`/`yes`/`on` to let Snapshot/WaitFor read the UI tree of VS Code-family windows (Code, Cursor, Windsurf, Antigravity, VSCodium). Off because one read pins VS Code at 100% CPU, "Not Responding" until restart, and returns nothing. Resolved in `tree/utils.py`. |
 | `WINDOWS_MCP_DISABLE_FLASH` | _(off)_ | Set to `1`/`true`/`yes`/`on` to suppress the orange-red glowing border that briefly appears after every screenshot. Resolved in `desktop/flash_overlay.py`. |
 
-`serve` flags can also be set by environment variable (click `envvar=` in `__main__.py`): `WINDOWS_MCP_AUTH_KEY`, `WINDOWS_MCP_IP_ALLOWLIST`, `WINDOWS_MCP_CORS_ORIGINS`, `WINDOWS_MCP_SSL_CERTFILE`, `WINDOWS_MCP_SSL_KEYFILE`, `WINDOWS_MCP_OAUTH_CLIENT_ID`, `WINDOWS_MCP_OAUTH_CLIENT_SECRET`, `WINDOWS_MCP_STATELESS_HTTP`, `WINDOWS_MCP_TOOLS`, `WINDOWS_MCP_EXCLUDE_TOOLS`. See `windows-mcp serve --help` for each one's meaning.
+`serve` flags can also be set by environment variable (click `envvar=` in `__main__.py`): `WINDOWS_MCP_AUTH_KEY`, `WINDOWS_MCP_IP_ALLOWLIST`, `WINDOWS_MCP_CORS_ORIGINS`, `WINDOWS_MCP_SSL_CERTFILE`, `WINDOWS_MCP_SSL_KEYFILE`, `WINDOWS_MCP_OAUTH_CLIENT_ID`, `WINDOWS_MCP_OAUTH_CLIENT_SECRET`, `WINDOWS_MCP_STATELESS_HTTP`, `WINDOWS_MCP_TOOLS`, `WINDOWS_MCP_EXCLUDE_TOOLS`, `WINDOWS_MCP_ACTION_LOG`. See `windows-mcp serve --help` for each one's meaning.
 
 ## Working Conventions
 
@@ -116,4 +116,4 @@ The codebase follows a layered service architecture under `src/windows_mcp/`:
 
 ## Security Context
 
-This server has **full system access** with no sandboxing. `PowerShell`, `FileSystem`, `Registry`, `Process`, and `App` can all perform irreversible operations, and there is no audit log or rollback. The recommended deployment target is a VM or Windows Sandbox. Use `--exclude-tools` (or `--tools`) to drop the tools a given deployment does not need.
+This server has **full system access** with no sandboxing. `PowerShell`, `FileSystem`, `Registry`, `Process`, and `App` can all perform irreversible operations, and there is no rollback; an opt-in action log (`--action-log`, `infrastructure/action_log.py`, written from inside `with_analytics` so every tool is covered) records each call with secrets hidden. The recommended deployment target is a VM or Windows Sandbox. Use `--exclude-tools` (or `--tools`) to drop the tools a given deployment does not need.

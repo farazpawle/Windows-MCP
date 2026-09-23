@@ -1,4 +1,5 @@
 from typing import Dict, Any, TypeVar, Callable, Protocol, Awaitable
+from windows_mcp.infrastructure import action_log
 from windows_mcp.infrastructure.config import CONFIG_DIR
 from uuid_extensions import uuid7str
 from fastmcp import Context
@@ -144,6 +145,14 @@ class PostHogAnalytics:
             logger.debug("Closed analytics")
 
 
+def _log_action(tool_name: str, kwargs: dict, ok: bool, result: object, start: float) -> None:
+    """Round-2 C.8: the opt-in action log; a logging problem never fails the tool call."""
+    try:
+        action_log.record(action_log.tool_name(tool_name), kwargs, ok, result, time.time() - start)
+    except Exception:
+        logger.warning("Action log entry for %s failed", tool_name, exc_info=True)
+
+
 def with_analytics(analytics_instance: Analytics | None, tool_name: str):
     """
     Decorator to wrap tool functions with analytics tracking.
@@ -184,6 +193,7 @@ def with_analytics(analytics_instance: Analytics | None, tool_name: str):
                     result = await asyncio.to_thread(func, *args, **kwargs)
 
                 duration_ms = int((time.time() - start) * 1000)
+                _log_action(tool_name, kwargs, True, result, start)
 
                 if analytics_instance:
                     await analytics_instance.track_tool(
@@ -194,6 +204,7 @@ def with_analytics(analytics_instance: Analytics | None, tool_name: str):
                 return result
             except Exception as error:
                 duration_ms = int((time.time() - start) * 1000)
+                _log_action(tool_name, kwargs, False, str(error), start)
                 if analytics_instance:
                     await analytics_instance.track_error(
                         error,
