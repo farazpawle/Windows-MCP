@@ -1,3 +1,4 @@
+import os
 from typing import Literal
 
 
@@ -17,16 +18,20 @@ def list_processes(
     import psutil
     from tabulate import tabulate
 
+    own_pid = os.getpid()
     procs = []
     for p in psutil.process_iter(["pid", "name", "cpu_percent", "memory_info"]):
         try:
             info = p.info
             mem_mb = info["memory_info"].rss / (1024 * 1024) if info["memory_info"] else 0
+            is_self = info["pid"] == own_pid
             procs.append(
                 {
                     "pid": info["pid"],
-                    "name": info["name"] or "Unknown",
-                    "cpu": info["cpu_percent"] or 0,
+                    "name": f"{info['name'] or 'Unknown'}{' (this server)' if is_self else ''}",
+                    # The server's own sample covers the moment it builds this list
+                    # (~96%), so it looked like a runaway process an agent might kill.
+                    "cpu": None if is_self else info["cpu_percent"] or 0,
                     "mem_mb": round(mem_mb, 1),
                 }
             )
@@ -38,7 +43,7 @@ def list_processes(
         procs = [p for p in procs if needle in p["name"].casefold()]
     sort_key = {
         "memory": lambda x: x["mem_mb"],
-        "cpu": lambda x: x["cpu"],
+        "cpu": lambda x: x["cpu"] or 0,
         "name": lambda x: x["name"].lower(),
     }
     procs.sort(key=sort_key.get(sort_by, sort_key["memory"]), reverse=(sort_by != "name"))
@@ -46,7 +51,15 @@ def list_processes(
     if not procs:
         return f"No processes found{f' matching {name}' if name else ''}."
     table = tabulate(
-        [[p["pid"], p["name"], f"{p['cpu']:.1f}%", f"{p['mem_mb']:.1f} MB"] for p in procs],
+        [
+            [
+                p["pid"],
+                p["name"],
+                "-" if p["cpu"] is None else f"{p['cpu']:.1f}%",
+                f"{p['mem_mb']:.1f} MB",
+            ]
+            for p in procs
+        ],
         headers=["PID", "Name", "CPU%", "Memory"],
         tablefmt="simple",
     )
