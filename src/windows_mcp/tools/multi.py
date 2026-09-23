@@ -6,6 +6,7 @@ from mcp.types import ToolAnnotations
 from windows_mcp.infrastructure import with_analytics
 from fastmcp import Context
 from windows_mcp.tools._args import as_bool
+from windows_mcp.tools._coords import to_model, to_screen
 from windows_mcp.tools.input import release_held_button
 
 
@@ -40,7 +41,7 @@ def register(mcp, *, get_desktop, get_analytics):
         labels = _as_loc(labels)
         if locs is None and labels is None:
             raise ValueError("Either locs or labels must be provided.")
-        locs = locs or []
+        locs = [to_screen(desktop, loc) for loc in locs or []]
         if labels is not None:
             if desktop.label_tree_state is None:
                 raise ValueError("Desktop state is empty. Please call Snapshot first.")
@@ -53,7 +54,7 @@ def register(mcp, *, get_desktop, get_analytics):
         press_ctrl = as_bool(press_ctrl, "press_ctrl")
         released = release_held_button(desktop)
         desktop.multi_select(press_ctrl, locs)
-        elements_str = "\n".join([f"({loc[0]},{loc[1]})" for loc in locs])
+        elements_str = "\n".join("({},{})".format(*to_model(desktop, loc)) for loc in locs)
         action = "Ctrl-selected elements" if press_ctrl else "Clicked in sequence"
         return f"{action} at:\n{elements_str}{released}"
 
@@ -79,7 +80,7 @@ def register(mcp, *, get_desktop, get_analytics):
         labels = _as_loc(labels)
         if locs is None and labels is None:
             raise ValueError("Either locs or labels must be provided.")
-        locs = locs or []
+        locs = [to_screen(desktop, loc) for loc in locs or []]
         if labels is not None:
             if desktop.label_tree_state is None:
                 raise ValueError("Desktop state is empty. Please call Snapshot first.")
@@ -104,5 +105,7 @@ def register(mcp, *, get_desktop, get_analytics):
 
         released = release_held_button(desktop)
         desktop.multi_edit(locs)
-        elements_str = ", ".join([f"({e[0]},{e[1]}) with text '{e[2]}'" for e in locs])
+        elements_str = ", ".join(
+            "({},{})".format(*to_model(desktop, e[:2])) + f" with text '{e[2]}'" for e in locs
+        )
         return f"Multi-edited elements at: {elements_str}{released}"

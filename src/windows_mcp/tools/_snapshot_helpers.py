@@ -14,6 +14,7 @@ from fastmcp.utilities.types import Image
 from textwrap import dedent
 from windows_mcp.desktop.service import Desktop, Size
 from windows_mcp.desktop.utils import remove_private_use_chars, repair_surrogates
+from windows_mcp.tools._coords import coordinate_scale, raw_coordinates, to_screen
 
 
 logger = logging.getLogger(__name__)
@@ -117,16 +118,26 @@ def capture_desktop_state(
         scale=_screenshot_scale(),
         grid_lines=grid_lines,
         display_indices=display_indices,
-        region=region,
+        region=to_screen(desktop, region, count=4),
         max_image_size=Size(width=MAX_IMAGE_WIDTH, height=MAX_IMAGE_HEIGHT),
     )
     if profile_enabled:
         desktop_state_ms = (time.perf_counter() - stage_started_at) * 1000
         stage_started_at = time.perf_counter()
 
-    interactive_elements = desktop_state.tree_state.interactive_elements_to_string()
-    scrollable_elements = desktop_state.tree_state.scrollable_elements_to_string()
-    semantic_tree = desktop_state.tree_state.semantic_tree_to_string()
+    # A full screenshot sets the caller's coordinate space (round-2 B.1); a region is a
+    # close-up of it and leaves the space alone, like computer use's zoom.
+    if use_vision and region is None and not raw_coordinates():
+        desktop.coordinate_scale = desktop_state.screenshot_scale or 1.0
+    scale = coordinate_scale(desktop)
+    image_origin = None
+    if desktop_state.screenshot_original_size:
+        box = desktop_state.screenshot_region or desktop.get_screen_box()
+        image_origin = (box.left, box.top)
+
+    interactive_elements = desktop_state.tree_state.interactive_elements_to_string(scale)
+    scrollable_elements = desktop_state.tree_state.scrollable_elements_to_string(scale)
+    semantic_tree = desktop_state.tree_state.semantic_tree_to_string(scale)
     if use_ui_tree:
         windows = desktop_state.windows_to_string()
         active_window = desktop_state.active_window_to_string()
@@ -171,7 +182,39 @@ def capture_desktop_state(
         "active_desktop": active_desktop,
         "all_desktops": all_desktops,
         "screenshot_bytes": screenshot_bytes,
+        "coordinate_scale": scale,
+        "image_origin": image_origin,
     }
+
+
+_SPACE_USERS = (
+    "element, cursor and display positions here and the loc, locs, from_loc and region you pass"
+)
+
+
+def _image_mapping_text(desktop_state, origin: tuple[int, int], scale: float) -> str:
+    """Size of the image and how its pixels map to the caller's coordinates."""
+    orig = desktop_state.screenshot_original_size
+    applied = desktop_state.screenshot_scale or 1.0
+    text = f"Screenshot Size: {orig.to_string()}\n"
+    if applied != 1.0:
+        text = (
+            f"Screenshot Original Size: {orig.to_string()}\n"
+            f"Image Size: {round(orig.width * applied)}x{round(orig.height * applied)}\n"
+        )
+    ratio = round(scale / applied, 6)
+    left, top = round(origin[0] * scale), round(origin[1] * scale)
+    if ratio == 1.0 and (left, top) == (0, 0):
+        if scale == 1.0:
+            return text
+        return text + (
+            f"Coordinates: image pixels as seen (screen pixels x {scale:g}); "
+            f"{_SPACE_USERS} use them\n"
+        )
+    return text + (
+        f"Coordinates: image pixel (x, y) = ({left} + x*{ratio:g}, {top} + y*{ratio:g}) "
+        f"in the coordinates {_SPACE_USERS} use\n"
+    )
 
 
 def build_snapshot_response(
@@ -209,23 +252,33 @@ def build_snapshot_response(
     active_desktop = repair_surrogates(active_desktop)
     all_desktops = repair_surrogates(all_desktops)
 
+    scale = capture_result.get("coordinate_scale", 1.0)
+
+    def box_to_string(box):
+        return "({},{},{},{})".format(*(round(v * scale) for v in box.convert_xywh_to_xyxy()))
+
     def display_to_string(display):
         primary = " primary" if display.primary else ""
         return (
-            f"{display.index}:{display.device_name} "
-            f"{display.bounding_box.xyxy_to_string()}{primary}"
+            f"{display.index}:{display.device_name} {box_to_string(display.bounding_box)}{primary}"
         )
 
     # get_state drops a cursor that lies outside the region (it would be drawn off the image).
     cursor = desktop_state.cursor_position
     if cursor is None:
         cursor = "outside region" if desktop_state.screenshot_region else "unknown"
+    else:
+        cursor = (round(cursor[0] * scale), round(cursor[1] * scale))
     metadata_text = f"Cursor Position: {cursor}\n"
-    if desktop_state.screenshot_original_size:
+    if desktop_state.screenshot_original_size and not raw_coordinates():
+        metadata_text += _image_mapping_text(
+            desktop_state, capture_result.get("image_origin") or (0, 0), scale
+        )
+    elif desktop_state.screenshot_original_size:
         orig = desktop_state.screenshot_original_size
-        scale = desktop_state.screenshot_scale or 1.0
-        if scale < 1.0:
-            coord_scale = round(1.0 / scale, 6)
+        applied = desktop_state.screenshot_scale or 1.0
+        if applied < 1.0:
+            coord_scale = round(1.0 / applied, 6)
             metadata_text += (
                 f"Screenshot Original Size: {orig.to_string()}\n"
                 f"Screenshot Coordinate Scale: {coord_scale} "
@@ -235,6 +288,11 @@ def build_snapshot_response(
             )
         else:
             metadata_text += f"Screenshot Size: {orig.to_string()}\n"
+    elif scale != 1.0:
+        metadata_text += (
+            f"Coordinates: screen pixels x {scale:g}, the space of the last full screenshot; "
+            f"{_SPACE_USERS} use it\n"
+        )
     if desktop_state.available_displays:
         metadata_text += "Visible Displays: "
         metadata_text += "; ".join(
@@ -244,8 +302,9 @@ def build_snapshot_response(
     if desktop_state.screenshot_displays:
         metadata_text += f"Selected Displays: {','.join(str(index) for index in desktop_state.screenshot_displays)}\n"
     if desktop_state.screenshot_region:
-        metadata_text += f"Screenshot Region: {desktop_state.screenshot_region.xyxy_to_string()}\n"
-        metadata_text += "Coordinate Space: Virtual desktop coordinates\n"
+        metadata_text += f"Screenshot Region: {box_to_string(desktop_state.screenshot_region)}\n"
+        if scale == 1.0:
+            metadata_text += "Coordinate Space: Virtual desktop coordinates\n"
     if desktop_state.screenshot_backend:
         metadata_text += f"Screenshot Backend: {desktop_state.screenshot_backend}\n"
     if ui_detail_note:

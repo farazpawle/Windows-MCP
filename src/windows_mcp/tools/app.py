@@ -123,7 +123,7 @@ def register(mcp, *, get_desktop, get_analytics):
             "by Start Menu name), 'launch_executable' (strictly launches one executable - a path, or a "
             "bare name found on PATH - with args as a list or plain command-line text and optional "
             "cwd; a .ps1 script is run through PowerShell), 'resize' (adjusts a named "
-            "or active window), and 'switch' (brings a specific window into focus)."
+            "or active window; window_loc and window_size are real screen pixels, not screenshot pixels), and 'switch' (brings a specific window into focus)."
         ),
         annotations=ToolAnnotations(
             title="App",

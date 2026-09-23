@@ -66,7 +66,7 @@ def _scroll_meta_str(metadata: dict[str, Any]) -> str:
     return "  " + "  ".join(f"[{p}]" for p in parts)
 
 
-def _render_tree(nodes: list, meta_fn) -> str:
+def _render_tree(nodes: list, meta_fn, scale: float = 1.0) -> str:
     windows: dict[str, list] = {}
     for node in nodes:
         windows.setdefault(node.window_name, []).append(node)
@@ -76,7 +76,7 @@ def _render_tree(nodes: list, meta_fn) -> str:
         lines.append(f'window "{window_name}"')
         for i, node in enumerate(window_nodes):
             connector = "└──" if i == len(window_nodes) - 1 else "├──"
-            coords = node.center.to_string()
+            coords = node.center.to_string(scale)
             ctrl = node.control_type.lower()
             name = node.name
             action = _action_for(ctrl)
@@ -136,7 +136,9 @@ def _label_key(kind: str, node: Any) -> tuple:
     )
 
 
-def _format_semantic_node(node: SemanticNode, labels: dict[tuple, list[int]] | None = None) -> str:
+def _format_semantic_node(
+    node: SemanticNode, labels: dict[tuple, list[int]] | None = None, scale: float = 1.0
+) -> str:
     ctrl = node.control_type.lower()
     name = node.name
     if node.element_type == "window":
@@ -144,7 +146,7 @@ def _format_semantic_node(node: SemanticNode, labels: dict[tuple, list[int]] | N
     if node.element_type == "structural":
         return f'{ctrl} "{name}"'
     if node.element_type in ("interactive", "scrollable"):
-        coords = node.center.to_string() if node.center else "(?)"
+        coords = node.center.to_string(scale) if node.center else "(?)"
         action = _action_for(ctrl)
         meta = (
             _node_meta_str(node.metadata)
@@ -163,12 +165,13 @@ def _render_semantic_node(
     prefix: str,
     is_last: bool,
     labels: dict[tuple, list[int]] | None = None,
+    scale: float = 1.0,
 ) -> None:
     if node.element_type == "desktop":
         lines.append("desktop")
     else:
         connector = "└── " if is_last else "├── "
-        lines.append(f"{prefix}{connector}{_format_semantic_node(node, labels)}")
+        lines.append(f"{prefix}{connector}{_format_semantic_node(node, labels, scale)}")
 
     if not node.children:
         return
@@ -176,7 +179,7 @@ def _render_semantic_node(
     extension = "    " if is_last else "│   "
     new_prefix = prefix + extension
     for i, child in enumerate(node.children):
-        _render_semantic_node(child, lines, new_prefix, i == len(node.children) - 1, labels)
+        _render_semantic_node(child, lines, new_prefix, i == len(node.children) - 1, labels, scale)
 
 
 def _prune_structural(node: SemanticNode) -> bool:
@@ -207,11 +210,11 @@ class TreeState:
     truncated: bool = False
     element_limit: int = 0
 
-    def semantic_tree_to_string(self) -> str:
+    def semantic_tree_to_string(self, scale: float = 1.0) -> str:
         if not self.semantic_tree_root:
             return "No elements"
         lines: list[str] = []
-        _render_semantic_node(self.semantic_tree_root, lines, "", True, self._label_lookup())
+        _render_semantic_node(self.semantic_tree_root, lines, "", True, self._label_lookup(), scale)
         text = "\n".join(lines)
         if self.truncated:
             text += "\n\n" + _truncation_note(self.element_limit)
@@ -231,18 +234,18 @@ class TreeState:
             labels.setdefault(_label_key(kind, node), []).append(i)
         return labels
 
-    def interactive_elements_to_string(self) -> str:
+    def interactive_elements_to_string(self, scale: float = 1.0) -> str:
         if not self.interactive_nodes:
             return "No interactive elements"
-        text = _render_tree(self.interactive_nodes, _node_meta_str)
+        text = _render_tree(self.interactive_nodes, _node_meta_str, scale)
         if self.truncated:
             text += "\n\n" + _truncation_note(self.element_limit)
         return text
 
-    def scrollable_elements_to_string(self) -> str:
+    def scrollable_elements_to_string(self, scale: float = 1.0) -> str:
         if not self.scrollable_nodes:
             return "No scrollable elements"
-        text = _render_tree(self.scrollable_nodes, _scroll_meta_str)
+        text = _render_tree(self.scrollable_nodes, _scroll_meta_str, scale)
         if self.truncated:
             text += "\n\n" + _truncation_note(self.element_limit)
         return text
@@ -289,8 +292,9 @@ class Center:
     x: int
     y: int
 
-    def to_string(self) -> str:
-        return f"({self.x},{self.y})"
+    def to_string(self, scale: float = 1.0) -> str:
+        """``scale`` is the caller's coordinate scale (round-2 B.1)."""
+        return f"({round(self.x * scale)},{round(self.y * scale)})"
 
 
 @dataclass

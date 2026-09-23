@@ -445,14 +445,15 @@ Source: live tests on 2026-09-22 (Windows 11 Pro 26200, one 1920x1080 display at
 
 Each item: what windows-mcp does today, what computer use / Cowork does, and the suggested change. Items that change behaviour start with a `[User]` design approval.
 
-- [ ]  B.1 **Coordinates in screenshot space.** Today: when a screenshot is downscaled (screens above 1920x1080, or `WINDOWS_MCP_SCREENSHOT_SCALE` below 1), the model must multiply image coordinates itself using a printed scale factor. Cowork: the model always clicks in the pixel space of the image it saw and the host scales.
+- [x]  B.1 **Coordinates in screenshot space.** Today: when a screenshot is downscaled (screens above 1920x1080, or `WINDOWS_MCP_SCREENSHOT_SCALE` below 1), the model must multiply image coordinates itself using a printed scale factor. Cowork: the model always clicks in the pixel space of the image it saw and the host scales.
 
-  - [ ]  a. [User] Approve the behaviour (design choice - changes what every coordinate means): scale automatically, with an opt-out for raw screen coordinates.
-  - [ ]  b. Remember the last full screenshot's scale.
-  - [ ]  c. Apply it to every `loc`, `from_loc` and `region`.
-  - [ ]  d. Add the opt-out.
+  - [x]  a. [User] Approve the behaviour (design choice - changes what every coordinate means): scale automatically, with an opt-out for raw screen coordinates.
+  - [x]  b. Remember the last full screenshot's scale.
+  - [x]  c. Apply it to every `loc`, `from_loc` and `region`.
+  - [x]  d. Add the opt-out.
 
   - **Verify:** Unit - with a stored scale of 0.5, `loc=[100,100]` maps to (200,200); opt-out keeps (100,100). Live - `WINDOWS_MCP_SCREENSHOT_SCALE=0.5`, Screenshot, Click a harness button at its image coordinates: harness logs the click.
+  - **Result (2026-09-23):** done. User approved auto-scale with opt-out. New `tools/_coords.py`: `to_screen` (caller -> screen, divide by the scale; numeric strings too; MultiEdit text untouched) and `to_model` (screen -> caller, for replies). A full (non-region) Screenshot or vision Snapshot stores its applied scale on `Desktop.coordinate_scale`; a region capture leaves it alone (a close-up, like computer use's zoom). Converted: Click/Type/Scroll/Move `loc`, Move `from_loc` and `mouse_button`, MultiSelect/MultiEdit `locs`, Snapshot/Screenshot `region`; labels and the cursor are already screen pixels and are not. Printed in caller space: element centres (tree printers take `scale`), cursor, display boxes, region, tool replies, the off-screen refusal. The reply's new `Coordinates:` line says which space is in use, or gives the pixel formula when the image is a region/offset display. Opt-out `WINDOWS_MCP_RAW_COORDINATES=1` keeps screen pixels and the old multiply hint. Not converted (by choice): App `window_loc`/`window_size` (its reply and the window list's sizes are screen pixels; description says so) and DisplayInventory. 22 unit tests in `tests/test_screenshot_coordinates.py` (all failed first); suite 1264 passed. Live (scale 0.5, harness window): Screenshot said "Image Size: 1280x720 ... image pixels as seen"; window centre screen (510,451) = image (255,226); Click `loc=[255,226]` -> harness logged `lbutton`; Snapshot then reported the cursor at (255,226). Note: this PC's screen is now 2560x1440, so screenshots are shrunk to 0.75 even without the setting and the new behaviour is on by default here.
 - [x]  B.2 **Refuse points outside the display.** Cowork returns an error result for coordinates outside the display.
 
   - Done together with 1.4.

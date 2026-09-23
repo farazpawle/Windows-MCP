@@ -57,6 +57,8 @@ Machine: 1 display 1920x1080, 100% scale (screen coords = image coords) · Power
 
 Coordinates: use Snapshot centres. Re-snapshot after any window move, resize or scroll, because coords go stale.
 
+**Shrunk screenshots (local repo):** screens above 1920x1080, or `WINDOWS_MCP_SCREENSHOT_SCALE` below 1, shrink the image. A full (non-region) Screenshot or vision Snapshot then makes the image's own pixels the coordinates: click where you see a thing, and Snapshot centres, the cursor, display boxes, `loc`/`locs`/`from_loc` and `region` all use the same shrunk space (the reply's `Coordinates:` line says so). A region image is a close-up and does not change the space; its `Coordinates:` line gives the pixel formula. App `window_loc`/`window_size` and DisplayInventory stay real screen pixels. `WINDOWS_MCP_RAW_COORDINATES=1` restores plain screen pixels. **PyPI: always screen pixels; multiply image coordinates by the printed scale yourself.**
+
 ## 4. System tools (most reliable, no focus issues)
 
 **PowerShell** (`command`, `timeout` s, default 30)

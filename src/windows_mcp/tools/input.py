@@ -12,6 +12,7 @@ from pydantic import AliasChoices, Field
 from windows_mcp.infrastructure import with_analytics
 from fastmcp import Context
 from windows_mcp.tools._args import as_bool
+from windows_mcp.tools._coords import to_model, to_screen
 
 
 WaitForCondition = Literal[
@@ -410,14 +411,14 @@ def register(
         if clicks == 0 and modifiers:
             raise ValueError("modifiers cannot be used with clicks=0 (a hover holds no keys)")
         desktop = get_desktop()
-        loc = _as_loc(loc)
+        loc = to_screen(desktop, _as_loc(loc))
         if label is not None:
             loc = _resolve_label(desktop, label)
         elif loc is None:
             loc = list(desktop.get_cursor_location())
         if len(loc) != 2:
             raise ValueError("Location must be a list of exactly 2 integers [x, y]")
-        x, y = loc[0], loc[1]
+        x, y = to_model(desktop, loc)
         # clicks=0 only moves the pointer, which is how a held drag is steered.
         released = release_held_button(desktop) if clicks else ""
         desktop.click(loc=loc, button=button, clicks=clicks, modifiers=modifiers)
@@ -450,7 +451,7 @@ def register(
         ctx: Context = None,
     ) -> str:
         desktop = get_desktop()
-        loc = _as_loc(loc)
+        loc = to_screen(desktop, _as_loc(loc))
         if label is not None:
             loc = _resolve_label(desktop, label)
         if loc is not None and len(loc) != 2:
@@ -473,7 +474,8 @@ def register(
         done += " Pressed Enter." if press_enter else ""
         if loc is None:
             return f"Typed {typed} into the focused element{_focus_suffix(focus)}{done}"
-        return f"Typed {typed} at ({loc[0]},{loc[1]}).{done}{released}"
+        x, y = to_model(desktop, loc)
+        return f"Typed {typed} at ({x},{y}).{done}{released}"
 
     @mcp.tool(
         name="Scroll",
@@ -509,7 +511,7 @@ def register(
             )
         modifiers = _as_modifiers(modifiers)
         desktop = get_desktop()
-        loc = _as_loc(loc)
+        loc = to_screen(desktop, _as_loc(loc))
         if label is not None:
             loc = _resolve_label(desktop, label)
         if loc and len(loc) != 2:
@@ -518,7 +520,7 @@ def register(
         response = desktop.scroll(loc, axis, direction, wheel_times, modifiers=modifiers)
         if response:
             return f"{response}{released}"
-        where = f" at ({loc[0]},{loc[1]})" if loc else " at the mouse position"
+        where = " at ({},{})".format(*to_model(desktop, loc)) if loc else " at the mouse position"
         return (
             f"Scrolled {axis} {direction} by {wheel_times} wheel times"
             f"{where}{_held_suffix(modifiers)}.{released}"
@@ -559,8 +561,8 @@ def register(
         ctx: Context = None,
     ) -> str:
         desktop = get_desktop()
-        loc = _as_loc(loc)
-        from_loc = _as_loc(from_loc)
+        loc = to_screen(desktop, _as_loc(loc))
+        from_loc = to_screen(desktop, _as_loc(from_loc))
         drag = as_bool(drag, "drag")
         modifiers = _as_modifiers(modifiers)
         if modifiers and not drag:
@@ -580,7 +582,8 @@ def register(
             if not desktop.mouse_button(loc, mouse_button):
                 return "No mouse button was held; nothing was sent."
             verb = "Pressed" if mouse_button == "down" else "Released"
-            return f"{verb} the left mouse button at ({loc[0]},{loc[1]})."
+            x, y = to_model(desktop, loc)
+            return f"{verb} the left mouse button at ({x},{y})."
         if loc is None and label is None:
             raise ValueError("Either loc or label must be provided.")
         if label is not None:
@@ -602,7 +605,7 @@ def register(
             loc = _as_point(loc, "loc")
             if from_loc is not None:
                 from_loc = _as_point(from_loc, "from_loc")
-        x, y = loc[0], loc[1]
+        x, y = to_model(desktop, loc)
         if drag:
             released = release_held_button(desktop)
             result = desktop.drag(
@@ -611,7 +614,7 @@ def register(
                 duration=duration,
                 modifiers=modifiers,
             )
-            start_x, start_y = result["start"]
+            start_x, start_y = to_model(desktop, result["start"])
             effective_duration = result["duration"]
             held = _held_suffix(modifiers)
             if effective_duration is None:

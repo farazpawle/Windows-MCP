@@ -253,6 +253,10 @@ def _escape_text_for_sendkeys(text: str) -> str:
 
 
 class Desktop:
+    # Caller coordinates = screen pixels x this; set by the last full screenshot
+    # (tools/_coords.py, round-2 B.1). Only messages here use it; input is already converted.
+    coordinate_scale: float = 1.0
+
     def __init__(self):
         self.encoding = getpreferredencoding()
         self.tree = Tree(self)
@@ -952,11 +956,17 @@ class Desktop:
         ]
         if not bad:
             return
-        screens = ", ".join(f"({r.left},{r.top})-({r.right - 1},{r.bottom - 1})" for r in rects)
+
+        def shown(x: int, y: int) -> str:  # in the caller's coordinates, not screen pixels
+            return f"({round(x * self.coordinate_scale)},{round(y * self.coordinate_scale)})"
+
+        screens = ", ".join(
+            f"{shown(r.left, r.top)}-{shown(r.right - 1, r.bottom - 1)}" for r in rects
+        )
         if len(points) == 1:
-            targets = f"({bad[0][1]},{bad[0][2]}) is"
+            targets = f"{shown(bad[0][1], bad[0][2])} is"
         else:
-            targets = ", ".join(f"target {i} ({x},{y})" for i, x, y in bad)
+            targets = ", ".join(f"target {i} {shown(x, y)}" for i, x, y in bad)
             targets += " is" if len(bad) == 1 else " are"
         raise ValueError(f"{targets} outside every display; no input was sent. Displays: {screens}")
 
