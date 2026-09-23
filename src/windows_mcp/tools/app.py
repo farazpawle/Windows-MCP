@@ -1,5 +1,6 @@
 """App tool — launch, resize, switch applications."""
 
+import ctypes
 import json
 import os
 import shutil
@@ -12,13 +13,34 @@ from windows_mcp.infrastructure import with_analytics
 from fastmcp import Context
 
 
+def _split_command_line(text: str) -> list[str]:
+    """Split *text* exactly as a Windows program splits its own command line."""
+    if not text.strip():
+        return []
+    shell32 = ctypes.windll.shell32
+    shell32.CommandLineToArgvW.argtypes = [ctypes.c_wchar_p, ctypes.POINTER(ctypes.c_int)]
+    shell32.CommandLineToArgvW.restype = ctypes.POINTER(ctypes.c_wchar_p)
+    count = ctypes.c_int()
+    # The first token follows program-name rules (no \" escapes), so give it a dummy one.
+    argv = shell32.CommandLineToArgvW(f"x {text}", ctypes.byref(count))
+    if not argv:
+        raise ValueError(f"args could not be split: {text!r}")
+    try:
+        return [argv[i] for i in range(1, count.value)]
+    finally:
+        ctypes.windll.kernel32.LocalFree(argv)
+
+
 def _as_args(value: list[str] | str | None) -> list[str]:
     if value is None:
         return []
     if isinstance(value, list):
         args = value
-    else:
+    elif value.lstrip().startswith(("[", "{")):
         args = json.loads(value)
+    else:
+        # Plain text such as "-n 30 127.0.0.1", which the schema allows.
+        args = _split_command_line(value)
     if not isinstance(args, list) or not all(isinstance(arg, str) for arg in args):
         raise ValueError("args must be a list of strings")
     return args
@@ -56,24 +78,40 @@ def _launch_executable(
     resolved_cwd = _resolve_cwd(cwd)
     resolved_args = _as_args(args)
 
-    process = subprocess.Popen(
-        [str(resolved_executable), *resolved_args],
-        cwd=str(resolved_cwd) if resolved_cwd is not None else None,
-        shell=False,
-        stdin=subprocess.DEVNULL,
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-        close_fds=True,
-    )
-    return json.dumps(
-        {
-            "pid": process.pid,
-            "executable": str(resolved_executable),
-            "args": resolved_args,
-            "cwd": str(resolved_cwd) if resolved_cwd is not None else None,
-        },
-        indent=2,
-    )
+    command = [str(resolved_executable), *resolved_args]
+    run_with = None
+    if resolved_executable.suffix.lower() == ".ps1":
+        # Windows can't start a .ps1 directly; hand it to PowerShell. Bypass only
+        # affects this one process, and the PowerShell tool can already run any script.
+        run_with = "pwsh" if shutil.which("pwsh") else "powershell"
+        command = [run_with, "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", *command]
+
+    try:
+        process = subprocess.Popen(
+            command,
+            cwd=str(resolved_cwd) if resolved_cwd is not None else None,
+            shell=False,
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            close_fds=True,
+        )
+    except OSError as exc:
+        if getattr(exc, "winerror", None) != 193:  # ERROR_BAD_EXE_FORMAT
+            raise
+        raise ValueError(
+            f"{resolved_executable} is not a program or a PowerShell script, so it cannot be "
+            'launched; to open a document, use mode="launch" or the PowerShell tool'
+        ) from exc
+    result = {
+        "pid": process.pid,
+        "executable": str(resolved_executable),
+        "args": resolved_args,
+        "cwd": str(resolved_cwd) if resolved_cwd is not None else None,
+    }
+    if run_with:
+        result["run_with"] = run_with
+    return json.dumps(result, indent=2)
 
 
 def register(mcp, *, get_desktop, get_analytics):
@@ -83,7 +121,8 @@ def register(mcp, *, get_desktop, get_analytics):
             "Open/start/launch applications and manage windows. Keywords: open, start, launch, program, "
             "application, window, foreground, focus, resize. Four modes: 'launch' (opens an application "
             "by Start Menu name), 'launch_executable' (strictly launches one executable - a path, or a "
-            "bare name found on PATH - with separated argv and optional cwd), 'resize' (adjusts a named "
+            "bare name found on PATH - with args as a list or plain command-line text and optional "
+            "cwd; a .ps1 script is run through PowerShell), 'resize' (adjusts a named "
             "or active window), and 'switch' (brings a specific window into focus)."
         ),
         annotations=ToolAnnotations(

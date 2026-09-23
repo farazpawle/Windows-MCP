@@ -271,3 +271,87 @@ def test_existing_app_modes_delegate_unchanged(
 
     assert result == "legacy app result"
     assert desktop.app_calls == [(mode, name, window_loc, window_size)]
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        ("-n 30 127.0.0.1", ["-n", "30", "127.0.0.1"]),
+        (r'--title "two words" C:\dir\file.txt', ["--title", "two words", r"C:\dir\file.txt"]),
+        # Windows rule: \" is a literal quote, so the quoted part runs to the end.
+        (r'"C:\Program Files\x\" -v', [r'C:\Program Files\x" -v']),
+        ("   ", []),
+    ],
+)
+def test_launch_executable_splits_plain_text_args_with_windows_rules(
+    text: str,
+    expected: list[str],
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    exe = tmp_path / "app.exe"
+    exe.write_text("", encoding="utf-8")
+    monkeypatch.setattr(app.subprocess, "Popen", lambda *a, **k: SimpleNamespace(pid=1))
+
+    result = json.loads(
+        asyncio.run(_mcp().tools["App"](mode="launch_executable", executable=str(exe), args=text))
+    )
+
+    assert result["args"] == expected
+
+
+def test_launch_executable_runs_a_powershell_script_through_powershell(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    script = tmp_path / "run.PS1"
+    script.write_text("Write-Output hi", encoding="utf-8")
+    commands: list[list[str]] = []
+
+    def fake_popen(command: list[str], **kwargs: object) -> SimpleNamespace:
+        commands.append(command)
+        return SimpleNamespace(pid=7)
+
+    monkeypatch.setattr(app.subprocess, "Popen", fake_popen)
+    monkeypatch.setattr(app.shutil, "which", lambda name: None)  # no pwsh -> Windows PowerShell
+
+    result = json.loads(
+        asyncio.run(
+            _mcp().tools["App"](
+                mode="launch_executable", executable=str(script), args="-Name 'a b'"
+            )
+        )
+    )
+
+    assert commands == [
+        [
+            "powershell",
+            "-NoProfile",
+            "-ExecutionPolicy",
+            "Bypass",
+            "-File",
+            str(script.resolve()),
+            "-Name",
+            "'a",
+            "b'",
+        ]
+    ]
+    assert result["pid"] == 7
+    assert result["executable"] == str(script.resolve())
+    assert result["run_with"] == "powershell"
+
+
+def test_launch_executable_explains_a_file_that_cannot_run(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    text = tmp_path / "notes.txt"
+    text.write_text("hi", encoding="utf-8")
+
+    def fake_popen(*args: object, **kwargs: object) -> None:
+        raise OSError(22, "%1 is not a valid Win32 application", None, 193)
+
+    monkeypatch.setattr(app.subprocess, "Popen", fake_popen)
+
+    with pytest.raises(ValueError, match="is not a program or a PowerShell script"):
+        asyncio.run(_mcp().tools["App"](mode="launch_executable", executable=str(text)))
