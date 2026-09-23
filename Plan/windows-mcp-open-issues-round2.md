@@ -397,11 +397,12 @@ Source: live tests on 2026-09-22 (Windows 11 Pro 26200, one 1920x1080 display at
 
   - **Verify:** Unit - horizontal + modifiers sends real wheel events between key-down and key-up. Live - harness logs the wheel with the key held.
   - **Result (2026-09-23):** done. `Desktop.scroll` passes `keys_held=bool(modifiers)` through `_scroll_wheel` to `_scroll_horizontal`, which then skips the ScrollPattern lookup and sends `MOUSEEVENTF_HWHEEL`. Without modifiers nothing changes (ScrollPattern first, wheel fallback). 1 unit test in `tests/test_scroll_horizontal.py` (failed first: ScrollPattern was used); suite 1225 passed. Live (same harness): Scroll horizontal right `modifiers="alt"` -> `hwheel 120 held=[alt]`; left x2 `modifiers="Control_L"` -> two `hwheel -120 held=[ctrl]`.
-- [ ]  3.27 **Move `mouse_button="down"` without `loc` is undocumented.** It presses at the current pointer position (worked), but the description says only `up` may omit `loc`.
+- [x]  3.27 **Move `mouse_button="down"` without `loc` is undocumented.** It presses at the current pointer position (worked), but the description says only `up` may omit `loc`.
 
-  - [ ]  a. Update the Move description to say `down` may omit `loc` too.
+  - [x]  a. Update the Move description to say `down` may omit `loc` too.
 
   - **Verify:** The tool description text says so.
+  - **Result (2026-09-23):** done. Move description now reads "(loc optional for both: current position)"; `Skills/Skill.md` Move row says the same. Checked by registering the input tools on a fresh FastMCP and reading the `Move` description (contains the new text). Description-only change, no test needed; Move tests 25 passed, ruff clean.
 - [ ]  3.28 **A one-second hold replies "for 1 seconds".** Tool: Shortcut. Found on 2026-09-22 while fixing 3.4, not part of it. `Shortcut shortcut="shift+left" hold=1` replies "Held shift+left for 1 seconds." Expected: "for 1 second". The `{hold:g}` format drops the decimal for a whole number, so the plural is wrong for exactly 1; every other value reads correctly ("0.5 seconds", "2 seconds").
 
   - [ ]  a. Word the unit singular when the value is exactly 1, in the Shortcut hold reply and anywhere else a duration is printed (check Wait).

@@ -522,7 +522,7 @@ def register(
             "modifiers (drag only) holds keys during the drag, e.g. 'ctrl' to copy instead of move. "
             "For drags one straight move can't express (curved paths, hover before dropping): "
             "mouse_button='down' presses the left button at loc, then plain Moves steer it, "
-            "then mouse_button='up' releases it (loc optional: current position). "
+            "then mouse_button='up' releases it (loc optional for both: current position). "
             "Always finish a 'down' with an 'up'; any click, scroll or drag releases it first."
         ),
         annotations=ToolAnnotations(
