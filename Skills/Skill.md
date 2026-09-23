@@ -63,7 +63,7 @@ Coordinates: use Snapshot centres. Re-snapshot after any window move, resize or 
 **PowerShell** (`command`, `timeout` s, default 30)
 
 - Output is UTF-8 and returns `Status Code`.
-- Local repo: errors and warnings come back as plain text. When the command still succeeds (non-terminating errors, status 0), they follow the output under an `Errors:` heading — check for it. **PyPI release drops those errors silently** (status stays 0) and shows failures as raw CLIXML; there, wrap commands: `$ErrorActionPreference='Stop'; try { ... } catch { "ERR: "+$_.Exception.Message; exit 1 }`
+- Local repo: errors and warnings come back as plain text. When the command still succeeds (non-terminating errors, status 0), they follow the output under an `Errors and messages:` heading (with any warning, verbose and debug lines) — check for it. **PyPI release drops those errors silently** (status stays 0) and shows failures as raw CLIXML; there, wrap commands: `$ErrorActionPreference='Stop'; try { ... } catch { "ERR: "+$_.Exception.Message; exit 1 }`
 - On timeout it returns "Command execution timed out" with status 1, and the command really is stopped (a timed-out script did not finish its work later). Raise `timeout` for long jobs. `timeout` must be at least 1 (local repo rejects 0 or less with a clear error; on PyPI `timeout=0` fails every command).
 - Web requests work here (Invoke-WebRequest uses the Windows cert store), so use this as the fallback when Scrape fails.
 - Find notification AppIDs: `Get-StartApps`.

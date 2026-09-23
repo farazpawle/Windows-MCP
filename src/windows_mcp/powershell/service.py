@@ -279,7 +279,8 @@ class PowerShellExecutor:
             stderr = decode_clixml(_decode_output(result.stderr))
             output = stdout or stderr
             if include_errors and stdout.strip() and stderr:
-                output = f"{stdout.rstrip()}\n\nErrors:\n{stderr}"
+                # Not just "Errors": warning, verbose and debug lines land here too.
+                output = f"{stdout.rstrip()}\n\nErrors and messages:\n{stderr}"
             # If the command failed with "Access is denied" and we aren't elevated, add a helpful hint
             if result.returncode != 0 and "Access is denied" in output and not is_elevated():
                 output += (

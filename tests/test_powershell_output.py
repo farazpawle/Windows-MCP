@@ -54,6 +54,17 @@ def test_multi_line_error_is_not_split_further():
     assert decode_clixml(clixml) == "line one\nline two"
 
 
+def test_other_streams_after_output_are_headed_errors_and_messages():
+    # A verbose/debug note is not an error; the old "Errors:" heading said it was.
+    completed = subprocess.CompletedProcess([], 0, b"done\r\n", CLIXML_STREAMS.encode())
+    with patch(RUN_PATH, return_value=completed):
+        output, _ = PowerShellExecutor.execute_command("x", include_errors=True)
+    assert output == (
+        "done\n\nErrors and messages:\n"
+        "WARNING: warn-stream\nWrite-Error: boom\nVERBOSE: verb-x\nDEBUG: dbg-x"
+    )
+
+
 # a. partial output survives a timeout
 def _timeout(stdout, stderr):
     def run(*args, **kwargs):

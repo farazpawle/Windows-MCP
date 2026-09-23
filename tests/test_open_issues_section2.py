@@ -88,7 +88,7 @@ class TestPowerShellErrors:
             output, code = PowerShellExecutor.execute_command("x", include_errors=True)
         assert code == 0
         assert output.startswith("after")
-        assert "Errors:\nGet-Item: Cannot find path" in output
+        assert "Errors and messages:\nGet-Item: Cannot find path" in output
 
     def test_tool_includes_errors_at_exit_zero(self):
         with patch(RUN_PATH, return_value=_completed("after\r\n", CLIXML_ERR, 0)):
