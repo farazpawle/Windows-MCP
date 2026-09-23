@@ -763,6 +763,11 @@ class Tree:
 
                               if not is_image_check:
                                   is_text = True
+                         elif is_dom and control_type_name == 'HyperlinkControl' and node.CachedName.strip():
+                              # Chromium marks the words inside a link as a non-control
+                              # TextControl, which is skipped, so the link's name is the only
+                              # place its text survives ("Learn more" was missing from Scrape).
+                              is_text = True
 
                          if is_text:
                              if is_browser and is_dom:
