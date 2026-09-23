@@ -71,8 +71,10 @@ class TreeElementBudget:
     def try_consume(self, amount: int = 1) -> bool:
         """Register `amount` newly captured elements.
 
-        Returns False (and marks the budget truncated) once the limit is
-        reached; the caller should then stop appending/recursing further.
+        Returns False (and marks the budget truncated) when the elements do
+        not fit; the caller should then stop appending/recursing further.
+        Reaching the limit exactly is not truncation: nothing was left out
+        yet. Callers that stop walking at the limit mark it themselves.
         `count` is hard-capped at `limit` — a single over-large `amount`
         cannot push it past the configured budget.
         """
@@ -86,6 +88,4 @@ class TreeElementBudget:
             self.truncated = True
             return False
         self.count += amount
-        if self.exhausted:
-            self.truncated = True
         return True

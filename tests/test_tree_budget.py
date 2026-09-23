@@ -18,12 +18,13 @@ class TestTreeElementBudget:
         assert budget.count == 1
         assert budget.truncated is False
 
-    def test_try_consume_reaching_limit_marks_truncated(self):
+    def test_try_consume_reaching_limit_is_not_truncation(self):
+        # Round-2 3.10: nothing was left out yet; the caller marks it when it stops walking.
         budget = TreeElementBudget(limit=2)
         assert budget.try_consume() is True
         assert budget.try_consume() is True
         assert budget.exhausted is True
-        assert budget.truncated is True
+        assert budget.truncated is False
 
     def test_try_consume_beyond_limit_returns_false(self):
         budget = TreeElementBudget(limit=1)

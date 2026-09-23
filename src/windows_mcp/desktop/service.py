@@ -319,7 +319,8 @@ class Desktop:
             stage_started_at = perf_counter()
 
         if screenshot_region:
-            active_window = self._filter_window_to_region(active_window, screenshot_region)
+            # The focused window stays named even outside the region: it is still where
+            # keys go, and dropping it read as "No active window found".
             windows = self._filter_windows_to_region(windows, screenshot_region)
             if use_ui_tree:
                 tree_state = self._filter_tree_state_to_region(tree_state, screenshot_region)
@@ -1315,14 +1316,7 @@ class Desktop:
                         "name": active_window.Name,
                         "is_browser": self.is_window_browser(active_window),
                         "depth": 0,
-                        "bounding_box": BoundingBox(
-                            left=active_window.BoundingRectangle.left,
-                            top=active_window.BoundingRectangle.top,
-                            right=active_window.BoundingRectangle.right,
-                            bottom=active_window.BoundingRectangle.bottom,
-                            width=active_window.BoundingRectangle.width(),
-                            height=active_window.BoundingRectangle.height(),
-                        ),
+                        "bounding_box": self._window_box(active_window),
                         "status": self.get_window_status(active_window),
                         "handle": active_window_handle,
                         "process_id": active_window.ProcessId,
@@ -1395,14 +1389,7 @@ class Desktop:
                                     "name": child.Name,
                                     "depth": depth,
                                     "status": status,
-                                    "bounding_box": BoundingBox(
-                                        left=bounding_rect.left,
-                                        top=bounding_rect.top,
-                                        right=bounding_rect.right,
-                                        bottom=bounding_rect.bottom,
-                                        width=bounding_rect.width(),
-                                        height=bounding_rect.height(),
-                                    ),
+                                    "bounding_box": self._window_box(child),
                                     "handle": child.NativeWindowHandle,
                                     "process_id": child.ProcessId,
                                     "is_browser": self.is_window_browser(child),
@@ -1414,6 +1401,12 @@ class Desktop:
             logger.error(f"Error in get_windows: {ex}")
             windows = []
         return windows, window_handles
+
+    def _window_box(self, control: uia.Control) -> BoundingBox:
+        # The visible frame: the outer rect adds invisible resize borders (7 px a side,
+        # 8 when maximised), so the listed size would not match what the image shows.
+        frame = uia.DwmGetWindowExtendFrameBounds(control.NativeWindowHandle)
+        return self._rect_to_bounding_box(frame or control.BoundingRectangle)
 
     def get_screen_size(self) -> Size:
         width, height = uia.GetVirtualScreenSize()
@@ -1739,22 +1732,13 @@ class Desktop:
         )
 
     def _filter_window_to_region(self, window: Window | None, region: BoundingBox) -> Window | None:
+        # Kept whole, not clipped: a clipped box listed every maximised window at the
+        # region's own size (e.g. 500x40).
         if window is None:
             return None
         if not self._visible_frame_overlaps(window.handle, window.bounding_box, region):
             return None
-        clipped_box = self._clip_bounding_box_to_region(window.bounding_box, region)
-        if clipped_box is None:
-            return None
-        return Window(
-            name=window.name,
-            is_browser=window.is_browser,
-            depth=window.depth,
-            status=window.status,
-            bounding_box=clipped_box,
-            handle=window.handle,
-            process_id=window.process_id,
-        )
+        return window
 
     def _filter_windows_to_region(self, windows: list[Window], region: BoundingBox) -> list[Window]:
         filtered_windows: list[Window] = []

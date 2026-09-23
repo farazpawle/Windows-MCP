@@ -48,6 +48,23 @@ def _as_region(value: list | str | None) -> list | None:
     return json.loads(value)
 
 
+MAX_GRID_CELLS = 100  # 1920 px / 100 = 19 px cells; thousands turned the image solid grey
+
+
+def _as_grid_count(value: int | str | None, name: str) -> int | None:
+    if value is None:
+        return None
+    try:
+        count = int(value)
+    except TypeError, ValueError:
+        count = 0
+    if not 1 <= count <= MAX_GRID_CELLS:
+        raise ValueError(
+            f"{name} must be a whole number from 1 to {MAX_GRID_CELLS} (got {value!r})"
+        )
+    return count
+
+
 def capture_desktop_state(
     desktop: Desktop,
     *,
@@ -74,9 +91,11 @@ def capture_desktop_state(
     display_indices = Desktop.parse_display_selection(display)
 
     # Either reference line alone is enough; the missing direction gets no lines.
+    width_reference_line = _as_grid_count(width_reference_line, "width_reference_line")
+    height_reference_line = _as_grid_count(height_reference_line, "height_reference_line")
     grid_lines = None
     if width_reference_line or height_reference_line:
-        grid_lines = (int(width_reference_line or 1), int(height_reference_line or 1))
+        grid_lines = (width_reference_line or 1, height_reference_line or 1)
 
     desktop_state = desktop.get_state(
         use_vision=use_vision,
@@ -186,7 +205,11 @@ def build_snapshot_response(
             f"{display.bounding_box.xyxy_to_string()}{primary}"
         )
 
-    metadata_text = f"Cursor Position: {desktop_state.cursor_position}\n"
+    # get_state drops a cursor that lies outside the region (it would be drawn off the image).
+    cursor = desktop_state.cursor_position
+    if cursor is None:
+        cursor = "outside region" if desktop_state.screenshot_region else "unknown"
+    metadata_text = f"Cursor Position: {cursor}\n"
     if desktop_state.screenshot_original_size:
         orig = desktop_state.screenshot_original_size
         scale = desktop_state.screenshot_scale or 1.0

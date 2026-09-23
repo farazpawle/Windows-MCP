@@ -226,6 +226,7 @@ class Tree:
                     self.element_budget.count,
                     self.element_budget.limit,
                 )
+                self.element_budget.truncated = True
                 break
             for attempt in range(THREAD_MAX_RETRIES + 1):
                 try:
@@ -798,6 +799,7 @@ class Tree:
                     # Stop descending once the element budget is spent — this is what
                     # bounds traversal time on huge flat lists/grids (thousands of rows),
                     # not just the size of the appended node lists.
+                    self.element_budget.truncated = True
                     break
                 try:
                     # Check if the child is a DOM element

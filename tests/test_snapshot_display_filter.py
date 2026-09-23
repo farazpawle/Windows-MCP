@@ -241,7 +241,8 @@ class TestDisplayFiltering:
         filtered_windows = desktop._filter_windows_to_region([kept_window, dropped_window], region)
 
         assert filtered_window is not None
-        assert filtered_window.bounding_box.left == 1920
+        # Round-2 3.10: kept whole, not clipped to the region.
+        assert filtered_window.bounding_box.left == 1800
         assert filtered_window.bounding_box.right == 2200
         assert [window.name for window in filtered_windows] == ["Browser"]
         assert [node.name for node in filtered_tree.interactive_nodes] == ["Visible"]
@@ -646,8 +647,9 @@ class TestDisplayFiltering:
                 )
 
         assert state.screenshot_region == make_box(1920, 0, 2200, 400)
-        # The active window (in the left monitor) is outside the region, so it's dropped.
-        assert state.active_window is None
+        # The active window (in the left monitor) is outside the region, but it is still
+        # the focused window, so the header keeps naming it (round-2 3.10).
+        assert state.active_window is active_window
         assert [window.name for window in state.windows] == ["Widget App"]
         # Cursor is inside the left monitor but outside the region.
         assert state.cursor_position is None
