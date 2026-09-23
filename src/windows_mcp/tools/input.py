@@ -664,7 +664,7 @@ def register(
 
     @mcp.tool(
         name="Shortcut",
-        description='Executes keyboard shortcuts using key combinations separated by +. Examples: "ctrl+c" (copy), "ctrl+v" (paste), "alt+tab" (switch apps), "win+r" (Run dialog), "win" (Start menu), "ctrl+shift+esc" (Task Manager), "ctrl++" or "ctrl+plus" (zoom in). xdotool key names work too (Return, Page_Down, KP_Enter, super, cmd). Punctuation can be named: plus, minus, equal, comma, period, slash, backslash, semicolon, quote, grave, bracketleft, bracketright, braceleft, braceright. Use for quick actions and system commands. repeat=N presses the combination N times (1-100), e.g. "down" with repeat=20. hold=S keeps all the keys down for S seconds (up to 300), e.g. an arrow key in a game; a held key does not auto-repeat typed characters, so use repeat for that. hold and repeat cannot be combined.',
+        description='Executes keyboard shortcuts using key combinations separated by +. Examples: "ctrl+c" (copy), "ctrl+v" (paste), "alt+tab" (switch apps), "win+r" (Run dialog), "win" (Start menu), "ctrl+shift+esc" (Task Manager), "ctrl++" or "ctrl+plus" (zoom in). xdotool key names work too (Return, Page_Down, KP_Enter, super, cmd). Punctuation can be named: plus, minus, equal, comma, period, slash, backslash, semicolon, quote, grave, bracketleft, bracketright, braceleft, braceright. Use for quick actions and system commands. repeat=N presses the combination N times (1-100), e.g. "down" with repeat=20. hold=S keeps all the keys down for S seconds (up to 300), e.g. an arrow key in a game; a held key does not auto-repeat typed characters, so use repeat for that. hold and repeat cannot be combined. release_all=true (alone, no shortcut) is the panic button after a failed sequence: it lets go of every held Shift/Ctrl/Alt/Win key and mouse button and names what was held.',
         annotations=ToolAnnotations(
             title="Shortcut",
             readOnlyHint=False,
@@ -675,11 +675,21 @@ def register(
     )
     @with_analytics(get_analytics(), "Shortcut-Tool")
     def shortcut_tool(
-        shortcut: str,
+        shortcut: str | None = None,
         repeat: int = 1,
         hold: float | str | None = None,
+        release_all: bool | str = False,
         ctx: Context = None,
     ):
+        if as_bool(release_all, "release_all"):
+            if shortcut is not None or hold is not None or repeat != 1:
+                raise ValueError("release_all cannot be combined with shortcut, repeat or hold")
+            released = get_desktop().release_all()
+            if not released:
+                return "Nothing was held; nothing was sent."
+            return f"Released: {', '.join(released)}."
+        if shortcut is None:
+            raise ValueError("shortcut is required (or release_all=true)")
         if type(repeat) is not int or not 1 <= repeat <= 100:
             raise ValueError(f"repeat must be a whole number from 1 to 100 (got {repeat!r})")
         if hold is not None:

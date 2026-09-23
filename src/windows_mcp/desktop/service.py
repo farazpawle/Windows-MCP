@@ -152,12 +152,37 @@ def _keys_held(keys: list[str]):
         yield
     finally:
         for code in reversed(pressed):
-            if code in _MASKED_KEYS:
-                # An unassigned key between key-down and key-up cancels what a bare
-                # Alt/Win release would open (AutoHotkey's "menu mask").
-                uia.PressKey(_MENU_MASK_KEY, waitTime=0)
-                uia.ReleaseKey(_MENU_MASK_KEY, waitTime=0)
-            uia.ReleaseKey(code, waitTime=0.05)
+            _release_key(code)
+
+
+def _release_key(code: int) -> None:
+    if code in _MASKED_KEYS:
+        # An unassigned key between key-down and key-up cancels what a bare
+        # Alt/Win release would open (AutoHotkey's "menu mask").
+        uia.PressKey(_MENU_MASK_KEY, waitTime=0)
+        uia.ReleaseKey(_MENU_MASK_KEY, waitTime=0)
+    uia.ReleaseKey(code, waitTime=0.05)
+
+
+# What Shortcut release_all checks, keys before buttons: a drop made while Ctrl is
+# still down would copy instead of move.
+_RELEASABLE_KEYS = (
+    ("left Shift", uia.Keys.VK_LSHIFT),
+    ("right Shift", uia.Keys.VK_RSHIFT),
+    ("left Ctrl", uia.Keys.VK_LCONTROL),
+    ("right Ctrl", uia.Keys.VK_RCONTROL),
+    ("left Alt", uia.Keys.VK_LMENU),
+    ("right Alt", uia.Keys.VK_RMENU),
+    ("left Win", uia.Keys.VK_LWIN),
+    ("right Win", uia.Keys.VK_RWIN),
+)
+# ponytail: GetAsyncKeyState reads physical buttons, so with swapped buttons a stuck
+# logical left shows as right; add a GetSystemMetrics(SM_SWAPBUTTON) check if that bites.
+_RELEASABLE_BUTTONS = (
+    ("left mouse button", uia.Keys.VK_LBUTTON, "ReleaseMouse"),
+    ("right mouse button", uia.Keys.VK_RBUTTON, "RightReleaseMouse"),
+    ("middle mouse button", uia.Keys.VK_MBUTTON, "MiddleReleaseMouse"),
+)
 
 
 class _WindowsTrustAdapter(requests.adapters.HTTPAdapter):
@@ -1255,6 +1280,24 @@ class Desktop:
         uia.ReleaseMouse(waitTime=0.05)
         self._left_held = False
         return True
+
+    def release_all(self) -> list[str]:
+        """Send key-up/button-up for every modifier and mouse button that is down.
+
+        Returns the names of what was released; nothing is sent for what is already up.
+        """
+        released = []
+        for name, code in _RELEASABLE_KEYS:
+            if uia.IsKeyPressed(code):
+                _release_key(code)
+                released.append(name)
+        for name, code, release in _RELEASABLE_BUTTONS:
+            ours = code == uia.Keys.VK_LBUTTON and self._left_held
+            if ours or uia.IsKeyPressed(code):
+                getattr(uia, release)(waitTime=0.05)
+                released.append(name)
+        self._left_held = False
+        return released
 
     def shortcut(self, shortcut: str, repeat: int = 1, hold: float | None = None):
         keys = _shortcut_keys(shortcut)

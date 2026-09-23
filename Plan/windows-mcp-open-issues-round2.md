@@ -557,14 +557,15 @@ Each is a new feature: the first subtask is the user's approval of the design.
 
   - **Verify:** Live - the returned position matches `GetCursorPos`.
   - **Result (2026-09-23):** user chose Move. `tools/input.py` `move_tool`: with no `loc`/`label` and no `drag`/`from_loc`/`duration` it replies "The cursor is at (x,y)." (through `to_model`, so it follows the screenshot scale like every other printed position) and sends nothing; drag-shaped calls without a target are still refused. 3 tests in `tests/test_move_cursor_position.py` (the position case failed first); suite 1320 passed. Live (in-process, no input sent): reply "(2545,981)" = ctypes `GetCursorPos` (2545, 981). Guide's Move row updated.
-- [ ]  C.2 **Release everything (panic button).** No tool can release stuck keys or buttons after a failed sequence (bug 2.4 shows how a held button spoils the next action).
+- [x]  C.2 **Release everything (panic button).** No tool can release stuck keys or buttons after a failed sequence (bug 2.4 shows how a held button spoils the next action).
 
-  - [ ]  a. [User] Choose the shape (design choice): a `ReleaseInputs` tool, or Shortcut `release_all=true`.
-  - [ ]  b. Send key-up for every modifier.
-  - [ ]  c. Send button-up for every mouse button.
-  - [ ]  d. Report what was held.
+  - [x]  a. [User] Choose the shape (design choice): a `ReleaseInputs` tool, or Shortcut `release_all=true`.
+  - [x]  b. Send key-up for every modifier.
+  - [x]  c. Send button-up for every mouse button.
+  - [x]  d. Report what was held.
 
   - **Verify:** Live - Move `mouse_button="down"`, then release: poller and harness show all keys and buttons up; the reply names the left button.
+  - **Result (2026-09-23):** user chose Shortcut `release_all=true`. `Desktop.release_all` (`desktop/service.py`) checks left/right Shift, Ctrl, Alt, Win, then left/right/middle button with `GetAsyncKeyState` and sends up only for what is down (keys first: a drop with Ctrl down would copy); the left button this server holds via `mouse_button="down"` is released even if the state read misses it, and forgotten. Alt/Win go through the existing menu mask, now shared as `_release_key` with `_keys_held`. `shortcut` became optional; `release_all` refuses `shortcut`/`repeat`/`hold`. Known ceiling (ponytail note): with swapped mouse buttons `GetAsyncKeyState` reads physical buttons. 11 tests in `tests/test_release_all.py` (all failed first); suite 1331 passed. Live (harness + `GetAsyncKeyState` poll): after Move down and a left Shift down, held = LSHIFT, LBUTTON; reply "Released: left Shift, left mouse button."; held after = none; a second call replied "Nothing was held; nothing was sent."
 - [ ]  C.3 **Window management.** App has launch/switch/resize only. Missing: minimise, maximise, restore, close (gracefully), move a window to another monitor, list windows with handle, PID and state (a window list with PIDs also allows killing by PID after App `launch`, which returns no PID).
 
   - [ ]  a. [User] Approve the modes and names (design choice).
