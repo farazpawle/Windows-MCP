@@ -1090,9 +1090,11 @@ class Desktop:
         if loc:
             self.move(loc)
         with _keys_held(list(modifiers)):
-            return self._scroll_wheel(type, direction, wheel_times)
+            return self._scroll_wheel(type, direction, wheel_times, bool(modifiers))
 
-    def _scroll_wheel(self, type: str, direction: str, wheel_times: int) -> str | None:
+    def _scroll_wheel(
+        self, type: str, direction: str, wheel_times: int, keys_held: bool = False
+    ) -> str | None:
         match type:
             case "vertical":
                 match direction:
@@ -1105,18 +1107,19 @@ class Desktop:
             case "horizontal":
                 if direction not in ("left", "right"):
                     return 'Invalid direction. Use "left" or "right".'
-                self._scroll_horizontal(direction == "right", wheel_times)
+                self._scroll_horizontal(direction == "right", wheel_times, keys_held)
             case _:
                 return 'Invalid type. Use "horizontal" or "vertical".'
         return None
 
-    def _scroll_horizontal(self, right: bool, wheel_times: int) -> None:
+    def _scroll_horizontal(self, right: bool, wheel_times: int, keys_held: bool = False) -> None:
         # Shift+wheel is only a browser/Explorer convention; native apps scroll
         # vertically on it. Prefer the ScrollPattern of the nearest horizontally
         # scrollable element under the cursor, else send a real horizontal wheel.
+        # ScrollPattern never sees held keys, so with modifiers only a real wheel is honest.
         pattern = None
         try:
-            control = uia.ControlFromCursor()
+            control = None if keys_held else uia.ControlFromCursor()
             while control is not None and pattern is None:
                 candidate = control.GetPattern(uia.PatternId.ScrollPattern)
                 if candidate is not None and candidate.HorizontallyScrollable:

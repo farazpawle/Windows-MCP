@@ -66,3 +66,26 @@ def test_falls_back_when_uia_lookup_fails(desktop):
     ):
         desktop.scroll(type="horizontal", direction="right", wheel_times=1)
     mouse_event.assert_called_once_with(uia.MouseEventFlag.HWheel, 0, 0, 120, 0)
+
+
+def test_modifiers_send_a_real_wheel_instead_of_scroll_pattern(desktop):
+    # Round-2 3.26: ScrollPattern ignores held keys, so "holding alt" was untrue.
+    pattern = MagicMock(HorizontallyScrollable=True)
+    events = []
+    with (
+        patch.object(uia, "ControlFromCursor", return_value=_control(pattern=pattern)),
+        patch.object(uia, "mouse_event", side_effect=lambda *a: events.append(("wheel", a))),
+        patch("windows_mcp.desktop.service._keys_held") as held,
+        patch("windows_mcp.desktop.service.sleep"),
+    ):
+        held.return_value.__enter__.side_effect = lambda: events.append("down")
+        held.return_value.__exit__.side_effect = lambda *a: events.append("up")
+        desktop.scroll(type="horizontal", direction="right", wheel_times=2, modifiers=["alt"])
+    pattern.Scroll.assert_not_called()
+    held.assert_called_once_with(["alt"])
+    assert events == [
+        "down",
+        ("wheel", (uia.MouseEventFlag.HWheel, 0, 0, 120, 0)),
+        ("wheel", (uia.MouseEventFlag.HWheel, 0, 0, 120, 0)),
+        "up",
+    ]
