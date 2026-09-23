@@ -74,6 +74,12 @@ _MODIFIERS = {
     "alt": "alt",
     "win": "win",
     "windows": "win",
+    # computer-use (xdotool / macOS) names
+    "super": "win",
+    "cmd": "win",
+    "command": "win",
+    "meta": "win",
+    "option": "alt",
 }
 
 
@@ -91,7 +97,13 @@ def _as_modifiers(value: list | str | None) -> list[str]:
             value = [token for token in re.split(r"[+,\s]+", value) if token]
     names = []
     for item in value:
-        key = _MODIFIERS.get(item.strip().lower()) if isinstance(item, str) else None
+        # "Control_L" / "Shift_R": either side holds the same modifier.
+        token = (
+            item.strip().lower().removesuffix("_l").removesuffix("_r")
+            if isinstance(item, str)
+            else None
+        )
+        key = _MODIFIERS.get(token)
         if key is None:
             raise ValueError(f"modifiers may only contain ctrl, shift, alt, win (got {item!r})")
         names.append(key)
@@ -365,8 +377,8 @@ def register(
             "Provide loc or label; with neither, clicks at the current mouse position. "
             "modifiers holds keys during the click, e.g. 'shift' to extend a selection, "
             "'ctrl' to add to it or open a link in a new tab, 'ctrl+shift'. "
-            "Allowed: ctrl, shift, alt, win (aliases: control, windows), separated by +, a comma "
-            "or a space. Not allowed with clicks=0, which only moves the pointer."
+            "Allowed: ctrl, shift, alt, win (aliases: control, windows, super, cmd, command, "
+            "meta, option), separated by +, a comma or a space. Not allowed with clicks=0, which only moves the pointer."
         ),
         annotations=ToolAnnotations(
             title="Click",
@@ -459,7 +471,7 @@ def register(
 
     @mcp.tool(
         name="Scroll",
-        description="Scrolls at coordinates [x, y], a UI element's label/id, or current mouse position if loc=None. Type: vertical (default) or horizontal. Direction: up/down for vertical, left/right for horizontal. wheel_times controls amount, 1 or more (1 wheel ≈ 3-5 lines). Use for navigating long content, lists, and web pages. modifiers holds keys while scrolling, e.g. 'ctrl' with up/down to zoom a page or document (allowed: ctrl, shift, alt, win; aliases: control, windows; separated by +, a comma or a space).",
+        description="Scrolls at coordinates [x, y], a UI element's label/id, or current mouse position if loc=None. Type: vertical (default) or horizontal. Direction: up/down for vertical, left/right for horizontal. wheel_times controls amount, 1 or more (1 wheel ≈ 3-5 lines). Use for navigating long content, lists, and web pages. modifiers holds keys while scrolling, e.g. 'ctrl' with up/down to zoom a page or document (allowed: ctrl, shift, alt, win; aliases: control, windows, super, cmd, command, meta, option; separated by +, a comma or a space).",
         annotations=ToolAnnotations(
             title="Scroll",
             readOnlyHint=False,
@@ -600,7 +612,7 @@ def register(
 
     @mcp.tool(
         name="Shortcut",
-        description='Executes keyboard shortcuts using key combinations separated by +. Examples: "ctrl+c" (copy), "ctrl+v" (paste), "alt+tab" (switch apps), "win+r" (Run dialog), "win" (Start menu), "ctrl+shift+esc" (Task Manager), "ctrl++" or "ctrl+plus" (zoom in). Punctuation can be named: plus, minus, equal, comma, period, slash, backslash, semicolon, quote, grave, bracketleft, bracketright, braceleft, braceright. Use for quick actions and system commands. repeat=N presses the combination N times (1-100), e.g. "down" with repeat=20. hold=S keeps all the keys down for S seconds (up to 10), e.g. an arrow key in a game; a held key does not auto-repeat typed characters, so use repeat for that. hold and repeat cannot be combined.',
+        description='Executes keyboard shortcuts using key combinations separated by +. Examples: "ctrl+c" (copy), "ctrl+v" (paste), "alt+tab" (switch apps), "win+r" (Run dialog), "win" (Start menu), "ctrl+shift+esc" (Task Manager), "ctrl++" or "ctrl+plus" (zoom in). xdotool key names work too (Return, Page_Down, KP_Enter, super, cmd). Punctuation can be named: plus, minus, equal, comma, period, slash, backslash, semicolon, quote, grave, bracketleft, bracketright, braceleft, braceright. Use for quick actions and system commands. repeat=N presses the combination N times (1-100), e.g. "down" with repeat=20. hold=S keeps all the keys down for S seconds (up to 10), e.g. an arrow key in a game; a held key does not auto-repeat typed characters, so use repeat for that. hold and repeat cannot be combined.',
         annotations=ToolAnnotations(
             title="Shortcut",
             readOnlyHint=False,

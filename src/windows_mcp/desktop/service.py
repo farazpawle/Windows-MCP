@@ -57,7 +57,11 @@ _KEY_ALIASES = {
     "scrolllock": "Scroll",
     "windows": "Win",
     "command": "Win",
+    "cmd": "Win",
+    "super": "Win",
+    "meta": "Win",
     "option": "Alt",
+    "menu": "Apps",
     # Punctuation by name, so a shortcut never has to spell a separator or brace.
     "plus": "+",
     "minus": "-",
@@ -91,9 +95,30 @@ def _shortcut_keys(shortcut: str) -> list[str]:
     return keys
 
 
+def _key_name(key: str) -> str:
+    """Our name for one key, also accepting the xdotool names computer-use models send.
+
+    xdotool spells "Page_Down", "KP_Enter" (numpad), "Super_L" (left/right side).
+    """
+    lower = key.lower()
+    if lower in _KEY_ALIASES:
+        return _KEY_ALIASES[lower]
+    if len(key) == 1 or key.upper() in uia.SpecialKeyNames:
+        return key
+    if lower.startswith("kp_"):
+        lower = lower[3:]
+        if lower.isdigit():
+            return "Numpad" + lower
+    side = ""
+    if lower.endswith(("_l", "_r")):
+        side, lower = lower[-1], lower[:-2]
+    lower = lower.replace("_", "")
+    return side + _KEY_ALIASES.get(lower, lower)
+
+
 def _virtual_key(key: str) -> int:
     """Virtual-key code for one shortcut key name ("shift", "down", "a", "/")."""
-    name = _KEY_ALIASES.get(key.lower(), key)
+    name = _key_name(key)
     if len(name) == 1:
         code = ctypes.windll.user32.VkKeyScanW(ord(name))
         if code != -1:
@@ -1209,7 +1234,7 @@ class Desktop:
             return
         sendkeys_str = ""
         for key in keys:
-            name = _KEY_ALIASES.get(key.lower(), key)
+            name = _key_name(key)
             if name == "+" and len(keys) > 1:
                 # "+" is not a SendKeys character code, so Ctrl would not combine with
                 # it; the "=/+" key is what apps read as Ctrl+Plus (zoom in).

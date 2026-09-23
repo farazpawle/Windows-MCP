@@ -1,7 +1,7 @@
 ---
 Title: Windows-MCP open issues backlog - round 2 (2026-09-22)
 Description: Findings of the second round of live testing of all 20 windows-mcp tools on 2026-09-22, turned into a task file. Part A Bugs - 7 High (registry paths act as wildcards and reach the file system; WaitFor renumbers Snapshot labels; off-screen points are clamped and clicked; an on-top unfocused window gets no Snapshot elements; pop-up menus don't hide covered elements; region clipping moves a click point under a covering window), 16 Medium, 27 Low. Part B Improvements to reach Claude Cowork computer-use behaviour. Part C New tools/abilities (each needs the user's design approval first). Part D Skills/Skill.md corrections and one optional [User] high-DPI test. Items 3.28 and 3.29 were found on 2026-09-22 while fixing 3.4 and 3.2 and are not yet done. Every item keeps its finding, then lists single-action fix subtasks and its own Verify line; the file ends with the overall verification rules.
-Total Tasks: 183
+Total Tasks: 184
 ---
 # Windows-MCP open issues - round 2
 
@@ -378,10 +378,11 @@ Source: live tests on 2026-09-22 (Windows 11 Pro 26200, one 1920x1080 display at
 
   - **Verify:** Live - CPU-sorted Process `list` shows the server marked and not at the top.
   - **Result (2026-09-23):** done. `list_processes` (`process/service.py`) compares each PID with `os.getpid()`: the server's row is named "<name> (this server)", its CPU column shows "-", and it sorts as 0 by CPU. 1 unit test in `tests/test_process_self_cpu.py` (failed first: the server's 97% sorted first); suite 1177 passed; lint clean. Live (real Process tool, in-process server PID 17256): two CPU-sorted lists 1 s apart - the server absent from the top 5 both times; name search "python" shows `17256  python.exe (this server)  -  167.4 MB`. Side findings (not changed, outside this item): the first CPU list after server start shows 0.0% for every process (psutil needs two samples), and "System Idle Process" shows ~1900% (summed over all cores).
-- [ ]  3.24 **Common key names from computer use are unknown.** `Page_Down`, `KP_Enter`, `super`, `cmd` are refused ('Unknown key name'); `Return`, `BackSpace`, `Escape`, `pagedown` work. Models trained on computer use send xdotool-style names.
+- [x]  3.24 **Common key names from computer use are unknown.** `Page_Down`, `KP_Enter`, `super`, `cmd` are refused ('Unknown key name'); `Return`, `BackSpace`, `Escape`, `pagedown` work. Models trained on computer use send xdotool-style names.
 
   - Done together with B.3.
   - **Verify:** see B.3.
+  - **Result (2026-09-23):** done with B.3 (see there).
 - [x]  3.25 **A registry key's (Default) value can't be set.** Registry `set` with `name=""` fails with "Cannot bind argument to parameter 'Name' because it is an empty string".
 
   - [x]  a. Treat an empty name or `"(Default)"` as the key's default value in `set`.
@@ -446,14 +447,15 @@ Each item: what windows-mcp does today, what computer use / Cowork does, and the
 
   - Done together with 1.4.
   - **Verify:** see 1.4.
-- [ ]  B.3 **Accept computer-use key names.** Today: Windows/SendKeys names (`pagedown`, `win`), no `super`, `cmd`, `Page_Down`, `KP_Enter`, no `+`. Cowork: xdotool names (`Return`, `Page_Down`, `super`, `ctrl+plus`...).
+- [x]  B.3 **Accept computer-use key names.** Today: Windows/SendKeys names (`pagedown`, `win`), no `super`, `cmd`, `Page_Down`, `KP_Enter`, no `+`. Cowork: xdotool names (`Return`, `Page_Down`, `super`, `ctrl+plus`...).
 
-  - [ ]  a. Add an alias table for xdotool key names (`Page_Down`, `Page_Up`, `KP_Enter`, `KP_Add`...).
-  - [ ]  b. Map `super`, `cmd`, `meta` to Win.
-  - [ ]  c. Use the table in Shortcut.
-  - [ ]  d. Use the table in every `modifiers` parameter.
+  - [x]  a. Add an alias table for xdotool key names (`Page_Down`, `Page_Up`, `KP_Enter`, `KP_Add`...).
+  - [x]  b. Map `super`, `cmd`, `meta` to Win.
+  - [x]  c. Use the table in Shortcut.
+  - [x]  d. Use the table in every `modifiers` parameter.
 
   - **Verify:** Unit - each alias resolves. Live - Shortcut `Page_Down` and `KP_Enter` are logged by the harness; Click `modifiers="super"` holds Win.
+  - **Result (2026-09-23):** done. `desktop/service.py`: new `_key_name` turns xdotool names into ours - `KP_<digit>` -> Numpad<digit>, other `KP_` names drop the prefix (`KP_Enter` -> Enter, `KP_Add` -> Add), `_L`/`_R` become the side prefix (`Super_L` -> LWin, `Control_L` -> LControl), underscores are dropped (`Page_Down` -> pagedown, `Caps_Lock` -> Capital, `Num_Lock` -> NumLock); `_KEY_ALIASES` gained `cmd`, `super`, `meta` (-> Win) and `menu` (-> Apps). Existing names (`Return`, `BackSpace`, `browser_back`) resolve first, unchanged. Both `_virtual_key` (hold path, modifiers) and `Desktop.shortcut` (SendKeys path) use it. `tools/input.py` `_MODIFIERS` gained `super`, `cmd`, `command`, `meta` (-> win) and `option` (-> alt); a `_l`/`_r` suffix is ignored. Shortcut, Click and Scroll descriptions name the new aliases. 33 unit tests in `tests/test_computer_use_key_names.py` (29 failed first); suite 1225 passed. Live (WinForms key-logging harness, real tools): Shortcut `Page_Down` -> `key Next`; `KP_Enter` -> `key Return`; `ctrl+KP_Add` -> `ControlKey`, `Add` held=[ctrl]; Click `modifiers="super"` -> `lbutton held=[win]`; `modifiers="cmd+shift"` -> `lbutton held=[shift win]`. Not changed: xdotool `Print` still means VK_PRINT, not Print Screen (use `printscreen`).
 - [ ]  B.4 **Zoom enlarges small areas.** Today: Screenshot `region` returns the area at native size (a 20x10 region came back as a 20x10 image). Cowork's `zoom`: the region is captured at full resolution and scaled up to the usual screenshot size so small text is legible, while later coordinates stay in full-screen space.
 
   - [ ]  a. [User] Approve the shape (design choice): a `zoom=true` option on Screenshot `region` (recommended) or a separate Zoom tool.
