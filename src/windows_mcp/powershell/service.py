@@ -91,17 +91,22 @@ def _win32_name(dll: str, func: str) -> str:
 
 _CLIXML_ESCAPE = re.compile(r"_x([0-9A-Fa-f]{4})_")
 _ANSI = re.compile(r"\x1b\[[0-9;]*[A-Za-z]")
-_CLIXML_STREAM_PREFIX = {"error": "", "warning": "WARNING: "}
+_CLIXML_STREAM_PREFIX = {
+    "error": "",
+    "warning": "WARNING: ",
+    "verbose": "VERBOSE: ",
+    "debug": "DEBUG: ",
+}
 
 
 def decode_clixml(stderr: str) -> str:
     """Turn PowerShell's CLIXML error stream into plain text.
 
-    When stdout/stderr are redirected, PowerShell writes its error, warning and
-    progress streams to stderr as serialized CLIXML. Keep error and warning
-    lines (warnings prefixed), drop progress noise, undo the ``_xHHHH_``
-    escaping and strip ANSI colours. Non-CLIXML stderr (a native exe's) is
-    returned as-is, trimmed.
+    When stdout/stderr are redirected, PowerShell writes its error, warning,
+    verbose, debug and progress streams to stderr as serialized CLIXML. Keep
+    error, warning, verbose and debug lines (all but errors prefixed), drop
+    progress noise, undo the ``_xHHHH_`` escaping and strip ANSI colours.
+    Non-CLIXML stderr (a native exe's) is returned as-is, trimmed.
     """
     text = stderr.strip()
     if not text.startswith("#< CLIXML"):
@@ -116,8 +121,19 @@ def decode_clixml(stderr: str) -> str:
         if prefix is None or not node.tag.endswith("}S") or node.text is None:
             continue
         line = _CLIXML_ESCAPE.sub(lambda m: chr(int(m.group(1), 16)), node.text)
-        parts.append(prefix + _ANSI.sub("", line))
+        line = prefix + _ANSI.sub("", line)
+        # Error lines carry their own CRLF; a warning/verbose/debug record is one whole
+        # message without one, and ran into the next line ("warn-streamException: boom").
+        if not line.endswith("\n"):
+            line += "\n"
+        parts.append(line)
     return "".join(parts).replace("\r\n", "\n").strip()
+
+
+def _decode_output(data: bytes | str | None) -> str:
+    if isinstance(data, bytes):
+        return data.decode("utf-8", errors="replace")
+    return data or ""
 
 
 _FALLBACK_PATHEXT = ".COM;.EXE;.BAT;.CMD;.VBS;.VBE;.JS;.JSE;.WSF;.WSH;.MSC;.CPL;.PY;.PYW"
@@ -259,13 +275,8 @@ class PowerShellExecutor:
                 env=env,
             )
             # Handle both bytes and str output (subprocess behavior varies by environment)
-            stdout = result.stdout
-            stderr = result.stderr
-            if isinstance(stdout, bytes):
-                stdout = stdout.decode("utf-8", errors="replace")
-            if isinstance(stderr, bytes):
-                stderr = stderr.decode("utf-8", errors="replace")
-            stderr = decode_clixml(stderr)
+            stdout = _decode_output(result.stdout)
+            stderr = decode_clixml(_decode_output(result.stderr))
             output = stdout or stderr
             if include_errors and stdout.strip() and stderr:
                 output = f"{stdout.rstrip()}\n\nErrors:\n{stderr}"
@@ -276,7 +287,17 @@ class PowerShellExecutor:
                     "The Windows-MCP server is currently running at a lower integrity level."
                 )
             return output, result.returncode
-        except subprocess.TimeoutExpired:
-            return "Command execution timed out", PowerShellExecutor.NOT_RUN
+        except subprocess.TimeoutExpired as e:
+            # What the command printed before it was stopped is often the clue to why.
+            partial = "\n".join(
+                text
+                for text in (
+                    _decode_output(e.stdout).rstrip(),
+                    decode_clixml(_decode_output(e.stderr)),
+                )
+                if text
+            )
+            note = f"Command execution timed out after {timeout} s"
+            return (f"{partial}\n\n{note}" if partial else note), PowerShellExecutor.NOT_RUN
         except Exception as e:
             return f"Command execution failed: {type(e).__name__}: {e}", PowerShellExecutor.NOT_RUN

@@ -31,6 +31,9 @@ def register(mcp, *, get_desktop, get_analytics):
         # stuck command would then block the server forever.
         if timeout < 1:
             raise ValueError(f"timeout must be at least 1 second (got {timeout})")
+        # An empty command ran and replied "Response: " as if it had done something.
+        if not command.strip():
+            raise ValueError("command is empty")
         response, status_code = PowerShellExecutor.execute_command(
             command, timeout, include_errors=True
         )
