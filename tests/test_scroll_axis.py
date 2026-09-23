@@ -50,3 +50,24 @@ def test_default_is_vertical():
 def test_bad_axis_is_refused():
     with pytest.raises(Exception, match="horizontal"):
         _call({"type": "diagonal"})
+
+
+# 3.33: a direction that doesn't fit the axis is a tool error, and nothing is sent.
+@pytest.mark.parametrize(
+    ("axis", "direction"),
+    [("horizontal", "up"), ("horizontal", "down"), ("vertical", "left"), ("vertical", "right")],
+)
+def test_direction_must_fit_axis(axis, direction):
+    mcp, desktop = _server()
+
+    async def run():
+        async with Client(mcp) as client:
+            return await client.call_tool(
+                "Scroll", {"axis": axis, "direction": direction}, raise_on_error=False
+            )
+
+    result = asyncio.run(run())
+    assert result.is_error
+    assert "direction" in result.content[0].text
+    desktop.scroll.assert_not_called()
+    desktop.release_held_button.assert_not_called()

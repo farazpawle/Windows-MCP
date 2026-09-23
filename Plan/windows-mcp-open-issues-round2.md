@@ -1,6 +1,6 @@
 ---
 Title: Windows-MCP open issues backlog - round 2 (2026-09-22)
-Description: Findings of the second round of live testing of all 20 windows-mcp tools on 2026-09-22, turned into a task file. Part A Bugs - 7 High (registry paths act as wildcards and reach the file system; WaitFor renumbers Snapshot labels; off-screen points are clamped and clicked; an on-top unfocused window gets no Snapshot elements; pop-up menus don't hide covered elements; region clipping moves a click point under a covering window), 16 Medium, 27 Low. Part B Improvements to reach Claude Cowork computer-use behaviour. Part C New tools/abilities (each needs the user's design approval first). Part D Skills/Skill.md corrections and one optional [User] high-DPI test. Items 3.28-3.33 were found while fixing other items; 3.33 (Scroll wrong-direction reply not flagged as an error) is not yet done. Every item keeps its finding, then lists single-action fix subtasks and its own Verify line; the file ends with the overall verification rules.
+Description: Findings of the second round of live testing of all 20 windows-mcp tools on 2026-09-22, turned into a task file. Part A Bugs - 7 High (registry paths act as wildcards and reach the file system; WaitFor renumbers Snapshot labels; off-screen points are clamped and clicked; an on-top unfocused window gets no Snapshot elements; pop-up menus don't hide covered elements; region clipping moves a click point under a covering window), 16 Medium, 27 Low. Part B Improvements to reach Claude Cowork computer-use behaviour. Part C New tools/abilities (each needs the user's design approval first). Part D Skills/Skill.md corrections and one optional [User] high-DPI test. Items 3.28-3.33 were found while fixing other items (all done). Every item keeps its finding, then lists single-action fix subtasks and its own Verify line; the file ends with the overall verification rules.
 Total Tasks: 185
 ---
 # Windows-MCP open issues - round 2
@@ -434,11 +434,12 @@ Source: live tests on 2026-09-22 (Windows 11 Pro 26200, one 1920x1080 display at
 
   - **Verify:** Unit - a 400% per-core sample on 4 CPUs shows 100.0%. Live - no process shows more than 100%.
   - **Result (2026-09-23):** done. `list_processes` divides each sample by `psutil.cpu_count()` (logical, fallback 1). Note: a process using one full core now reads 5% on this 20-thread PC, as in Task Manager. 1 unit test in `tests/test_process_self_cpu.py` (failed first); suite 1183 passed; lint clean. Live (real Process tool, all 499 rows): System Idle Process 95.1%, highest other 0.4%, all rows together 96.6%.
-- [ ]  3.33 **Scroll's wrong-direction refusal is not flagged as an error.** Tool: Scroll. Found on 2026-09-23 while fixing 3.29. `axis="horizontal"`, `direction="up"` (or vertical with left/right) sends nothing and replies 'Invalid direction. Use "left" or "right".' as ordinary text, so the client sees success (`is_error` false). The project rule is that a failure reaches the client as a tool error.
+- [x]  3.33 **Scroll's wrong-direction refusal is not flagged as an error.** Tool: Scroll. Found on 2026-09-23 while fixing 3.29. `axis="horizontal"`, `direction="up"` (or vertical with left/right) sends nothing and replies 'Invalid direction. Use "left" or "right".' as ordinary text, so the client sees success (`is_error` false). The project rule is that a failure reaches the client as a tool error.
 
-  - [ ]  a. Raise a `ValueError` in `scroll_tool` when `direction` does not fit `axis`, before any input (release of a held button, move) is sent.
+  - [x]  a. Raise a `ValueError` in `scroll_tool` when `direction` does not fit `axis`, before any input (release of a held button, move) is sent.
 
   - **Verify:** Unit - both mismatches raise and `desktop.scroll` is not called. Live - the same call through a FastMCP client returns `is_error=True`.
+  - **Result (2026-09-23):** done. `scroll_tool` checks `direction` against `axis` right after `wheel_times`, before a held button is released or the pointer moves, and raises "direction must be left or right for horizontal (got 'up')". 4 unit cases added to `tests/test_scroll_axis.py` through a real FastMCP client (all failed first: no error, `desktop.scroll` called); suite 1241 passed. Live (real Desktop, no input sent): `type="horizontal"`+`up` and `axis="vertical"`+`left` both return a tool error with that text. `Skills/Skill.md` Scroll row notes it.
 
 # Part B - Improvements (to work like Claude Cowork)
 

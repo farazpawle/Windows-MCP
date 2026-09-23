@@ -502,6 +502,11 @@ def register(
     ) -> str:
         if isinstance(wheel_times, bool) or not isinstance(wheel_times, int) or wheel_times < 1:
             raise ValueError(f"wheel_times must be 1 or more (got {wheel_times!r})")
+        fits = ("left", "right") if axis == "horizontal" else ("up", "down")
+        if direction not in fits:
+            raise ValueError(
+                f"direction must be {' or '.join(fits)} for {axis} (got {direction!r})"
+            )
         modifiers = _as_modifiers(modifiers)
         desktop = get_desktop()
         loc = _as_loc(loc)
