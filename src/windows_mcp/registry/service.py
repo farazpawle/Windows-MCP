@@ -120,8 +120,22 @@ def parse_multistring(value: str) -> list[str]:
     return items
 
 
+def _is_default(name: str) -> bool:
+    """An empty name or "(Default)" means the key's unnamed default value."""
+    return name == "" or name.lower() == "(default)"
+
+
+def _value_name(name: str) -> tuple[str, str]:
+    """(name for PowerShell, name for the reply).
+
+    PowerShell refuses -Name '' but maps '(default)' to the unnamed value.
+    """
+    return ("(default)", "(Default)") if _is_default(name) else (name, name)
+
+
 def get_value(path: str, name: str) -> str:
     """Read a registry value at *path* with the given *name*."""
+    name, shown_name = _value_name(name)
     q_path = ps_quote(path)
     q_name = ps_quote(name)
     command = (
@@ -136,7 +150,7 @@ def get_value(path: str, name: str) -> str:
     response, status = PowerShellExecutor.execute_command(command)
     if status != 0:
         return f"Error reading registry: {response.strip()}"
-    return f'Registry value [{path}] "{name}" = {response.strip()}'
+    return f'Registry value [{path}] "{shown_name}" = {response.strip()}'
 
 
 def set_value(path: str, name: str, value: str, reg_type: RegistryType = "String") -> str:
@@ -146,6 +160,7 @@ def set_value(path: str, name: str, value: str, reg_type: RegistryType = "String
             f"Error: invalid registry type '{reg_type}'. "
             f"Allowed: {', '.join(sorted(ALLOWED_REGISTRY_TYPES))}"
         )
+    name, shown_name = _value_name(name)
     q_path = ps_quote(path)
     q_name = ps_quote(name)
     shown = value
@@ -177,7 +192,7 @@ def set_value(path: str, name: str, value: str, reg_type: RegistryType = "String
     response, status = PowerShellExecutor.execute_command(command)
     if status != 0:
         return f"Error writing registry: {response.strip()}"
-    return f'Registry value [{path}] "{name}" set to "{shown}" (type: {reg_type}).'
+    return f'Registry value [{path}] "{shown_name}" set to "{shown}" (type: {reg_type}).'
 
 
 def delete_entry(path: str, name: str | None = None, recursive: bool = False) -> str:
@@ -194,8 +209,22 @@ def delete_entry(path: str, name: str | None = None, recursive: bool = False) ->
         )
     q_path = ps_quote(path)
     if name:
-        q_name = ps_quote(name)
-        command = f"Remove-ItemProperty -LiteralPath {q_path} -Name {q_name} -Force"
+        if _is_default(name):
+            # Remove-ItemProperty cannot delete '(default)', and the key Get-Item
+            # returns is read-only, so reopen it writable from its hive.
+            name = "(Default)"
+            command = (
+                f"$hive, $sub = (Get-Item -LiteralPath {q_path} -ErrorAction Stop).Name "
+                "-split '\\\\', 2; "
+                "$base = [Microsoft.Win32.RegistryKey]::OpenBaseKey(@{"
+                "HKEY_CURRENT_USER='CurrentUser'; HKEY_LOCAL_MACHINE='LocalMachine'; "
+                "HKEY_CLASSES_ROOT='ClassesRoot'; HKEY_USERS='Users'; "
+                "HKEY_CURRENT_CONFIG='CurrentConfig'}[$hive], 'Default'); "
+                "$key = if ($sub) { $base.OpenSubKey($sub, $true) } else { $base }; "
+                "try { $key.DeleteValue('') } finally { $key.Close() }"
+            )
+        else:
+            command = f"Remove-ItemProperty -LiteralPath {q_path} -Name {ps_quote(name)} -Force"
         response, status = PowerShellExecutor.execute_command(command)
         if status != 0:
             return f"Error deleting registry value: {response.strip()}"

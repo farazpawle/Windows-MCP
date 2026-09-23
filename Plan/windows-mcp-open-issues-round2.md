@@ -382,12 +382,14 @@ Source: live tests on 2026-09-22 (Windows 11 Pro 26200, one 1920x1080 display at
 
   - Done together with B.3.
   - **Verify:** see B.3.
-- [ ]  3.25 **A registry key's (Default) value can't be set.** Registry `set` with `name=""` fails with "Cannot bind argument to parameter 'Name' because it is an empty string".
+- [x]  3.25 **A registry key's (Default) value can't be set.** Registry `set` with `name=""` fails with "Cannot bind argument to parameter 'Name' because it is an empty string".
 
-  - [ ]  a. Treat an empty name or `"(Default)"` as the key's default value in `set`.
-  - [ ]  b. Do the same in `get`.
+  - [x]  a. Treat an empty name or `"(Default)"` as the key's default value in `set`.
+  - [x]  b. Do the same in `get`.
+  - [x]  c. Let `delete` remove the default value when `name="(Default)"` (added: `Remove-ItemProperty -Name '(default)'` fails with "Property (default) does not exist").
 
   - **Verify:** Live (in `HKCU:\Software\WMCP-Test`) - set then get the default value; `(Get-Item ...).GetValue('')` matches.
+  - **Result (2026-09-23):** done. `registry/service.py`: `_is_default` / `_value_name` map `""` or `"(Default)"` (any case) to PowerShell's `'(default)'` in `get_value` and `set_value`; replies name it `"(Default)"`. `delete_entry` with `name="(Default)"` reopens the key writable through `[Microsoft.Win32.RegistryKey]::OpenBaseKey` and calls `DeleteValue('')` (an empty name in delete still means "the key", unchanged). Registry description updated. 7 unit tests in `tests/test_registry_default_value.py` (6 failed first). Live (real Registry tool, `HKCU:\Software\WMCP-Test\Default325`): set `""`="hello default" -> `GetValue('')` "hello default"; get `""` -> same; set `(Default)`=42 DWord -> `GetValue('')` 42, kind DWord; get `(default)` -> 42; delete `(Default)` -> default gone, sibling value "Other" kept; key removed after. Note: a first live run lost the path's backslashes (script quoting) and so used a temporary `HKCU:\SoftwareWMCP-TestDefault325`, which the same run deleted; confirmed absent afterwards.
 - [ ]  3.26 **Horizontal Scroll ignores `modifiers` but says it held them.** `type="horizontal"`, `modifiers="alt"` replied "... holding alt"; the harness logged no wheel event (the horizontal path uses UIA ScrollPattern, where held keys have no effect) - only the Ctrl/Alt key presses.
 
   - [ ]  a. Refuse `modifiers` on the horizontal ScrollPattern path (the other option - sending a real horizontal wheel when modifiers are given - can follow if needed).
