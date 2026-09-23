@@ -39,8 +39,11 @@ Claude Code client cannot, such as an empty string.
    afterwards, read `C:\ProgramData\AVAST Software\Avast\log\detections.log` (open with
    FileShare ReadWrite; timestamps are **UTC**) for "show and wait for user choice".
 3. If the test overwrites the clipboard (Clipboard set, copy shortcuts), back it up right
-   before that step and restore it after, every time. Non-text contents cannot be restored:
-   ask first. Type restores the clipboard itself after a paste of 20+ characters.
+   before that step and restore it after, every time. Text, an image (`clipboard.service`
+   `save_image` then `set_image`) and a file list (`set_files`) can be restored; other formats
+   (HTML, Office data) cannot, so ask first. Type restores the clipboard itself after a paste
+   of 20+ characters. Check an empty clipboard with `EnumClipboardFormats(0) == 0`: pywin32's
+   `CountClipboardFormats` raises on 0 instead of returning it.
 4. If the test reads the UI tree (Snapshot, WaitFor, App switch/resize), check for
    "Not Responding" windows first; one can stall the read:
    `Add-Type -Name U -Namespace W -MemberDefinition '[DllImport("user32.dll")] public static extern bool IsHungAppWindow(IntPtr h);'; Get-Process | ? { $_.MainWindowHandle -ne 0 -and [W.U]::IsHungAppWindow($_.MainWindowHandle) } | select Id,ProcessName,MainWindowTitle`
