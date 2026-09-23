@@ -563,7 +563,8 @@ def register(
             "to the target coordinates, or provide from_loc=[x, y] to make the drag explicit-start "
             "and atomic in one tool call. Optional duration controls bounded intermediate movement. "
             "Default (drag=False) is a simple cursor move (hover). "
-            "Provide either loc or label. "
+            "Provide either loc or label; with neither (and no drag), nothing moves and the "
+            "reply gives the current cursor position. "
             "modifiers (drag only) holds keys during the drag, e.g. 'ctrl' to copy instead of move. "
             "For drags one straight move can't express (curved paths, hover before dropping): "
             "mouse_button='down' presses the left button at loc, then plain Moves steer it, "
@@ -614,6 +615,11 @@ def register(
             x, y = to_model(desktop, loc)
             return f"{verb} the left mouse button at ({x},{y})."
         if loc is None and label is None:
+            # A bare Move is the "where is the pointer?" query; anything drag-shaped still
+            # needs a target.
+            if not drag and from_loc is None and duration is None:
+                x, y = to_model(desktop, list(desktop.get_cursor_location()))
+                return f"The cursor is at ({x},{y})."
             raise ValueError("Either loc or label must be provided.")
         if label is not None:
             loc = _resolve_label(desktop, label)

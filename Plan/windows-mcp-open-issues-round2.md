@@ -550,12 +550,13 @@ Each item: what windows-mcp does today, what computer use / Cowork does, and the
 
 Each is a new feature: the first subtask is the user's approval of the design.
 
-- [ ]  C.1 **Cursor position.** Cowork has `cursor_position`. Today the position appears only in a Screenshot header, and shows "None" when the pointer is outside the captured region; Move with no arguments is refused.
+- [x]  C.1 **Cursor position.** Cowork has `cursor_position`. Today the position appears only in a Screenshot header, and shows "None" when the pointer is outside the captured region; Move with no arguments is refused.
 
-  - [ ]  a. [User] Choose the shape (design choice): Move with no `loc`/`label` returns the position (recommended - no new tool), or a new `CursorPosition` tool.
-  - [ ]  b. Return the current `[x, y]`.
+  - [x]  a. [User] Choose the shape (design choice): Move with no `loc`/`label` returns the position (recommended - no new tool), or a new `CursorPosition` tool.
+  - [x]  b. Return the current `[x, y]`.
 
   - **Verify:** Live - the returned position matches `GetCursorPos`.
+  - **Result (2026-09-23):** user chose Move. `tools/input.py` `move_tool`: with no `loc`/`label` and no `drag`/`from_loc`/`duration` it replies "The cursor is at (x,y)." (through `to_model`, so it follows the screenshot scale like every other printed position) and sends nothing; drag-shaped calls without a target are still refused. 3 tests in `tests/test_move_cursor_position.py` (the position case failed first); suite 1320 passed. Live (in-process, no input sent): reply "(2545,981)" = ctypes `GetCursorPos` (2545, 981). Guide's Move row updated.
 - [ ]  C.2 **Release everything (panic button).** No tool can release stuck keys or buttons after a failed sequence (bug 2.4 shows how a held button spoils the next action).
 
   - [ ]  a. [User] Choose the shape (design choice): a `ReleaseInputs` tool, or Shortcut `release_all=true`.
