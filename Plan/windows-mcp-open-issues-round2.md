@@ -312,11 +312,12 @@ Source: live tests on 2026-09-22 (Windows 11 Pro 26200, one 1920x1080 display at
 
   - **Verify:** Unit - reply for a 1,097-character text with clear and Enter.
   - **Result (2026-09-23):** done. New `_typed_text` in `tools/input.py`: text up to 50 characters is echoed whole as before; longer text is named as `1,097 characters ("<first 50>...")`. The Type tool now parses `clear`/`press_enter` once, passes the same values to `Desktop.type`, and ends the reply with "Cleared the existing text first." and/or "Pressed Enter." when used (both the located and the focused-element path do both actions - checked in `Desktop.type`). The held-button note (2.4) still comes last. 6 new unit tests in `tests/test_type_reply_details.py` (4 failed first; the 2 short-text guards passed from the start); full suite 1128 passed; lint unchanged at 53. GitNexus `impact`: no code callers (MCP-only tool). `Skills/Skill.md` does not quote the reply. Live (user hands-off; real Type tool through an in-process FastMCP client; a throwaway TopMost tkinter entry holding "old text" that saves its content on Enter; WindowFromPoint guard; closed afterwards): 1,097 characters with `clear` and `press_enter` - reply `Typed 1,097 characters ("xxxx...") at (658,369). Cleared the existing text first. Pressed Enter.`; the entry saved exactly the 1,097 characters, "old text" gone, Enter received.
-- [ ]  3.14 **Notification with an empty `app_id`** replies "Windows reports the setting ''".
+- [x]  3.14 **Notification with an empty `app_id`** replies "Windows reports the setting ''".
 
-  - [ ]  a. Refuse an empty `app_id` with "app_id is required".
+  - [x]  a. Refuse an empty `app_id` with "app_id is required".
 
   - **Verify:** Unit - empty `app_id` refused.
+  - **Result (2026-09-23):** done. Cause (from the script): with `$appId = ''` the known-app check tested `HKCU:\Software\Classes\AppUserModelId\`, the folder itself, which exists, so the id passed as "known"; `CreateToastNotifier('')` then reported an empty setting, giving "Windows reports the setting ''". `send_notification` now returns "Error: app_id is required. Use an AppID listed by Get-StartApps, e.g. ..." for an empty or blank `app_id` before PowerShell runs; `@raise_error_replies` makes it a tool error. 4 new unit tests in `tests/test_notification_app_id.py` (all failed first - PowerShell was reached); full suite 1132 passed; lint unchanged at 53. Only caller: the Notification tool (text search; GitNexus resolved none). Live (no toast possible, no input; real Notification tool through an in-process FastMCP client): `""` and `"   "` refused in 0.01 s with `is_error=True`; `Not.A.Real.App` still gives the "not an installed app" error.
 - [ ]  3.15 **WaitFor finds elements in an off-screen window** (harness moved to x=-3000) with no hint they can't be clicked.
 
   - [ ]  a. Add "(window is off-screen)" to the reply when the match is outside every display.

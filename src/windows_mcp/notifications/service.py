@@ -30,6 +30,14 @@ def send_notification(title: str, message: str, app_id: str) -> str:
         app identity for desktop toast notifications, and it MUST match a
         registered shortcut/AppUserModelID.
     """
+    # A blank id made the registry check test the AppUserModelId folder itself, which
+    # exists, so Windows was asked anyway and replied "Windows reports the setting ''".
+    if not app_id.strip():
+        return (
+            "Error: app_id is required. Use an AppID listed by Get-StartApps, e.g. "
+            r"'{1AC14E77-02E7-4E5D-B744-2EB1AE5198B7}\WindowsPowerShell\v1.0\powershell.exe'."
+        )
+
     safe_title = ps_quote_for_xml(title)
     safe_message = ps_quote_for_xml(message)
     safe_app_id = ps_quote(app_id)
