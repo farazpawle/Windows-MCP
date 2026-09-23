@@ -1134,6 +1134,11 @@ class Desktop:
                 return 'Invalid axis. Use "horizontal" or "vertical".'
         return None
 
+    def _cursor_over_unreadable(self) -> bool:
+        """True over a hung or VS Code-family window, whose UIA read stalls or freezes it (3.34)."""
+        handle = top_level_window_at(*self.get_cursor_location())
+        return bool(handle) and (is_window_hung(handle) or is_unreadable_window(handle))
+
     def _scroll_horizontal(self, right: bool, wheel_times: int, keys_held: bool = False) -> None:
         # Shift+wheel is only a browser/Explorer convention; native apps scroll
         # vertically on it. Prefer the ScrollPattern of the nearest horizontally
@@ -1141,7 +1146,9 @@ class Desktop:
         # ScrollPattern never sees held keys, so with modifiers only a real wheel is honest.
         pattern = None
         try:
-            control = None if keys_held else uia.ControlFromCursor()
+            control = (
+                None if keys_held or self._cursor_over_unreadable() else uia.ControlFromCursor()
+            )
             while control is not None and pattern is None:
                 candidate = control.GetPattern(uia.PatternId.ScrollPattern)
                 if candidate is not None and candidate.HorizontallyScrollable:

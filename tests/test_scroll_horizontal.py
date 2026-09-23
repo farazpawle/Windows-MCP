@@ -89,3 +89,19 @@ def test_modifiers_send_a_real_wheel_instead_of_scroll_pattern(desktop):
         ("wheel", (uia.MouseEventFlag.HWheel, 0, 0, 120, 0)),
         "up",
     ]
+
+
+@pytest.mark.parametrize("guard", ["is_unreadable_window", "is_window_hung"])
+def test_vs_code_or_hung_window_is_not_read(desktop, guard):
+    """Round-2 3.34: a UIA read of VS Code freezes it, so the real wheel is used unread."""
+    desktop.get_cursor_location = MagicMock(return_value=(50, 60))
+    with (
+        patch("windows_mcp.desktop.service.top_level_window_at", return_value=7),
+        patch(f"windows_mcp.desktop.service.{guard}", return_value=True),
+        patch.object(uia, "ControlFromCursor") as read,
+        patch.object(uia, "mouse_event") as mouse_event,
+        patch("windows_mcp.desktop.service.sleep"),
+    ):
+        desktop.scroll(axis="horizontal", direction="right", wheel_times=1)
+    read.assert_not_called()
+    mouse_event.assert_called_once_with(uia.MouseEventFlag.HWheel, 0, 0, 120, 0)
