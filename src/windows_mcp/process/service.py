@@ -1,4 +1,5 @@
 import os
+import time
 from typing import Literal
 
 
@@ -19,6 +20,12 @@ def list_processes(
     from tabulate import tabulate
 
     own_pid = os.getpid()
+    # cpu_percent compares with the previous reading of the same (cached) process:
+    # the first ever is 0, later ones average over the gap since the last list.
+    # Prime every process, then read over a fresh half second.
+    for _ in psutil.process_iter(["cpu_percent"]):
+        pass
+    time.sleep(0.5)
     procs = []
     for p in psutil.process_iter(["pid", "name", "cpu_percent", "memory_info"]):
         try:

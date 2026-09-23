@@ -31,3 +31,24 @@ def test_own_process_is_marked_and_not_ranked_by_its_own_sample(monkeypatch):
     own = next(line for line in lines if line.split()[0] == str(me))
     assert "(this server)" in own
     assert "97" not in own
+
+
+def test_cpu_is_sampled_over_a_fresh_short_window(monkeypatch):
+    # Round-2 3.31: psutil's first reading per process is 0, and later ones average
+    # over the whole gap since the previous list - so prime, wait, then read.
+    events = []
+
+    def fake_iter(attrs):
+        events.append(("iter", tuple(attrs)))
+        return [_fake(4242, "busy.exe", 12.0)]
+
+    monkeypatch.setattr(psutil, "process_iter", fake_iter)
+    monkeypatch.setattr(
+        "windows_mcp.process.service.time.sleep", lambda s: events.append(("sleep", s))
+    )
+
+    list_processes(sort_by="cpu")
+
+    assert events[0] == ("iter", ("cpu_percent",))
+    assert events[1] == ("sleep", 0.5)
+    assert events[2][0] == "iter" and "cpu_percent" in events[2][1]
