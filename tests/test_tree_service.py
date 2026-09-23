@@ -184,6 +184,47 @@ class TestTreeTraversal:
         assert interactive_nodes == []
         assert semantic_root.children == []
 
+    @pytest.mark.parametrize(
+        ("control_type", "automation_id", "expected_name"),
+        [
+            ("EditControl", "EditA", "EditA"),
+            ("EditControl", "", ""),
+            # WinForms without a control name reports the window handle: meaningless.
+            ("EditControl", "1446746", ""),
+            ("ComboBoxControl", "cboCity", "cboCity"),
+        ],
+    )
+    def test_unnamed_text_field_is_still_listed(
+        self, tree_instance, monkeypatch, control_type, automation_id, expected_name
+    ):
+        # Round-2 3.30: unlabelled text boxes are common and are where an agent types.
+        child = MagicMock()
+        child.CachedIsOffscreen = False
+        child.CachedControlTypeName = control_type
+        child.CachedIsControlElement = True
+        child.CachedBoundingRectangle = Rect(10, 10, 110, 30)
+        child.CachedIsEnabled = True
+        child.CachedHasKeyboardFocus = False
+        child.CachedName = ""
+        child.CachedAutomationId = automation_id
+        child.CachedLocalizedControlType = "edit"
+        child.CachedAcceleratorKey = ""
+        child.CachedHelpText = ""
+        child.GetCachedPropertyValue.return_value = 42
+
+        monkeypatch.setattr(
+            "windows_mcp.tree.service.CachedControlHelper.get_cached_children",
+            lambda node, cache_request: [],
+        )
+        monkeypatch.setattr("windows_mcp.tree.service.AccessibleRoleNames", {42: "Text"})
+
+        interactive_nodes = []
+        tree_instance.tree_traversal(
+            child, Rect(0, 0, 200, 200), "Window", False, interactive_nodes, [], [], []
+        )
+
+        assert [node.name for node in interactive_nodes] == [expected_name]
+
     def test_stale_uia_subtree_is_pruned(self, tree_instance):
         class StaleNode:
             @property

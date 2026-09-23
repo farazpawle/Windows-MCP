@@ -719,7 +719,14 @@ class Tree:
                             else:
                                 bounding_box=self.iou_bounding_box(window_bounding_box,element_bounding_box)
                                 center = bounding_box.get_center()
-                                if name:
+                                # Unnamed elements are mostly noise (bare icons), but an
+                                # unlabelled text field is common and is where an agent types.
+                                is_text_field = control_type_name in ('EditControl', 'ComboBoxControl')
+                                if not name and is_text_field:
+                                    automation_id = (node.CachedAutomationId or '').strip()
+                                    # A bare number is a window handle or control id: no meaning.
+                                    name = '' if automation_id.isdigit() else automation_id
+                                if name or is_text_field:
                                     tree_node=TreeElementNode(**{
                                         'name':name,
                                         'control_type':localized_control_type.title(),

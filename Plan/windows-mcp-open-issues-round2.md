@@ -1,7 +1,7 @@
 ---
 Title: Windows-MCP open issues backlog - round 2 (2026-09-22)
 Description: Findings of the second round of live testing of all 20 windows-mcp tools on 2026-09-22, turned into a task file. Part A Bugs - 7 High (registry paths act as wildcards and reach the file system; WaitFor renumbers Snapshot labels; off-screen points are clamped and clicked; an on-top unfocused window gets no Snapshot elements; pop-up menus don't hide covered elements; region clipping moves a click point under a covering window), 16 Medium, 27 Low. Part B Improvements to reach Claude Cowork computer-use behaviour. Part C New tools/abilities (each needs the user's design approval first). Part D Skills/Skill.md corrections and one optional [User] high-DPI test. Items 3.28 and 3.29 were found on 2026-09-22 while fixing 3.4 and 3.2 and are not yet done. Every item keeps its finding, then lists single-action fix subtasks and its own Verify line; the file ends with the overall verification rules.
-Total Tasks: 179
+Total Tasks: 183
 ---
 # Windows-MCP open issues - round 2
 
@@ -408,6 +408,23 @@ Source: live tests on 2026-09-22 (Windows 11 Pro 26200, one 1920x1080 display at
   - [ ]  a. Decide with the user whether to rename the argument (it is part of the tool's public schema, so renaming changes what the model sends) or to leave it and add a comment at the top of both functions warning that `type` is shadowed. `[User]` - renaming is a visible API change, so it needs the user's call.
 
   - **Verify:** Whichever is chosen: if renamed, the old name still works or the description is updated and the tests pass; if not, the comment is present in `scroll_tool` and `Desktop.scroll`.
+- [x]  3.30 **Unnamed text boxes are missing from Snapshot.** Tool: Snapshot/WaitFor. Found on 2026-09-23 while live-testing 3.20. A WinForms window with three text boxes and no accessible name listed only its title-bar buttons; the boxes appeared once `AccessibleName` was set. UIA reports them correctly (EditControl, role 42 = text, enabled, on screen). Cause: `Tree.tree_traversal` adds a non-browser interactive element only `if name:`, so any unnamed field is dropped - and unlabelled text fields are common in real apps.
+
+  - [x]  a. Keep unnamed text-entry elements (Edit and ComboBox controls) in the element list.
+  - [x]  b. Name them from their AutomationId when they have one (the same fallback scroll areas already use).
+
+  - **Verify:** Unit - an unnamed Edit is listed (with its AutomationId as the name when present); an unnamed Button is still dropped. Live - Snapshot of the unnamed three-field harness lists three edit elements.
+  - **Result (2026-09-23):** done. In `Tree.tree_traversal` (non-browser branch) an unnamed Edit/ComboBox is now kept; its name falls back to the AutomationId, unless that is all digits (WinForms without a control name reports the window handle, e.g. "1446746" - meaningless and changing), in which case the name stays empty and the tree shows `edit ""` with its value. Other unnamed elements are still dropped (existing test for an unnamed button unchanged). 4 new unit cases in `tests/test_tree_service.py` (all failed first); suite 1181 passed; lint unchanged (2 pre-existing whitespace warnings on untouched lines). GitNexus impact LOW. Live (real Snapshot tool, TopMost WinForms window, no input): with control names but no AccessibleName - `edit "EditA"/"EditB"/"EditC"`; with neither - three `edit ""` rows with values EditA/EditB/EditC; before the fix both cases listed only the title-bar buttons.
+- [ ]  3.31 **The first CPU-sorted Process list shows 0.0% for everything.** Tool: Process. Found on 2026-09-23 while live-testing 3.23. psutil's `cpu_percent` compares with the previous call, so the first call per process returns 0 and later calls average over the whole gap since the last list (possibly minutes).
+
+  - [ ]  a. Take two CPU samples 0.5 s apart inside each `list` call, so every list shows current load.
+
+  - **Verify:** Unit - two sampling passes with a wait between them. Live - the first CPU-sorted list after server start shows non-zero values.
+- [ ]  3.32 **"System Idle Process" shows ~1900% CPU.** Tool: Process. Found on 2026-09-23 while live-testing 3.23. psutil reports each process in per-core units (100% = one core), so on this 20-thread PC idle reads 1909.8%.
+
+  - [ ]  a. Divide by the logical CPU count so CPU% is a share of the whole machine (0-100, like Task Manager).
+
+  - **Verify:** Unit - a 400% per-core sample on 4 CPUs shows 100.0%. Live - no process shows more than 100%.
 
 # Part B - Improvements (to work like Claude Cowork)
 
