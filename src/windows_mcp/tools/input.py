@@ -113,6 +113,19 @@ def _focus_suffix(focus: object) -> str:
     )
 
 
+_TYPED_PREVIEW_CHARS = 50
+
+
+def _typed_text(text: str) -> str:
+    """The text as a Type reply names it: whole if short, else its length and start.
+
+    Echoing a 1,000-character text back in full cost the caller as much as sending it.
+    """
+    if len(text) <= _TYPED_PREVIEW_CHARS:
+        return text
+    return f'{len(text):,} characters ("{text[:_TYPED_PREVIEW_CHARS]}...")'
+
+
 def _held_suffix(modifiers: list[str]) -> str:
     return f" holding {'+'.join(modifiers)}" if modifiers else ""
 
@@ -404,16 +417,21 @@ def register(
         released = release_held_button(desktop) if loc is not None else ""
         # Read the focus before typing: typing can move it (Tab, Enter in a form).
         focus = desktop.describe_focused_element() if loc is None else None
+        clear = as_bool(clear, "clear")
+        press_enter = as_bool(press_enter, "press_enter")
         desktop.type(
             loc=loc,
             text=text,
             caret_position=caret_position,
-            clear=as_bool(clear, "clear"),
-            press_enter=as_bool(press_enter, "press_enter"),
+            clear=clear,
+            press_enter=press_enter,
         )
+        typed = _typed_text(text)
+        done = " Cleared the existing text first." if clear else ""
+        done += " Pressed Enter." if press_enter else ""
         if loc is None:
-            return f"Typed {text} into the focused element{_focus_suffix(focus)}"
-        return f"Typed {text} at ({loc[0]},{loc[1]}).{released}"
+            return f"Typed {typed} into the focused element{_focus_suffix(focus)}{done}"
+        return f"Typed {typed} at ({loc[0]},{loc[1]}).{done}{released}"
 
     @mcp.tool(
         name="Scroll",
