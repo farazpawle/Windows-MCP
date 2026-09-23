@@ -3,8 +3,8 @@ name: windows-mcp-tool-tester
 description: >
   Automated testing skill for Windows-MCP tools. Use this skill whenever the user wants to test,
   validate, benchmark, or evaluate any Windows-MCP tool (App, PowerShell, Screenshot, Snapshot,
-  Click, Type, Scroll, Move, Shortcut, Wait, MultiSelect, MultiEdit, Clipboard, Process,
-  Notification, FileSystem, Registry, Scrape). Triggers on phrases like "test the Click tool",
+  DisplayInventory, Click, Type, Scroll, Move, Shortcut, Wait, WaitFor, MultiSelect, MultiEdit,
+  Clipboard, Process, Notification, FileSystem, Registry, Scrape). Triggers on phrases like "test the Click tool",
   "benchmark Screenshot", "validate FileSystem", "run QA on Registry", "check if PowerShell works",
   "evaluate tool performance", or any mention of testing/validating a Windows-MCP tool.
   Each invocation tests exactly ONE tool.
@@ -28,7 +28,29 @@ and actionable recommendations.
   destructive tools (FileSystem delete, Registry set/delete, Process kill, PowerShell) can
   modify or destroy data. Running in a **VM or Windows Sandbox** is strongly recommended.
   Before executing destructive test cases, confirm the user accepts the risk. See `SECURITY.md`.
+- **Shared PC**: tests usually run on the PC the user is working on. See Shared-PC Safety below.
 - **Produce a structured report** at the end (see Step 4).
+
+## Shared-PC Safety (learned from real incidents)
+
+- **Hands off first.** Before any input test (Click, Type, Scroll, Move, Shortcut, MultiSelect,
+  MultiEdit), tell the user how long it takes and ask them to keep off mouse and keyboard. A run
+  done while they worked hit the wrong window and had to be repeated.
+- **Target your own visible window.** Never start a test window hidden: clicks aimed at it land on
+  whatever is behind it (one run typed Ctrl+A, Backspace and text into the user's editor).
+  Re-check with Screenshot that it is on top before each input test, and click it before every
+  keyboard test — focus drifts to the editor during long calls.
+- **Never tree-read VS Code-family windows** (VS Code, Cursor, Windsurf, Antigravity, VSCodium):
+  one read pins them at 100% CPU until restart. Snapshot, WaitFor and App switch/resize read the
+  whole desktop, so keep `WINDOWS_MCP_READ_VSCODE` off and prefer a `region` around the test window.
+- **Check for frozen apps** before Snapshot/WaitFor/App calls; a "Not Responding" window can stall
+  them. If a call stalls, find it with `IsHungAppWindow` via PowerShell and ask the user.
+- **Back up the clipboard before every test that overwrites it** (Clipboard set, Type of 20+
+  characters, copy shortcuts) — not once per session. Non-text contents cannot be restored: ask
+  before overwriting them.
+- **Empty strings**: some clients cannot send `""`. Test empty inputs through a FastMCP script
+  client instead (see the `windows-mcp-live-test` skill), not by skipping them.
+- **Announce slow steps** (app launches, big Snapshots) and cap them with a timeout.
 
 ---
 
@@ -36,8 +58,9 @@ and actionable recommendations.
 
 If the user hasn't specified a tool, present the full list and ask them to pick one:
 
-> App, PowerShell, Screenshot, Snapshot, Click, Type, Scroll, Move, Shortcut, Wait,
-> MultiSelect, MultiEdit, Clipboard, Process, Notification, FileSystem, Registry, Scrape
+> App, PowerShell, Screenshot, Snapshot, DisplayInventory, Click, Type, Scroll, Move, Shortcut,
+> Wait, WaitFor, MultiSelect, MultiEdit, Clipboard, Process, Notification, FileSystem, Registry,
+> Scrape
 
 Once a tool is confirmed, proceed to Step 1. Do NOT test multiple tools in one session.
 
@@ -491,11 +514,25 @@ Hints per tool. Always read the actual schema to discover additional scenarios b
 - Various flag combinations: use_vision, use_dom, use_annotation, use_ui_tree
 - All flags off vs. all flags on
 - With/without reference lines
+- With `region` limited to the test window (also the safe way to avoid reading other apps)
+
+### DisplayInventory
+- No parameters: verify every monitor is listed with bounds, work area, DPI and scale
+- Cross-check against the PowerShell display info from Pre-Test Step 1
+- Multi-monitor layouts if a second display is available
+
+### WaitFor
+- Each condition: active_window, text_exists, element_exists, element_enabled, focused_element
+- A condition that is already true (should return at once) vs. one that never becomes true
+  (should error at `timeout` and name the actual active window)
+- `timeout` / `interval` boundaries (0, negative, very small interval)
+- Missing `text` or `window_name` for a condition that needs it
+- `use_dom=true` against a browser page
 
 ### Click
 - By coordinates (loc) vs. by label
 - Different button types: left, right, middle
-- clicks=0 (hover), clicks=1 (single), clicks=2 (double)
+- clicks=0 (hover), clicks=1 (single), clicks=2 (double), clicks=3 (triple), out-of-range values
 - Invalid coordinates (negative, off-screen)
 - Invalid label (non-existent element ID)
 
