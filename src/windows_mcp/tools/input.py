@@ -171,6 +171,11 @@ def _as_seconds(
     return seconds
 
 
+def _seconds_text(seconds: float) -> str:
+    """'1 second', '0.5 seconds', '2 seconds' for a reply sentence."""
+    return f"{seconds:g} second" + ("" if seconds == 1 else "s")
+
+
 def _text_matches(value: object | None, expected: str | None) -> bool:
     if expected is None:
         return True
@@ -636,7 +641,7 @@ def register(
                 raise ValueError("hold and repeat cannot be combined")
         get_desktop().shortcut(shortcut, repeat=repeat, hold=hold)
         if hold is not None:
-            return f"Held {shortcut} for {hold:g} seconds."
+            return f"Held {shortcut} for {_seconds_text(hold)}."
         return f"Pressed {shortcut}" + (f" {repeat} times." if repeat > 1 else ".")
 
     @mcp.tool(
@@ -655,7 +660,7 @@ def register(
         # Capped so a typo (600 for 6.00) or a huge value can't block the server for long.
         seconds = _as_seconds(duration, "duration", maximum=300)
         time.sleep(seconds)
-        return f"Waited for {seconds:g} seconds."
+        return f"Waited for {_seconds_text(seconds)}."
 
     @mcp.tool(
         name="WaitFor",
