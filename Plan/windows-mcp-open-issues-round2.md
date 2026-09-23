@@ -495,13 +495,14 @@ Each item: what windows-mcp does today, what computer use / Cowork does, and the
 
   - Done together with 2.13.
   - **Verify:** see 2.13.
-- [ ]  B.9 **Stable element references.** Today: `label=N` is an index into whatever tree was captured last (bugs 1.3, 2.11).
+- [x]  B.9 **Stable element references.** Today: `label=N` is an index into whatever tree was captured last (bugs 1.3, 2.11).
 
-  - [ ]  a. [User] Approve the approach (design choice): labels tied to a Snapshot id (`snapshotId:N`), or element name/role resolved at click time (C.5).
-  - [ ]  b. Implement the chosen approach.
-  - [ ]  c. Refuse a label whose element no longer has the name/role Snapshot printed.
+  - [x]  a. [User] Approve the approach (design choice): labels tied to a Snapshot id (`snapshotId:N`), or element name/role resolved at click time (C.5).
+  - [x]  b. Implement the chosen approach.
+  - [x]  c. Refuse a label whose element no longer has the name/role Snapshot printed.
 
   - **Verify:** Unit - a stale label is refused. Live - Snapshot, change the harness layout, Click the old label: refused, no click logged.
+  - **Result (2026-09-23):** done. User chose the check at click time (no Snapshot ids). New `tree/utils.element_still_at(name, control_type, x, y)`, called for every label in `Desktop.get_coordinates_from_labels` (the one path for Click/Type/Scroll/Move/MultiSelect/MultiEdit labels): the top-level window at the point (win32, no UIA read) must exist and be neither hung nor VS Code-family, else refused unread; then `ControlFromPoint` and up to 10 parents must show the listed name as Name, AutomationId or localized type (unnamed fields: the type). `Word` labels skip the name check (no element carries one word); a UIA exception lets the action through as before (ponytail note). Refusal: 'label N (edit "") is no longer at its spot; the screen changed since Snapshot. Take a new Snapshot.' `tests/conftest.py` stubs the check for made-up trees. 15 tests in `tests/test_label_still_there.py` (all failed first); suite 1289 passed. Live (two harness windows): label click on the textbox went through (harness logged `lbutton`); a second harness window moved over the spot, the same label was refused, the covering window logged nothing and the first still had one click. Known limit: two unnamed fields of the same type swapping places pass the check.
 - [ ]  B.10 **Verified replies.** Today: replies repeat the request ("Typed ...", "Single left clicked ...") even when nothing happened (bugs 1.4, 2.4, 2.5, 3.1, 3.3).
 
   - [ ]  a. [User] Approve the reply format (design choice - adds a little time to each action).

@@ -18,6 +18,8 @@ def _nothing_covers_fake_windows(monkeypatch):
     desktop would call them covered. Tests of these checks patch them themselves."""
     monkeypatch.setattr("windows_mcp.desktop.service.is_fully_covered", lambda *a, **k: False)
     monkeypatch.setattr("windows_mcp.desktop.service.top_level_window_at", lambda x, y: 0)
+    # Labels of made-up trees are "still there" (B.9); test_label_still_there covers the check.
+    monkeypatch.setattr("windows_mcp.desktop.service.element_still_at", lambda *a, **k: True)
 
 
 @pytest.fixture

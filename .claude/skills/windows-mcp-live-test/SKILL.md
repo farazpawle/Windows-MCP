@@ -103,6 +103,8 @@ cd "<repo root>" && timeout 180 env -u SSLKEYLOGFILE \
 - `--no-sync`: a running server from this `.venv` locks `windows-mcp.exe`.
 - Always use `timeout`, and announce the run first. A script that hangs leaves the user watching
   a silent spinner.
+- Add `2>/dev/null` when a call is expected to fail: the server logs each tool error as a long
+  boxed traceback on stderr, which buries the script's own prints (it cost a repeat run).
 
 ## 4. Judge and report
 

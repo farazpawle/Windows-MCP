@@ -4,7 +4,12 @@ from windows_mcp.desktop.utils import (
 )
 from windows_mcp.powershell.utils import ps_quote
 from windows_mcp.powershell import PowerShellExecutor
-from windows_mcp.tree.utils import is_fully_covered, is_unreadable_window, top_level_window_at
+from windows_mcp.tree.utils import (
+    element_still_at,
+    is_fully_covered,
+    is_unreadable_window,
+    top_level_window_at,
+)
 from windows_mcp.vdm.core import (
     get_all_desktops,
     get_current_desktop,
@@ -934,7 +939,14 @@ class Desktop:
                     element_node = scrollable_nodes[scroll_idx]
                 else:
                     raise IndexError(f"Label {label} out of range")
-            results.append((element_node.center.x, element_node.center.y))
+            x, y = element_node.center.x, element_node.center.y
+            if not element_still_at(element_node.name, element_node.control_type, x, y):
+                raise ValueError(
+                    f"label {label} ({element_node.control_type.lower()} "
+                    f'"{element_node.name}") is no longer at its spot; the screen changed '
+                    "since Snapshot. Take a new Snapshot."
+                )
+            results.append((x, y))
         return results
 
     def _require_on_screen(self, points: list[tuple[int, int]]) -> None:

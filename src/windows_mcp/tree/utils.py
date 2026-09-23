@@ -8,6 +8,8 @@ import win32con
 import win32gui
 import win32process
 
+import windows_mcp.uia as uia
+from windows_mcp.desktop.utils import is_window_hung
 from windows_mcp.uia import Control
 
 logger = logging.getLogger(__name__)
@@ -72,6 +74,39 @@ def top_level_window_at(x: int, y: int) -> int:
     """Handle of the top-level window that owns the screen point, or 0."""
     hwnd = win32gui.WindowFromPoint((x, y))
     return win32gui.GetAncestor(hwnd, win32con.GA_ROOT) if hwnd else 0
+
+
+def element_still_at(name: str, control_type: str, x: int, y: int, max_depth: int = 10) -> bool:
+    """True when the element under (x, y), or one of its parents, still is the listed one.
+
+    Guards label actions (round-2 B.9): a label is a remembered position, so after the
+    screen changes it would act on whatever moved there. The listed name may be the
+    element's Name, its AutomationId (unnamed fields) or its type (unnamed scroll areas).
+    """
+    handle = top_level_window_at(x, y)
+    # Snapshot never lists elements in these, and reading a hung or VS Code window stalls it.
+    if not handle or is_window_hung(handle) or is_unreadable_window(handle):
+        return False
+    if control_type == "Word":  # one word of a text element: no UIA element carries its name
+        return True
+    wanted = name.strip().lower()
+    wanted = "" if wanted == "''" else wanted
+    kind = control_type.strip().lower()
+    try:
+        control = uia.ControlFromPoint(x, y)
+        for _ in range(max_depth):
+            if control is None:
+                break
+            own_type = control.LocalizedControlType.strip().lower()
+            seen = {control.Name.strip().lower(), control.AutomationId.strip().lower(), own_type}
+            if (wanted and wanted in seen) or (not wanted and own_type == kind):
+                return True
+            control = control.GetParentControl()
+    except Exception:
+        # ponytail: an unreadable element acts as before B.9 rather than blocking the action.
+        logger.debug("Could not re-check the element at (%s, %s)", x, y, exc_info=True)
+        return True
+    return False
 
 
 def z_order_rank() -> dict[int, int]:
