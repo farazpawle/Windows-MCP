@@ -324,11 +324,12 @@ Source: live tests on 2026-09-22 (Windows 11 Pro 26200, one 1920x1080 display at
 
   - **Verify:** Live - harness at x=-3000, WaitFor on one of its elements shows the hint.
   - **Result (2026-09-23):** done. Live showed the element conditions (`element_exists`, `element_enabled`, `focused_element`) already report "absent" for an off-screen window: the tree clips every element to the displays and drops zero-area ones. The hint-less matches came from `text_exists` (the targeted `find_text` search reads a window wherever it sits) and `active_window`. Both now append " (window is off-screen)" when every window the match relied on has its center outside every display (`_off_screen_hint` in `tools/input.py`; new `Desktop.is_on_screen` reuses `_require_on_screen` unchanged, so input tools are untouched). 4 new unit tests in `tests/test_wait_for_tool.py` (both off-screen cases failed first); full suite 1136 passed; lint unchanged at 53. GitNexus: `_matches_wait_condition` LOW (1 caller, WaitFor). Live (read-only, WinForms harness shown at x=200 then moved to x=-3000): `text_exists` with and without `window_name` and `active_window` show the hint; at x=200 all five conditions match with no hint. Known limit: judged by the window's center, so a window mostly off-screen is flagged even if an edge is visible.
-- [ ]  3.16 **Skills/Skill.md starts with a blank line before its `---` frontmatter.** Skill loaders expect the frontmatter on line 1, so the guide may not load as a skill.
+- [x]  3.16 **Skills/Skill.md starts with a blank line before its `---` frontmatter.** Skill loaders expect the frontmatter on line 1, so the guide may not load as a skill.
 
-  - [ ]  a. Delete line 1 of `Skills/Skill.md`.
+  - [x]  a. Delete line 1 of `Skills/Skill.md`.
 
   - **Verify:** Line 1 of the file is `---`.
+  - **Result (2026-09-23):** done. Blank line 1 deleted; `head -1 Skills/Skill.md` prints `---`. One-line diff, nothing else changed.
 - [ ]  3.17 **Scrape ignores `query` silently when summarising isn't available.** `query="which domains are reserved"` returned the whole raw page; the note mentions only the missing summary. Links stay relative (`/domains`).
 
   - [ ]  a. Say "query ignored" in the note (the keyword filter is B.12).
