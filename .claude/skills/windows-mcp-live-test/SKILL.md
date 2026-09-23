@@ -116,8 +116,17 @@ cd "<repo root>" && timeout 180 env -u SSLKEYLOGFILE \
 ## Multi-monitor tests (this PC has one screen)
 
 A temporary virtual screen works without a reboot: the signed "Driver.Only" build of
-VirtualDrivers/Virtual-Display-Driver (hardware id `Root\MttVDD`), installed through SetupAPI
-(pnputil cannot create a root device), with `vdd_settings.xml` in `C:\VirtualDisplayDriver\`.
-It adds an 800x600 screen to the right. Install and removal each need **admin: the user must
-click Yes on UAC**, so ask before every install. Remove with `pnputil /remove-device /deviceid
-Root\MttVDD` and `pnputil /delete-driver <oemNN> /uninstall`, and move test windows back first.
+VirtualDrivers/Virtual-Display-Driver (hardware id `Root\MttVDD`; release 25.7.23's
+`VirtualDisplayDriver-x86.Driver.Only.zip` is in fact the x64 build, signed by SignPath
+Foundation). It adds an 800x600 screen to the right. `scripts/virtual_display.ps1` does it all:
+`-Install -Source <unzipped VirtualDisplayDriver folder>` (copies to `C:\VirtualDisplayDriver\`,
+trims the settings to 800x600, creates the root device through SetupAPI since pnputil cannot)
+and `-Remove` (device, driver package and folder). It must run elevated, so each run needs
+**the user to click Yes on UAC**: start it with `Start-Process powershell -Verb RunAs -Wait`
+and pass `-Log <file>`, because the elevated window's output is otherwise lost. Ask before every
+install, and move test windows back before removing it.
+
+**Not over Remote Desktop.** In an RDP session (`query session` shows `rdp-tcp#N` Active;
+`GetSystemMetrics(SM_REMOTESESSION)` is 1) Windows shows only the session's own screen: the
+virtual screen installs fine ("Virtual Display Driver", status OK) but never appears. The user
+must be signed in at the PC itself. Check this before asking for the UAC click.
