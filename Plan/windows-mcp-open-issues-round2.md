@@ -479,7 +479,7 @@ Each item: what windows-mcp does today, what computer use / Cowork does, and the
 
   - Wait cap: done together with 2.12.
   - **Verify:** Unit - `hold=300` accepted, `301` refused.
-- [ ]  B.6 **Fast key repeat.** Today: ~0.52 s per repeated press. Cowork's `key` with `repeat` fires the presses back to back.
+- [x]  B.6 **Fast key repeat.** Today: ~0.52 s per repeated press. Cowork's `key` with `repeat` fires the presses back to back.
 
   - Done together with 2.6.
   - **Verify:** see 2.6.
@@ -488,7 +488,7 @@ Each item: what windows-mcp does today, what computer use / Cowork does, and the
   - Decided and built under 2.14 (`SendInput` Unicode events, chunked, clipboard untouched; paste kept only as an opt-in for very long text).
   - **Verify:** see 2.14, plus a 2,000-character text arrives intact.
   - **Result (2026-09-22):** done under 2.14; 2,000 characters arrived intact (2000/2000). The opt-in paste was not built.
-- [ ]  B.8 **Errors as errors.** Cowork requires `is_error: true` on any failure.
+- [x]  B.8 **Errors as errors.** Cowork requires `is_error: true` on any failure.
 
   - Done together with 2.13.
   - **Verify:** see 2.13.
@@ -522,7 +522,7 @@ Each item: what windows-mcp does today, what computer use / Cowork does, and the
   - [ ]  a. Keyword filter of paragraphs for `query` when summarising isn't possible.
 
   - **Verify:** Unit - a page with a matching paragraph returns only matching paragraphs plus a note.
-- [ ]  B.13 **Hit-testing everywhere.** Any listed element should be really clickable.
+- [x]  B.13 **Hit-testing everywhere.** Any listed element should be really clickable.
 
   - Done together with 1.5 (always-on-top windows), 1.6 (pop-up menus) and 2.3 (DOM mode).
   - **Verify:** see 1.5, 1.6, 2.3.
