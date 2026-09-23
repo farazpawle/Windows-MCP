@@ -330,12 +330,13 @@ Source: live tests on 2026-09-22 (Windows 11 Pro 26200, one 1920x1080 display at
 
   - **Verify:** Line 1 of the file is `---`.
   - **Result (2026-09-23):** done. Blank line 1 deleted; `head -1 Skills/Skill.md` prints `---`. One-line diff, nothing else changed.
-- [ ]  3.17 **Scrape ignores `query` silently when summarising isn't available.** `query="which domains are reserved"` returned the whole raw page; the note mentions only the missing summary. Links stay relative (`/domains`).
+- [x]  3.17 **Scrape ignores `query` silently when summarising isn't available.** `query="which domains are reserved"` returned the whole raw page; the note mentions only the missing summary. Links stay relative (`/domains`).
 
-  - [ ]  a. Say "query ignored" in the note (the keyword filter is B.12).
-  - [ ]  b. Make links absolute.
+  - [x]  a. Say "query ignored" in the note (the keyword filter is B.12).
+  - [x]  b. Make links absolute.
 
   - **Verify:** Unit - relative links become absolute. Live - Scrape example.com with a query shows the note.
+  - **Result (2026-09-23):** done. (a) When the reply is not a summary (no sampling, or `use_sampling=False`) and `query` was given, the note adds "query ignored (it only focuses the summary)"; with `use_sampling=False` that is the only note. (b) `Desktop.scrape` parses the page with BeautifulSoup, resolves every `href`/`src` against the final URL after redirects (`urljoin`, so absolute, `mailto:` and `#` links are kept correct), then converts with `MarkdownConverter().convert_soup` - the same parser and defaults `markdownify()` used. `beautifulsoup4>=4.9` is now a declared dependency (it was already installed as markdownify's own dependency; lock refreshed with `uv lock --offline` because Avast breaks TLS to PyPI - no new package, same version). 8 new unit tests in `tests/test_scrape_links_and_query.py` (5 failed first; the 3 "keep as is" cases passed); full suite 1144 passed; lint unchanged at 53. Only caller of `Desktop.scrape` is the Scrape tool. Live (real tool, no sampling): example.com with the query shows "...raw content returned; query ignored (it only focuses the summary)."; iana.org/help/example-domains lists `https://www.iana.org/domains`, `/static/...svg` logo etc. as full addresses.
 - [ ]  3.18 **Screenshot `region` details.** Text form `"100,100,300,200"` (allowed by the schema) fails with "Extra data: line 1 column 4 (char 3)"; `[0,0,1921,1080]` (1 px past the screen) is accepted although the description promises an error, and prints "image pixels are downscaled; multiply by 1.000521"; `use_annotation=true` is silently ignored on Screenshot.
 
   - [ ]  a. Parse comma-separated text for `region`.

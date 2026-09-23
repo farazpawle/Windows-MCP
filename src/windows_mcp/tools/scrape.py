@@ -70,11 +70,10 @@ def register(mcp, *, get_desktop, get_analytics):
             except Exception:
                 logger.debug("Scrape summary via sampling failed", exc_info=True)
 
-        if use_sampling:
-            # Clients without sampling (e.g. Claude Code) would otherwise get raw content
-            # with no hint that the default summary was skipped.
-            return (
-                f"URL: {url}\nNote: summary unavailable in this client; raw content returned.\n"
-                f"Content:\n{content}"
-            )
-        return f"URL: {url}\nContent:\n{content}"
+        # Clients without sampling (e.g. Claude Code) would otherwise get raw content
+        # with no hint that the default summary was skipped, or that query only steers it.
+        notes = ["summary unavailable in this client; raw content returned"] if use_sampling else []
+        if query:
+            notes.append("query ignored (it only focuses the summary)")
+        note = f"Note: {'; '.join(notes)}.\n" if notes else ""
+        return f"URL: {url}\n{note}Content:\n{content}"

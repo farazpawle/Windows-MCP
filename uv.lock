@@ -1757,6 +1757,7 @@ name = "windows-mcp"
 version = "0.8.5"
 source = { editable = "." }
 dependencies = [
+    { name = "beautifulsoup4" },
     { name = "click" },
     { name = "comtypes" },
     { name = "dxcam" },
@@ -1786,6 +1787,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "beautifulsoup4", specifier = ">=4.9" },
     { name = "click", specifier = ">=8.2.1" },
     { name = "comtypes", specifier = ">=1.4.15" },
     { name = "dxcam", specifier = ">=0.3.0" },

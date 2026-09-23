@@ -22,7 +22,8 @@ from urllib.parse import urljoin
 from contextlib import contextmanager
 from locale import getpreferredencoding
 from typing import Literal
-from markdownify import markdownify
+from markdownify import MarkdownConverter
+from bs4 import BeautifulSoup
 from fuzzywuzzy import process
 from time import sleep, time, perf_counter
 from psutil import Process
@@ -1235,9 +1236,13 @@ class Desktop:
             raise ConnectionError(f"Failed to connect to {current_url}: {e}") from e
         except requests.exceptions.Timeout as e:
             raise TimeoutError(f"Request timed out for {current_url}: {e}") from e
-        html = response.text
-        content = markdownify(html=html)
-        return content
+        # Relative links ("/domains") mean nothing once the page is text; resolve them
+        # against the address the page was actually served from (after redirects).
+        soup = BeautifulSoup(response.text, "html.parser")
+        for attr in ("href", "src"):
+            for tag in soup.find_all(attrs={attr: True}):
+                tag[attr] = urljoin(current_url, tag[attr])
+        return MarkdownConverter().convert_soup(soup)
 
     def is_overlay_window(self, element: uia.Control) -> bool:
         """Return True if the window is a decorative overlay rather than a real app window.
