@@ -30,6 +30,7 @@ def start_window(
     *,
     rect: tuple[int, int, int, int] = (300, 300, 420, 280),
     textbox: bool = False,
+    scrollbars: bool = False,
     seconds: int = 90,
 ) -> tuple[subprocess.Popen, int]:
     """Open the logging test window and wait until it is visible.
@@ -47,6 +48,8 @@ def start_window(
     ]  # fmt: skip
     if textbox:
         cmd.append("-TextBox")
+    if scrollbars:
+        cmd.append("-ScrollBars")
     proc = subprocess.Popen(
         cmd, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
     )

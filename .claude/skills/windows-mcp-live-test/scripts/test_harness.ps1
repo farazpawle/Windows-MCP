@@ -8,7 +8,8 @@ param(
     [Parameter(Mandatory)] [string]$Log,
     [int]$X = 300, [int]$Y = 300, [int]$Width = 420, [int]$Height = 280,
     [int]$Seconds = 90,
-    [switch]$TextBox
+    [switch]$TextBox,
+    [switch]$ScrollBars  # with -TextBox: a vertical scroll bar (a ScrollPattern for UIA)
 )
 Add-Type -ReferencedAssemblies System.Windows.Forms, System.Drawing -TypeDefinition @"
 using System;
@@ -61,6 +62,7 @@ if ($TextBox) {
     $box = New-Object Windows.Forms.TextBox
     $box.Multiline = $true
     $box.Dock = "Fill"
+    if ($ScrollBars) { $box.ScrollBars = "Vertical" }
     $textPath = "$Log.text"
     $box.Add_TextChanged({ try { [IO.File]::WriteAllText($textPath, $box.Text) } catch {} })
     # Clicks and wheel on the box never reach the form's WndProc, so log them here.

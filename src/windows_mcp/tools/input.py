@@ -13,6 +13,7 @@ from windows_mcp.infrastructure import with_analytics
 from fastmcp import Context
 from windows_mcp.tools._args import as_bool
 from windows_mcp.tools._coords import to_model, to_screen
+from windows_mcp.tree.utils import describe_point, focused_value, scroll_position
 
 
 WaitForCondition = Literal[
@@ -138,6 +139,28 @@ def _typed_text(text: str) -> str:
     if len(text) <= _TYPED_PREVIEW_CHARS:
         return text
     return f'{len(text):,} characters ("{text[:_TYPED_PREVIEW_CHARS]}...")'
+
+
+def _is_point(point: object) -> bool:
+    return isinstance(point, (list, tuple)) and all(type(v) is int for v in point)
+
+
+def _point_description(point: list) -> str:
+    """'button "Save" in "Notepad" ' for a Click reply (round-2 B.10), else ""."""
+    described = describe_point(*point) if _is_point(point) else ""
+    return f"{described} " if described else ""
+
+
+def _scroll_position(point: list, axis: str) -> tuple[str, float] | None:
+    return scroll_position(*point, axis) if _is_point(point) else None
+
+
+def _scroll_change(before: tuple[str, float] | None, after: tuple[str, float] | None) -> str:
+    """' list "Files" is now at 45% (was 30%).' for a Scroll reply (round-2 B.10)."""
+    if after is None:
+        return " The scroll position could not be read."
+    was = f" (was {before[1]:g}%)" if before and before[0] == after[0] else ""
+    return f" {after[0]} is now at {after[1]:g}%{was}."
 
 
 def _held_suffix(modifiers: list[str]) -> str:
@@ -421,12 +444,14 @@ def register(
         x, y = to_model(desktop, loc)
         # clicks=0 only moves the pointer, which is how a held drag is steered.
         released = release_held_button(desktop) if clicks else ""
+        # Read before clicking: the click may close or replace what it hits.
+        target = _point_description(loc) if clicks else ""
         desktop.click(loc=loc, button=button, clicks=clicks, modifiers=modifiers)
         if clicks == 0:
             return f"Moved to ({x},{y}) (hover)."
         return (
-            f"{_CLICK_NAMES[clicks]} {button} clicked at ({x},{y}){_held_suffix(modifiers)}."
-            f"{released}"
+            f"{_CLICK_NAMES[clicks]} {button} clicked {target}at ({x},{y})"
+            f"{_held_suffix(modifiers)}.{released}"
         )
 
     @mcp.tool(
@@ -472,6 +497,7 @@ def register(
         typed = _typed_text(text)
         done = " Cleared the existing text first." if clear else ""
         done += " Pressed Enter." if press_enter else ""
+        done += focused_value()
         if loc is None:
             return f"Typed {typed} into the focused element{_focus_suffix(focus)}{done}"
         x, y = to_model(desktop, loc)
@@ -517,13 +543,16 @@ def register(
         if loc and len(loc) != 2:
             raise ValueError("Location must be a list of exactly 2 integers [x, y]")
         released = release_held_button(desktop)
+        point = loc or list(desktop.get_cursor_location())
+        before = _scroll_position(point, axis)
         response = desktop.scroll(loc, axis, direction, wheel_times, modifiers=modifiers)
         if response:
             return f"{response}{released}"
         where = " at ({},{})".format(*to_model(desktop, loc)) if loc else " at the mouse position"
         return (
             f"Scrolled {axis} {direction} by {wheel_times} wheel times"
-            f"{where}{_held_suffix(modifiers)}.{released}"
+            f"{where}{_held_suffix(modifiers)}.{_scroll_change(before, _scroll_position(point, axis))}"
+            f"{released}"
         )
 
     @mcp.tool(

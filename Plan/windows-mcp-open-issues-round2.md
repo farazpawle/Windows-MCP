@@ -1,7 +1,7 @@
 ---
 Title: Windows-MCP open issues backlog - round 2 (2026-09-22)
-Description: Findings of the second round of live testing of all 20 windows-mcp tools on 2026-09-22, turned into a task file. Part A Bugs - 7 High (registry paths act as wildcards and reach the file system; WaitFor renumbers Snapshot labels; off-screen points are clamped and clicked; an on-top unfocused window gets no Snapshot elements; pop-up menus don't hide covered elements; region clipping moves a click point under a covering window), 16 Medium, 27 Low. Part B Improvements to reach Claude Cowork computer-use behaviour. Part C New tools/abilities (each needs the user's design approval first). Part D Skills/Skill.md corrections and one optional [User] high-DPI test. Items 3.28-3.33 were found while fixing other items (all done). Every item keeps its finding, then lists single-action fix subtasks and its own Verify line; the file ends with the overall verification rules.
-Total Tasks: 185
+Description: Findings of the second round of live testing of all 20 windows-mcp tools on 2026-09-22, turned into a task file. Part A Bugs - 7 High (registry paths act as wildcards and reach the file system; WaitFor renumbers Snapshot labels; off-screen points are clamped and clicked; an on-top unfocused window gets no Snapshot elements; pop-up menus don't hide covered elements; region clipping moves a click point under a covering window), 16 Medium, 27 Low. Part B Improvements to reach Claude Cowork computer-use behaviour. Part C New tools/abilities (each needs the user's design approval first). Part D Skills/Skill.md corrections and one optional [User] high-DPI test. Items 3.28-3.33 were found while fixing other items (all done); 3.34 (horizontal Scroll reads VS Code unguarded) was found during B.10 and is open. Every item keeps its finding, then lists single-action fix subtasks and its own Verify line; the file ends with the overall verification rules.
+Total Tasks: 186
 ---
 # Windows-MCP open issues - round 2
 
@@ -441,6 +441,12 @@ Source: live tests on 2026-09-22 (Windows 11 Pro 26200, one 1920x1080 display at
   - **Verify:** Unit - both mismatches raise and `desktop.scroll` is not called. Live - the same call through a FastMCP client returns `is_error=True`.
   - **Result (2026-09-23):** done. `scroll_tool` checks `direction` against `axis` right after `wheel_times`, before a held button is released or the pointer moves, and raises "direction must be left or right for horizontal (got 'up')". 4 unit cases added to `tests/test_scroll_axis.py` through a real FastMCP client (all failed first: no error, `desktop.scroll` called); suite 1241 passed. Live (real Desktop, no input sent): `type="horizontal"`+`up` and `axis="vertical"`+`left` both return a tool error with that text. `Skills/Skill.md` Scroll row notes it.
 
+- [ ]  3.34 **Horizontal Scroll reads the element under the pointer without the VS Code guard.** Tool: Scroll. Found on 2026-09-23 while doing B.10 (code reading, not run). `Desktop._scroll_horizontal` calls `ControlFromCursor()` and walks its parents for a ScrollPattern with no hung / VS Code-family check, while Snapshot, WaitFor, the B.9 label check and the B.10 reply reads all skip those windows. A horizontal Scroll over VS Code could freeze it (one element read did on 2026-09-22).
+
+  - [ ]  a. Before the ScrollPattern lookup, skip it (use the real horizontal wheel) when the window at the cursor is hung or VS Code-family (`tree/utils._readable_window`).
+
+  - **Verify:** Unit - with an unreadable window at the cursor, `ControlFromCursor` is not called and the wheel path runs. Live - not over VS Code (never); a harness horizontal Scroll still logs `hwheel`.
+
 # Part B - Improvements (to work like Claude Cowork)
 
 Each item: what windows-mcp does today, what computer use / Cowork does, and the suggested change. Items that change behaviour start with a `[User]` design approval.
@@ -503,14 +509,15 @@ Each item: what windows-mcp does today, what computer use / Cowork does, and the
 
   - **Verify:** Unit - a stale label is refused. Live - Snapshot, change the harness layout, Click the old label: refused, no click logged.
   - **Result (2026-09-23):** done. User chose the check at click time (no Snapshot ids). New `tree/utils.element_still_at(name, control_type, x, y)`, called for every label in `Desktop.get_coordinates_from_labels` (the one path for Click/Type/Scroll/Move/MultiSelect/MultiEdit labels): the top-level window at the point (win32, no UIA read) must exist and be neither hung nor VS Code-family, else refused unread; then `ControlFromPoint` and up to 10 parents must show the listed name as Name, AutomationId or localized type (unnamed fields: the type). `Word` labels skip the name check (no element carries one word); a UIA exception lets the action through as before (ponytail note). Refusal: 'label N (edit "") is no longer at its spot; the screen changed since Snapshot. Take a new Snapshot.' `tests/conftest.py` stubs the check for made-up trees. 15 tests in `tests/test_label_still_there.py` (all failed first); suite 1289 passed. Live (two harness windows): label click on the textbox went through (harness logged `lbutton`); a second harness window moved over the spot, the same label was refused, the covering window logged nothing and the first still had one click. Known limit: two unnamed fields of the same type swapping places pass the check.
-- [ ]  B.10 **Verified replies.** Today: replies repeat the request ("Typed ...", "Single left clicked ...") even when nothing happened (bugs 1.4, 2.4, 2.5, 3.1, 3.3).
+- [x]  B.10 **Verified replies.** Today: replies repeat the request ("Typed ...", "Single left clicked ...") even when nothing happened (bugs 1.4, 2.4, 2.5, 3.1, 3.3).
 
-  - [ ]  a. [User] Approve the reply format (design choice - adds a little time to each action).
-  - [ ]  b. Click: report the element under the pointer, e.g. "Clicked button 'ShowLater' at (633,521)".
-  - [ ]  c. Type: report the field's value after typing.
-  - [ ]  d. Scroll: report the scroll position after scrolling.
+  - [x]  a. [User] Approve the reply format (design choice - adds a little time to each action).
+  - [x]  b. Click: report the element under the pointer, e.g. "Clicked button 'ShowLater' at (633,521)".
+  - [x]  c. Type: report the field's value after typing.
+  - [x]  d. Scroll: report the scroll position after scrolling.
 
   - **Verify:** Live - each reply names the real element/value/position seen in the harness state file.
+  - **Result (2026-09-23):** done in the approved format. New read-only helpers in `tree/utils.py`, each skipping hung and VS Code-family windows (named, never read): `describe_point` (element at the point read before the click; a nameless text/image part climbs to its named parent, an unnamed field stays itself), `focused_value` (focused field's ValuePattern after typing, 100-char preview plus length; password boxes never shown), `scroll_position` (nearest ancestor that scrolls on the axis; read before and after). Replies: 'Single left clicked edit in "LiveTestB10" at (510,451).', ' The field (edit) now reads "hello world".', ' edit is now at 64% (was 100%).' or ' The scroll position could not be read.' `tests/conftest.py` stubs them for made-up screens. 23 tests in `tests/test_verified_replies.py` (all failed first); suite 1310 passed. Live (harness with a new `-ScrollBars` switch): Click named the text box; Type reported "hello world" = the harness text file; after 3,011 characters and Scroll up 3, the reply said 64% (was 100%) and win32 `GetScrollInfo` on the box read 64.0. Found 3.34 on the way.
 - [x]  B.11 **Output caps everywhere.**
 
   - PowerShell, FileSystem read, Process list: done together with 2.10.

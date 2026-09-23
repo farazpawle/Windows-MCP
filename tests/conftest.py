@@ -20,6 +20,10 @@ def _nothing_covers_fake_windows(monkeypatch):
     monkeypatch.setattr("windows_mcp.desktop.service.top_level_window_at", lambda x, y: 0)
     # Labels of made-up trees are "still there" (B.9); test_label_still_there covers the check.
     monkeypatch.setattr("windows_mcp.desktop.service.element_still_at", lambda *a, **k: True)
+    # B.10 reply reads: nothing is known about made-up points (test_verified_replies covers them).
+    monkeypatch.setattr("windows_mcp.tools.input.describe_point", lambda *a, **k: "")
+    monkeypatch.setattr("windows_mcp.tools.input.focused_value", lambda *a, **k: "")
+    monkeypatch.setattr("windows_mcp.tools.input.scroll_position", lambda *a, **k: None)
 
 
 @pytest.fixture

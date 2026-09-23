@@ -9,7 +9,7 @@ import win32gui
 import win32process
 
 import windows_mcp.uia as uia
-from windows_mcp.desktop.utils import is_window_hung
+from windows_mcp.desktop.utils import is_window_hung, remove_private_use_chars, repair_surrogates
 from windows_mcp.uia import Control
 
 logger = logging.getLogger(__name__)
@@ -107,6 +107,95 @@ def element_still_at(name: str, control_type: str, x: int, y: int, max_depth: in
         logger.debug("Could not re-check the element at (%s, %s)", x, y, exc_info=True)
         return True
     return False
+
+
+# Round-2 B.10: what Click, Type and Scroll replies report. Each read is guarded like
+# element_still_at: a hung or VS Code-family window is named but never read.
+
+
+def _clean(text: str, limit: int = 60) -> str:
+    text = repair_surrogates(remove_private_use_chars(text or "")).strip()
+    return text if len(text) <= limit else f"{text[:limit]}..."
+
+
+def _readable_window(handle: int) -> bool:
+    return bool(handle) and not is_window_hung(handle) and not is_unreadable_window(handle)
+
+
+def _described(control) -> str:
+    name = _clean(control.Name)
+    return f'{control.LocalizedControlType} "{name}"' if name else control.LocalizedControlType
+
+
+# Nameless parts a click lands on inside the real target (the text inside a button).
+_INNER_PARTS = {"TextControl", "ImageControl"}
+
+
+def describe_point(x: int, y: int, max_depth: int = 3) -> str:
+    """'button "Save" in "Notepad"' for the element at (x, y); "" when nothing is there."""
+    handle = top_level_window_at(x, y)
+    if not handle:
+        return ""
+    window = f'in "{_clean(win32gui.GetWindowText(handle))}"'
+    if not _readable_window(handle):
+        return f"{window} (not read)"
+    try:
+        control = uia.ControlFromPoint(x, y)
+        for _ in range(max_depth):
+            if control is None or control.Name.strip():
+                break
+            if control.ControlTypeName not in _INNER_PARTS:
+                break  # an unnamed field is itself the target, not its window
+            control = control.GetParentControl()
+        return f"{_described(control)} {window}" if control is not None else window
+    except Exception:
+        logger.debug("Could not describe the element at (%s, %s)", x, y, exc_info=True)
+        return window
+
+
+def focused_value() -> str:
+    """' The field (edit "Search") now reads "hi".' for the focused field, else ""."""
+    if not _readable_window(win32gui.GetForegroundWindow()):
+        return ""
+    try:
+        focused = uia.GetFocusedControl()
+        pattern = focused.GetPattern(uia.PatternId.ValuePattern) if focused else None
+        if pattern is None:
+            return ""
+        field = _described(focused)
+        if focused.IsPassword:
+            return f" The field ({field}) is a password box; its contents are not shown."
+        value = pattern.Value or ""
+        shown = _clean(value, 100)
+        size = f" ({len(value):,} characters)" if len(value) > 100 else ""
+        return f' The field ({field}) now reads "{shown}"{size}.'
+    except Exception:
+        logger.debug("Could not read the focused field", exc_info=True)
+        return ""
+
+
+def scroll_position(x: int, y: int, axis: str, max_depth: int = 15) -> tuple[str, float] | None:
+    """(description, percent) of the nearest area at (x, y) that scrolls along *axis*."""
+    if not _readable_window(top_level_window_at(x, y)):
+        return None
+    vertical = axis == "vertical"
+    try:
+        control = uia.ControlFromPoint(x, y)
+        for _ in range(max_depth):
+            if control is None:
+                break
+            pattern = control.GetPattern(uia.PatternId.ScrollPattern)
+            if pattern is not None and (
+                pattern.VerticallyScrollable if vertical else pattern.HorizontallyScrollable
+            ):
+                percent = (
+                    pattern.VerticalScrollPercent if vertical else pattern.HorizontalScrollPercent
+                )
+                return _described(control), round(percent, 1)
+            control = control.GetParentControl()
+    except Exception:
+        logger.debug("Could not read the scroll position at (%s, %s)", x, y, exc_info=True)
+    return None
 
 
 def z_order_rank() -> dict[int, int]:
