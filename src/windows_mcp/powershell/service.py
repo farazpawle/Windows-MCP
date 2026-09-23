@@ -18,6 +18,14 @@ __all__ = ["PowerShellExecutor"]
 
 logger = logging.getLogger(__name__)
 
+# Both pwsh ("PowerShell is ...") and Windows PowerShell ("Windows PowerShell is ...").
+_PROMPT_BLOCKED = "NonInteractive mode. Read and Prompt functionality is not available"
+_PROMPT_HINT = (
+    "Error: interactive input is not available - the command asked for input (Read-Host, "
+    "a confirmation or a credential prompt) and nothing was done at that step. Pass the "
+    "value as a parameter, or add -Confirm:$false, -Force or -Recurse as appropriate."
+)
+
 
 def _read_reg_env(hkey: int, subkey: str) -> tuple[dict[str, str], str, str]:
     """Read all environment variables from a registry key.
@@ -259,7 +267,9 @@ class PowerShellExecutor:
 
             shell = shell or ("pwsh" if shutil.which("pwsh") else "powershell")
 
-            args = [shell, "-NoProfile"]
+            # No one can answer a prompt: without -NonInteractive, Read-Host returned ""
+            # and a confirmation prompt failed with a meaningless null-reference error.
+            args = [shell, "-NoProfile", "-NonInteractive"]
             # Only older Windows PowerShell (5.1) uses -OutputFormat Text successfully here
             shell_name = os.path.basename(shell).lower().replace(".exe", "")
             if shell_name == "powershell":
@@ -281,13 +291,20 @@ class PowerShellExecutor:
             if include_errors and stdout.strip() and stderr:
                 # Not just "Errors": warning, verbose and debug lines land here too.
                 output = f"{stdout.rstrip()}\n\nErrors and messages:\n{stderr}"
+            returncode = result.returncode
+            # ponytail: matches the English message only; a localized PowerShell keeps
+            # its own wording and the raw exit code.
+            if _PROMPT_BLOCKED in stderr:
+                # A blocked confirmation prompt is a non-terminating error (exit 0).
+                returncode = returncode or 1
+                output = f"{output.rstrip()}\n\n{_PROMPT_HINT}"
             # If the command failed with "Access is denied" and we aren't elevated, add a helpful hint
-            if result.returncode != 0 and "Access is denied" in output and not is_elevated():
+            if returncode != 0 and "Access is denied" in output and not is_elevated():
                 output += (
                     "\n\nHINT: This command may require an elevated (Administrator) terminal. "
                     "The Windows-MCP server is currently running at a lower integrity level."
                 )
-            return output, result.returncode
+            return output, returncode
         except subprocess.TimeoutExpired as e:
             # What the command printed before it was stopped is often the clue to why.
             partial = "\n".join(
