@@ -27,6 +27,8 @@ pytest                     # Run all tests
 pytest tests/test_foo.py   # Run a single test file
 ```
 
+On this PC Avast breaks TLS to PyPI (`invalid peer certificate: BadSignature`, even with `--native-tls`), so refresh the lock after a dependency edit with `uv lock --offline` (works when every package is already cached). While a windows-mcp server from this `.venv` is running, `uv run` cannot reinstall the project (`windows-mcp.exe` is locked) after `pyproject.toml` changes; use `uv run --no-sync ...`.
+
 **Package manager**: UV (not pip). **Python**: 3.14+ (`requires-python = ">=3.14"`; `.python-version` pins 3.14.7, which older uv releases cannot download — use `uv sync --python 3.14 --extra dev`, since pytest/ruff live in the `dev` extra). **Build backend**: Hatchling.
 
 ## Architecture
