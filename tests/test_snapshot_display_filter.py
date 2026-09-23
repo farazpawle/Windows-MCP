@@ -105,9 +105,15 @@ class TestParseRegionSelection:
         with pytest.raises(ValueError):
             desktop.parse_region_selection([5000, 5000, 5100, 5100])
 
-    def test_allows_region_partially_outside_virtual_screen(self, desktop):
-        result = desktop.parse_region_selection([1800, 900, 2200, 1300])
-        assert result == Rect(1800, 900, 2200, 1300)
+    def test_rejects_region_partially_outside_virtual_screen(self, desktop):
+        # Round-2 3.18: the capture would silently differ from what was asked.
+        with pytest.raises(ValueError, match="goes past the screen"):
+            desktop.parse_region_selection([1800, 900, 2200, 1300])
+        with pytest.raises(ValueError, match="goes past the screen"):
+            desktop.parse_region_selection([0, 0, 1921, 1080])
+
+    def test_allows_region_filling_the_whole_screen(self, desktop):
+        assert desktop.parse_region_selection([0, 0, 1920, 1080]) == Rect(0, 0, 1920, 1080)
 
 
 class TestDisplayFiltering:

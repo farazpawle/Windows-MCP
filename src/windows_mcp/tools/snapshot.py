@@ -97,12 +97,16 @@ def register(mcp, *, get_desktop, get_analytics):
         region: list[int] | str | None = None,
         ctx: Context = None,
     ):
+        if as_bool(use_annotation, "use_annotation"):
+            raise ValueError(
+                "use_annotation needs UI elements, which Screenshot skips; use Snapshot instead"
+            )
         try:
             capture_result = capture_desktop_state(
                 get_desktop(),
                 use_vision=True,
                 use_dom=False,
-                use_annotation=as_bool(use_annotation, "use_annotation"),
+                use_annotation=False,
                 use_ui_tree=False,
                 width_reference_line=width_reference_line,
                 height_reference_line=height_reference_line,

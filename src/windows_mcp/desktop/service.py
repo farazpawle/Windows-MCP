@@ -1491,6 +1491,12 @@ class Desktop:
                 f"region {region} does not overlap the virtual screen bounds "
                 f"{screen_box.xyxy_to_string()}"
             )
+        if overlap != candidate:
+            # Capturing only the on-screen part would silently return less than was asked.
+            raise ValueError(
+                f"region {region} goes past the screen bounds {screen_box.xyxy_to_string()} "
+                "(right and bottom are exclusive)"
+            )
 
         return candidate
 

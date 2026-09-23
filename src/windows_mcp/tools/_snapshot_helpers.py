@@ -43,9 +43,20 @@ def _snapshot_profile_enabled() -> bool:
 
 
 def _as_region(value: list | str | None) -> list | None:
+    """Accept region as a list, a JSON array string, or "left,top,right,bottom" text."""
     if value is None or isinstance(value, list):
         return value
-    return json.loads(value)
+    text = value.strip()
+    if not text:
+        return None
+    try:
+        if text.startswith("["):
+            return json.loads(text)
+        return [int(part) for part in text.split(",")]
+    except ValueError:  # JSONDecodeError is a ValueError too
+        raise ValueError(
+            f'region must be [left, top, right, bottom] or "left,top,right,bottom" (got {value!r})'
+        ) from None
 
 
 MAX_GRID_CELLS = 100  # 1920 px / 100 = 19 px cells; thousands turned the image solid grey
