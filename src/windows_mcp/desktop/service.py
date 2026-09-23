@@ -1082,7 +1082,7 @@ class Desktop:
     def scroll(
         self,
         loc: tuple[int, int] = None,
-        type: Literal["horizontal", "vertical"] = "vertical",
+        axis: Literal["horizontal", "vertical"] = "vertical",
         direction: Literal["up", "down", "left", "right"] = "down",
         wheel_times: int = 1,
         modifiers: list[str] = (),
@@ -1090,12 +1090,12 @@ class Desktop:
         if loc:
             self.move(loc)
         with _keys_held(list(modifiers)):
-            return self._scroll_wheel(type, direction, wheel_times, bool(modifiers))
+            return self._scroll_wheel(axis, direction, wheel_times, bool(modifiers))
 
     def _scroll_wheel(
-        self, type: str, direction: str, wheel_times: int, keys_held: bool = False
+        self, axis: str, direction: str, wheel_times: int, keys_held: bool = False
     ) -> str | None:
-        match type:
+        match axis:
             case "vertical":
                 match direction:
                     case "up":
@@ -1109,7 +1109,7 @@ class Desktop:
                     return 'Invalid direction. Use "left" or "right".'
                 self._scroll_horizontal(direction == "right", wheel_times, keys_held)
             case _:
-                return 'Invalid type. Use "horizontal" or "vertical".'
+                return 'Invalid axis. Use "horizontal" or "vertical".'
         return None
 
     def _scroll_horizontal(self, right: bool, wheel_times: int, keys_held: bool = False) -> None:

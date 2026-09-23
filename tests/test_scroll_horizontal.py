@@ -31,7 +31,7 @@ def test_uses_scroll_pattern_of_nearest_horizontal_ancestor(desktop):
         patch.object(uia, "mouse_event") as mouse_event,
         patch.object(uia, "PressKey") as press_key,
     ):
-        desktop.scroll(type="horizontal", direction="right", wheel_times=2)
+        desktop.scroll(axis="horizontal", direction="right", wheel_times=2)
     assert pattern.Scroll.call_count == 6  # 3 small increments per wheel notch
     pattern.Scroll.assert_called_with(uia.ScrollAmount.SmallIncrement, uia.ScrollAmount.NoAmount)
     mouse_event.assert_not_called()
@@ -41,7 +41,7 @@ def test_uses_scroll_pattern_of_nearest_horizontal_ancestor(desktop):
 def test_left_scrolls_by_small_decrement(desktop):
     pattern = MagicMock(HorizontallyScrollable=True)
     with patch.object(uia, "ControlFromCursor", return_value=_control(pattern=pattern)):
-        desktop.scroll(type="horizontal", direction="left", wheel_times=1)
+        desktop.scroll(axis="horizontal", direction="left", wheel_times=1)
     pattern.Scroll.assert_called_with(uia.ScrollAmount.SmallDecrement, uia.ScrollAmount.NoAmount)
 
 
@@ -52,7 +52,7 @@ def test_falls_back_to_horizontal_wheel_without_pattern(desktop):
         patch.object(uia, "mouse_event") as mouse_event,
         patch("windows_mcp.desktop.service.sleep"),
     ):
-        desktop.scroll(type="horizontal", direction="left", wheel_times=2)
+        desktop.scroll(axis="horizontal", direction="left", wheel_times=2)
     assert mouse_event.call_count == 2
     mouse_event.assert_called_with(uia.MouseEventFlag.HWheel, 0, 0, -120, 0)
     vertical_only.Scroll.assert_not_called()
@@ -64,7 +64,7 @@ def test_falls_back_when_uia_lookup_fails(desktop):
         patch.object(uia, "mouse_event") as mouse_event,
         patch("windows_mcp.desktop.service.sleep"),
     ):
-        desktop.scroll(type="horizontal", direction="right", wheel_times=1)
+        desktop.scroll(axis="horizontal", direction="right", wheel_times=1)
     mouse_event.assert_called_once_with(uia.MouseEventFlag.HWheel, 0, 0, 120, 0)
 
 
@@ -80,7 +80,7 @@ def test_modifiers_send_a_real_wheel_instead_of_scroll_pattern(desktop):
     ):
         held.return_value.__enter__.side_effect = lambda: events.append("down")
         held.return_value.__exit__.side_effect = lambda *a: events.append("up")
-        desktop.scroll(type="horizontal", direction="right", wheel_times=2, modifiers=["alt"])
+        desktop.scroll(axis="horizontal", direction="right", wheel_times=2, modifiers=["alt"])
     pattern.Scroll.assert_not_called()
     held.assert_called_once_with(["alt"])
     assert events == [

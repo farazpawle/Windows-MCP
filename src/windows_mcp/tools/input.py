@@ -5,9 +5,10 @@ import math
 import re
 import time
 from collections.abc import Callable, Iterator
-from typing import Any, Literal
+from typing import Annotated, Any, Literal
 
 from mcp.types import ToolAnnotations
+from pydantic import AliasChoices, Field
 from windows_mcp.infrastructure import with_analytics
 from fastmcp import Context
 from windows_mcp.tools._args import as_bool
@@ -476,7 +477,7 @@ def register(
 
     @mcp.tool(
         name="Scroll",
-        description="Scrolls at coordinates [x, y], a UI element's label/id, or current mouse position if loc=None. Type: vertical (default) or horizontal. Direction: up/down for vertical, left/right for horizontal. wheel_times controls amount, 1 or more (1 wheel ≈ 3-5 lines). Use for navigating long content, lists, and web pages. modifiers holds keys while scrolling, e.g. 'ctrl' with up/down to zoom a page or document (allowed: ctrl, shift, alt, win; aliases: control, windows, super, cmd, command, meta, option; separated by +, a comma or a space).",
+        description="Scrolls at coordinates [x, y], a UI element's label/id, or current mouse position if loc=None. axis: vertical (default) or horizontal (also accepted as type). Direction: up/down for vertical, left/right for horizontal. wheel_times controls amount, 1 or more (1 wheel ≈ 3-5 lines). Use for navigating long content, lists, and web pages. modifiers holds keys while scrolling, e.g. 'ctrl' with up/down to zoom a page or document (allowed: ctrl, shift, alt, win; aliases: control, windows, super, cmd, command, meta, option; separated by +, a comma or a space).",
         annotations=ToolAnnotations(
             title="Scroll",
             readOnlyHint=False,
@@ -489,13 +490,16 @@ def register(
     def scroll_tool(
         loc: list[int] | str | None = None,
         label: int | None = None,
-        type: Literal["horizontal", "vertical"] = "vertical",
+        # Was named `type` (still accepted), which shadowed the builtin in this body.
+        axis: Annotated[
+            Literal["horizontal", "vertical"],
+            Field(validation_alias=AliasChoices("axis", "type")),
+        ] = "vertical",
         direction: Literal["up", "down", "left", "right"] = "down",
         wheel_times: int = 1,
         modifiers: list[str] | str | None = None,
         ctx: Context = None,
     ) -> str:
-        # isinstance, not type(): the `type` parameter above shadows the builtin here.
         if isinstance(wheel_times, bool) or not isinstance(wheel_times, int) or wheel_times < 1:
             raise ValueError(f"wheel_times must be 1 or more (got {wheel_times!r})")
         modifiers = _as_modifiers(modifiers)
@@ -506,12 +510,12 @@ def register(
         if loc and len(loc) != 2:
             raise ValueError("Location must be a list of exactly 2 integers [x, y]")
         released = release_held_button(desktop)
-        response = desktop.scroll(loc, type, direction, wheel_times, modifiers=modifiers)
+        response = desktop.scroll(loc, axis, direction, wheel_times, modifiers=modifiers)
         if response:
             return f"{response}{released}"
         where = f" at ({loc[0]},{loc[1]})" if loc else " at the mouse position"
         return (
-            f"Scrolled {type} {direction} by {wheel_times} wheel times"
+            f"Scrolled {axis} {direction} by {wheel_times} wheel times"
             f"{where}{_held_suffix(modifiers)}.{released}"
         )
 
