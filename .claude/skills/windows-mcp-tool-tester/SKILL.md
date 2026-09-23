@@ -4,7 +4,7 @@ description: >
   Automated testing skill for Windows-MCP tools. Use this skill whenever the user wants to test,
   validate, benchmark, or evaluate any Windows-MCP tool (App, PowerShell, Screenshot, Snapshot,
   DisplayInventory, Click, Type, Scroll, Move, Shortcut, Wait, WaitFor, MultiSelect, MultiEdit,
-  Clipboard, Process, Notification, FileSystem, Registry, Scrape). Triggers on phrases like "test the Click tool",
+  Clipboard, Process, Notification, FileSystem, Registry, Scrape, FindText). Triggers on phrases like "test the Click tool",
   "benchmark Screenshot", "validate FileSystem", "run QA on Registry", "check if PowerShell works",
   "evaluate tool performance", or any mention of testing/validating a Windows-MCP tool.
   Each invocation tests exactly ONE tool.
@@ -60,7 +60,7 @@ If the user hasn't specified a tool, present the full list and ask them to pick 
 
 > App, PowerShell, Screenshot, Snapshot, DisplayInventory, Click, Type, Scroll, Move, Shortcut,
 > Wait, WaitFor, MultiSelect, MultiEdit, Clipboard, Process, Notification, FileSystem, Registry,
-> Scrape
+> Scrape, FindText
 
 Once a tool is confirmed, proceed to Step 1. Do NOT test multiple tools in one session.
 

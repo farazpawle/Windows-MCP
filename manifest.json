@@ -96,6 +96,10 @@
       "description": "Captures a fast screenshot-first desktop snapshot with cursor position, active/open windows, and an image. Skips UI tree extraction for speed and should be the default first call when you mainly need visual context. Supports display=[0] or display=[0,1] using zero-based active Windows display indices. Note: the returned image may be downscaled for efficiency; when it is, multiply image coordinates by the ratio of original size to displayed size to get the actual screen coordinates for mouse actions (Click, Move, etc.)."
     },
     {
+      "name": "FindText",
+      "description": "Finds text on screen by OCR (Windows' built-in text recognition) for apps with no accessibility data, such as games, remote desktops and canvas apps. Returns every place the phrase appears with a clickable [x, y] position. Searches every screen, or region=[left, top, right, bottom] only."
+    },
+    {
       "name": "Snapshot",
       "description": "Captures complete desktop state including: system language, focused/opened windows, interactive elements (buttons, text fields, links, menus with coordinates), and scrollable areas. Use this when you need interactive element ids, scrollable regions, or browser DOM extraction with use_dom=True. Set use_vision=True to include screenshot. Set display=[0] or display=[0,1] using zero-based active Windows display indices; omit it to keep the default full-desktop behavior."
     },

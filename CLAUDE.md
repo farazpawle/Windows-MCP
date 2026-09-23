@@ -4,11 +4,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Windows-MCP is a Python MCP (Model Context Protocol) server that bridges AI LLM agents with the Windows OS, enabling direct desktop automation. It exposes 20 tools via FastMCP:
+Windows-MCP is a Python MCP (Model Context Protocol) server that bridges AI LLM agents with the Windows OS, enabling direct desktop automation. It exposes 21 tools via FastMCP:
 
 | Group | Tools |
 |---|---|
-| Capture | `Screenshot`, `Snapshot`, `Scrape`, `DisplayInventory` |
+| Capture | `Screenshot`, `Snapshot`, `Scrape`, `DisplayInventory`, `FindText` (OCR) |
 | Input | `Click`, `Type`, `Scroll`, `Move` (also drag-and-drop via `drag=True`), `Shortcut`, `MultiSelect`, `MultiEdit` |
 | Timing | `Wait`, `WaitFor` |
 | System | `App`, `PowerShell`, `FileSystem`, `Registry`, `Process`, `Clipboard`, `Notification` |
@@ -54,7 +54,7 @@ The codebase follows a layered service architecture under `src/windows_mcp/`:
 
 **Virtual Desktop Manager** — `vdm/core.py`: Tracks which windows belong to which Windows virtual desktop (Win10/11).
 
-**Domain services** — thin packages backing the system tools: `filesystem/` (read/write/copy/move/delete/list/search/info), `registry/` (get/set/delete/list, implemented via PowerShell cmdlets), `powershell/` (`PowerShellExecutor` plus environment resolution), `process/` (list/kill), `notifications/`, `clipboard/` (text, images, file lists; pywin32's `CountClipboardFormats` raises on an empty clipboard, so emptiness is checked with `EnumClipboardFormats(0)`). Registry and PowerShell tools shell out, so their latency is dominated by process startup.
+**Domain services** — thin packages backing the system tools: `filesystem/` (read/write/copy/move/delete/list/search/info), `registry/` (get/set/delete/list, implemented via PowerShell cmdlets), `powershell/` (`PowerShellExecutor` plus environment resolution), `process/` (list/kill), `notifications/`, `clipboard/` (text, images, file lists; pywin32's `CountClipboardFormats` raises on an empty clipboard, so emptiness is checked with `EnumClipboardFormats(0)`). Registry and PowerShell tools shell out, so their latency is dominated by process startup. `ocr/` (FindText, WaitFor `screen_text`) runs `Windows.Media.Ocr` through Windows PowerShell 5.1 on a temporary PNG, pinned to `powershell` because pwsh 7 cannot load WinRT types (no WinRT Python package is installed).
 
 **Infrastructure** — `infrastructure/`: cross-cutting concerns. `analytics.py` (optional PostHog telemetry, disabled with `ANONYMIZED_TELEMETRY=false`; records tool names and errors only, never arguments or outputs), `auth.py` and `oauth.py` (bearer-token and OAuth middleware for HTTP transports), `security.py` (SSRF validation, IP allowlist middleware), `config.py` (server configuration). Note `windows_mcp/config.py` at the package root is unrelated — it only holds the `WINDOWS_MCP_DEBUG` helpers.
 
