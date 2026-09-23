@@ -475,12 +475,13 @@ Each item: what windows-mcp does today, what computer use / Cowork does, and the
 
   - **Verify:** Unit - a 20x10 region with zoom returns a ~1280-px-wide image. Live - zoomed region of small harness text is readable.
   - **Result (2026-09-23):** done. User chose the Screenshot option. `Screenshot zoom=true` needs a `region` (refused before any capture otherwise). `capture_desktop_state(zoom=True)` passes `scale = min(1280/width, 1080/height)` of the screen-pixel region and no size cap (the cap clamped any enlargement back to 1), ignoring `WINDOWS_MCP_SCREENSHOT_SCALE`. Being a region, it never changes the B.1 coordinate space; the reply's `Coordinates:` line gives the pixel formula (printed even with `WINDOWS_MCP_RAW_COORDINATES`, whose old hint only covers shrinking). 5 unit tests in `tests/test_screenshot_zoom.py` (all failed first; a real `get_state` turns a 20x10 capture into 1280x640); suite 1269 passed. Live (read-only, harness window): a 120x24 title-bar region came back 1280x256 with "LiveTestB4" plainly legible; the region echoed in the 0.75 caller space and the full-screen space stayed 0.75.
-- [ ]  B.5 **Longer holds and a bounded wait.** Today: Shortcut `hold` up to 10 s; Wait has no limit. Cowork: `hold_key` and `wait` both up to 300 s.
+- [x]  B.5 **Longer holds and a bounded wait.** Today: Shortcut `hold` up to 10 s; Wait has no limit. Cowork: `hold_key` and `wait` both up to 300 s.
 
-  - [ ]  a. Raise the Shortcut `hold` limit to 300 s.
+  - [x]  a. Raise the Shortcut `hold` limit to 300 s.
 
   - Wait cap: done together with 2.12.
   - **Verify:** Unit - `hold=300` accepted, `301` refused.
+  - **Result (2026-09-23):** done. Shortcut `hold` maximum 10 -> 300 s (same `_as_seconds` check, so the wording "more than 0 and at most 300 seconds" matches the other limits); description and guide updated. Tests: `hold=300` reaches the desktop, `301` is refused with nothing pressed (the old 10-second cases moved to 301); suite 1270 passed. The Wait cap was already 300 s (2.12). No live run: only the number changed; holding itself was proven live under 3.x.
 - [x]  B.6 **Fast key repeat.** Today: ~0.52 s per repeated press. Cowork's `key` with `repeat` fires the presses back to back.
 
   - Done together with 2.6.

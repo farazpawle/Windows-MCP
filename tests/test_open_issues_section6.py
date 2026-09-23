@@ -156,7 +156,7 @@ class TestShortcutHoldRepeat:
             {"repeat": 101},
             {"repeat": True},
             {"hold": 0},
-            {"hold": 11},
+            {"hold": 301},
             {"hold": float("nan")},
             {"hold": 1, "repeat": 2},
         ],

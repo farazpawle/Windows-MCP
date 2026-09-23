@@ -34,18 +34,24 @@ class TestHoldWording:
         desktop = MagicMock()
         with pytest.raises(ValueError) as e:
             _tool("Shortcut", desktop)(shortcut="a", hold=0)
-        assert str(e.value) == "hold must be more than 0 and at most 10 seconds (got 0)"
+        assert str(e.value) == "hold must be more than 0 and at most 300 seconds (got 0)"
         desktop.shortcut.assert_not_called()
 
     def test_too_long_hold_uses_the_same_sentence(self):
         with pytest.raises(ValueError) as e:
-            _tool("Shortcut", MagicMock())(shortcut="a", hold=99)
-        assert str(e.value) == "hold must be more than 0 and at most 10 seconds (got 99)"
+            _tool("Shortcut", MagicMock())(shortcut="a", hold=301)
+        assert str(e.value) == "hold must be more than 0 and at most 300 seconds (got 301)"
 
     def test_negative_hold_uses_the_same_sentence(self):
         with pytest.raises(ValueError) as e:
             _tool("Shortcut", MagicMock())(shortcut="a", hold=-1)
-        assert str(e.value) == "hold must be more than 0 and at most 10 seconds (got -1)"
+        assert str(e.value) == "hold must be more than 0 and at most 300 seconds (got -1)"
+
+    def test_computer_use_hold_of_300_seconds_is_accepted(self):
+        # Round-2 B.5: computer use's hold_key allows up to 300 s.
+        desktop = MagicMock()
+        _tool("Shortcut", desktop)(shortcut="a", hold=300)
+        desktop.shortcut.assert_called_once_with("a", repeat=1, hold=300)
 
     def test_wait_duration_still_allows_zero(self):
         desktop = MagicMock()
