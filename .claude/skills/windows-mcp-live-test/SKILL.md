@@ -86,6 +86,9 @@ Helpers (`scripts/livetest.py`):
 | `read_settled(path)` | Reads the log once it stops changing and retries while the file is locked. The window lags behind fast input, so an early read under-counts. |
 | `center`, `on_window`, `close_window`, `mcp_client` | Window centre point, the WindowFromPoint check, clean close by own handle, in-process client. |
 
+Snapshot's text block reaches the client JSON-escaped (`button \"Alpha\"`): undo `\"` before
+matching element lines with a regex, or it finds nothing.
+
 Read-only calls (Snapshot, WaitFor, DisplayInventory, FindText) need no `points`. For pixel
 checks (WaitFor `screen_changed` / `screen_idle`, FindText), open a plain test window first and
 give a `region` inside its client area: anything else on screen (the Claude Code panel's
@@ -119,6 +122,13 @@ cd "<repo root>" && timeout 180 env -u SSLKEYLOGFILE \
 - If the guard aborted, nothing was sent: re-check focus and window position, then re-run.
 - Report the result in plain words. Record any new lesson in this skill, and any behaviour
   change in `Skills/Skill.md`, in the same task (CLAUDE.md "Skills and Keeping Them Current").
+
+## Display-scaling tests
+
+`scripts/dpi_check.py` (run as in section 3, hands off, ~30 s) checks Snapshot centres, label
+Clicks, Move and Screenshot region sizes on a 3-button test window at the current scaling and
+prints `RESULT: PASS`/`FAIL` with the monitor DPI. Passed at 100% on 2026-09-24. Over Remote
+Desktop the session's scaling comes from the connecting client, so change it at the PC itself.
 
 ## Multi-monitor tests (this PC has one screen)
 

@@ -641,6 +641,7 @@ Each is a new feature: the first subtask is the user's approval of the design.
 
 - [ ]  5.1 [User] **True high-DPI test (125% / 150% scaling).** Needs the display scaling changed and a sign-out/sign-in, which would end the agent's session. Optional: change scaling, sign back in, then ask the agent to re-run the coordinate checks (Click, Move, Screenshot region, Snapshot centres).
   - **Verify:** At 125% and 150%, a Click on each harness button is logged by the harness, and Snapshot centres fall inside the buttons on a screenshot.
+  - **Progress (2026-09-24):** check script ready: `.claude/skills/windows-mcp-live-test/scripts/dpi_check.py` (Snapshot centre inside each of 3 harness buttons' real rectangles, Click by label logged by the harness, Move lands on the centre, Screenshot region image = region size). Baseline at 100% (2560x1440, over Remote Desktop): PASS, e.g. Alpha centre (348,346) inside (311,334,386,358), all three clicks logged. Still to do, at the PC itself (an RDP session takes its scaling from the connecting client): switch to 125% then 150%, run the script at each.
 
 ## Round-1 fixes that held (no action)
 
