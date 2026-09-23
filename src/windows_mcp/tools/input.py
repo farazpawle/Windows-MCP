@@ -13,7 +13,7 @@ from windows_mcp.infrastructure import with_analytics
 from fastmcp import Context
 from windows_mcp.tools._args import as_bool
 from windows_mcp.tools._coords import to_model, to_screen
-from windows_mcp.tree.utils import describe_point, focused_value, scroll_position
+from windows_mcp.tree.utils import describe_point, find_element, focused_value, scroll_position
 
 
 WaitForCondition = Literal[
@@ -405,6 +405,10 @@ def register(
             "Supports clicks: 0=hover only (no click), 1=single click (select/focus), 2=double click (open/activate), "
             "3=triple click (select a line/paragraph). "
             "Provide loc or label; with neither, clicks at the current mouse position. "
+            "Or element='type:name' (e.g. 'button:Save', or just 'Save') finds the element by "
+            "name when clicking, no Snapshot needed: an exact name (case ignored) wins, else a "
+            "single partial match; several or none are refused with what was found. It searches "
+            "the front window, or the one named by window. "
             "modifiers holds keys during the click, e.g. 'shift' to extend a selection, "
             "'ctrl' to add to it or open a link in a new tab, 'ctrl+shift'. "
             "Allowed: ctrl, shift, alt, win (aliases: control, windows, super, cmd, command, "
@@ -425,6 +429,8 @@ def register(
         button: Literal["left", "right", "middle"] = "left",
         clicks: int = 1,
         modifiers: list[str] | str | None = None,
+        element: str | None = None,
+        window: str | None = None,
         ctx: Context = None,
     ) -> str:
         if type(clicks) is not int or clicks not in _CLICK_NAMES:
@@ -433,9 +439,17 @@ def register(
         # A hover never presses the keys, so accepting them would report a hold that never happened.
         if clicks == 0 and modifiers:
             raise ValueError("modifiers cannot be used with clicks=0 (a hover holds no keys)")
+        if element is not None and (loc is not None or label is not None):
+            raise ValueError("Give only one of loc, label or element.")
+        if window is not None and element is None:
+            raise ValueError("window only goes with element (the window to search).")
         desktop = get_desktop()
         loc = to_screen(desktop, _as_loc(loc))
-        if label is not None:
+        if element is not None:
+            target_window, _ = desktop.pick_window(window, None)
+            _, _, fx, fy = find_element(target_window.handle, target_window.name, element)
+            loc = [fx, fy]
+        elif label is not None:
             loc = _resolve_label(desktop, label)
         elif loc is None:
             loc = list(desktop.get_cursor_location())

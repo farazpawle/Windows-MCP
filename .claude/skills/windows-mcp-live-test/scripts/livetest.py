@@ -31,6 +31,7 @@ def start_window(
     rect: tuple[int, int, int, int] = (300, 300, 420, 280),
     textbox: bool = False,
     scrollbars: bool = False,
+    buttons: tuple[str, ...] = (),
     seconds: int = 90,
 ) -> tuple[subprocess.Popen, int]:
     """Open the logging test window and wait until it is visible.
@@ -50,6 +51,8 @@ def start_window(
         cmd.append("-TextBox")
     if scrollbars:
         cmd.append("-ScrollBars")
+    if buttons:
+        cmd += ["-Buttons", ",".join(buttons)]
     proc = subprocess.Popen(
         cmd, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
     )
@@ -79,6 +82,18 @@ def center(hwnd: int, dy: int = 0) -> tuple[int, int]:
     left, top, right, bottom = win32gui.GetClientRect(hwnd)
     x, y = win32gui.ClientToScreen(hwnd, ((left + right) // 2, (top + bottom) // 2 + dy))
     return x, y
+
+
+def control_center(hwnd: int, text: str) -> tuple[int, int]:
+    """Screen centre of the window's child control showing `text` (e.g. a harness button)."""
+    found = []
+    win32gui.EnumChildWindows(
+        hwnd, lambda h, _: found.append(h) if win32gui.GetWindowText(h) == text else None, None
+    )
+    if not found:
+        raise RuntimeError(f"no control {text!r} on the test window")
+    left, top, right, bottom = win32gui.GetWindowRect(found[0])
+    return (left + right) // 2, (top + bottom) // 2
 
 
 def on_window(hwnd: int, x: int, y: int) -> bool:

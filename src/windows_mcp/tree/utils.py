@@ -198,6 +198,91 @@ def scroll_position(x: int, y: int, axis: str, max_depth: int = 15) -> tuple[str
     return None
 
 
+# Round-2 C.5: Click element="button:Save" resolves the element when it clicks, so no
+# Snapshot label can go stale. A found element is (localized type, name, centre x, centre y).
+
+_MAX_CANDIDATES = 10
+
+
+def _listed(found: list[tuple[str, str, int, int]]) -> str:
+    names = [f'{kind} "{_clean(name)}"' for kind, name, _, _ in found[:_MAX_CANDIDATES]]
+    more = f" and {len(found) - _MAX_CANDIDATES} more" if len(found) > _MAX_CANDIDATES else ""
+    return ", ".join(names) + more
+
+
+def pick_element(
+    found: list[tuple[str, str, int, int]], role: str, name: str, window: str
+) -> tuple[str, str, int, int]:
+    """The one element meant, from those whose name contains *name*; else ValueError.
+
+    An exact name (case ignored) wins; failing that, a single partial match. Never
+    guesses between two.
+    """
+    kind = role.casefold()
+    typed = [f for f in found if f[0].casefold() == kind] if kind else found
+    exact = [f for f in typed if f[1].casefold() == name.casefold()]
+    matches = exact or typed
+    if len(matches) == 1:
+        return matches[0]
+    what = f'{role or "element"} named "{name}"'
+    if matches:
+        raise ValueError(
+            f'{len(matches)} elements match {what} in "{window}": {_listed(matches)}. '
+            "Give the full name or its type (element='type:name'), or click by loc."
+        )
+    others = f" Found: {_listed(found)}." if found else ""
+    colon = " A name containing ':' needs a leading ':' (element=':12:00')." if ":" in name else ""
+    raise ValueError(f'No {what} in "{window}".{others}{colon}')
+
+
+def find_element(handle: int, window: str, element: str) -> tuple[str, str, int, int]:
+    """Find element='type:name' (type optional) in the window and check it is uncovered."""
+    role, _, name = element.partition(":") if ":" in element else ("", "", element)
+    role, name = role.strip(), name.strip()
+    if not name:
+        raise ValueError("element needs a name, e.g. element='button:Save' or element='Save'.")
+    if not _readable_window(handle):
+        raise ValueError(
+            f'"{window}" cannot be read (not responding, or a VS Code window); click by loc.'
+        )
+    ia = uia.core._AutomationClient.instance().IUIAutomation
+    flags = (
+        uia.PropertyConditionFlags.PropertyConditionFlags_IgnoreCase
+        | uia.PropertyConditionFlags.PropertyConditionFlags_MatchSubstring
+    )
+    found = []
+    try:
+        condition = ia.CreatePropertyConditionEx(uia.PropertyId.NameProperty, name, flags)
+        # ponytail: one native FindAll over the whole window; a very short name in a huge
+        # tree (a grid of thousands) can take seconds. Narrow with type or window if so.
+        elements = ia.ElementFromHandle(handle).FindAll(
+            uia.TreeScope.TreeScope_Descendants, condition
+        )
+        for i in range(elements.Length):
+            el = elements.GetElement(i)
+            rect = el.CurrentBoundingRectangle
+            if el.CurrentIsOffscreen or rect.right <= rect.left or rect.bottom <= rect.top:
+                continue
+            found.append(
+                (
+                    el.CurrentLocalizedControlType,
+                    el.CurrentName,
+                    (rect.left + rect.right) // 2,
+                    (rect.top + rect.bottom) // 2,
+                )
+            )
+    except Exception as e:
+        logger.debug("Element search failed in window %s", handle, exc_info=True)
+        raise ValueError(f'Could not search "{window}" for elements: {e}') from None
+    kind, found_name, x, y = pick_element(found, role, name, window)
+    # Same spot check as label clicks (B.9): another window or a pop-up may sit on top.
+    if not element_still_at(found_name, kind, x, y):
+        raise ValueError(
+            f'{kind} "{_clean(found_name)}" is covered at its spot; bring "{window}" to the front.'
+        )
+    return kind, found_name, x, y
+
+
 def z_order_rank() -> dict[int, int]:
     """Top-level window handle -> position in z-order (0 = frontmost, topmost first)."""
     handles: list[int] = []

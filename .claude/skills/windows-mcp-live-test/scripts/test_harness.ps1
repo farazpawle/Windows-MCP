@@ -9,7 +9,8 @@ param(
     [int]$X = 300, [int]$Y = 300, [int]$Width = 420, [int]$Height = 280,
     [int]$Seconds = 90,
     [switch]$TextBox,
-    [switch]$ScrollBars  # with -TextBox: a vertical scroll bar (a ScrollPattern for UIA)
+    [switch]$ScrollBars,  # with -TextBox: a vertical scroll bar (a ScrollPattern for UIA)
+    [string]$Buttons = ""  # comma-separated names: a row of buttons, each logs "click <name>"
 )
 Add-Type -ReferencedAssemblies System.Windows.Forms, System.Drawing -TypeDefinition @"
 using System;
@@ -74,6 +75,20 @@ if ($TextBox) {
     })
     $box.Add_MouseWheel({ param($s, $e) $form.Write("wheel " + $e.Delta) })
     $form.Controls.Add($box)
+}
+if ($Buttons) {
+    $panel = New-Object Windows.Forms.FlowLayoutPanel
+    $panel.Dock = "Top"
+    $panel.Height = 40
+    foreach ($name in $Buttons.Split(",")) {
+        $button = New-Object Windows.Forms.Button
+        $button.Text = $name
+        $button.AutoSize = $true
+        # Button clicks never reach the form's WndProc, so log them here.
+        $button.Add_Click({ param($s, $e) $form.Write("click " + $s.Text) })
+        $panel.Controls.Add($button)
+    }
+    $form.Controls.Add($panel)
 }
 $timer = New-Object Windows.Forms.Timer
 $timer.Interval = $Seconds * 1000
