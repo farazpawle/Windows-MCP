@@ -18,14 +18,19 @@ Tool names are defined by the `name=` argument of each `@mcp.tool(...)` in `src/
 ## Build & Development Commands
 
 ```bash
-uv sync                    # Install dependencies
-uv run windows-mcp         # Run the MCP server
-ruff format .              # Format code
-ruff check .               # Lint code
-ruff check --fix .         # Lint and auto-fix
-pytest                     # Run all tests
-pytest tests/test_foo.py   # Run a single test file
+uv sync                          # Install dependencies
+uv run windows-mcp serve         # Run the MCP server (stdio; --transport sse|streamable-http for HTTP)
+ruff format .                    # Format code
+ruff check .                     # Lint code
+ruff check --fix .               # Lint and auto-fix
+pytest                           # Run all tests
+pytest tests/test_foo.py         # Run a single test file
+python scripts/check_versions.py # Check the four version strings agree (run before a release)
 ```
+
+`windows-mcp` is a click command group: `serve`, `install` / `uninstall` (run the server as a background scheduled task) and `auth` (generate HTTP credentials; `--with-tls` adds a self-signed cert). Bare `windows-mcp` does not start the server, and serve flags placed before the subcommand are rejected with a hint. `serve` also reads `~/.windows-mcp/config.toml` (`--config` to override); explicit flags win.
+
+The version lives in `pyproject.toml`, `uv.lock`, `manifest.json` and `server.json` `packages[].version` (not the top-level `server.json` version, which is the registry entry's own 1.x line). Bump all of them together; `scripts/check_versions.py` catches drift.
 
 On this PC Avast breaks TLS to PyPI (`invalid peer certificate: BadSignature`, even with `--native-tls`), so refresh the lock after a dependency edit with `uv lock --offline` (works when every package is already cached). While a windows-mcp server from this `.venv` is running, `uv run` cannot reinstall the project (`windows-mcp.exe` is locked) after `pyproject.toml` changes; use `uv run --no-sync ...`.
 
@@ -43,7 +48,7 @@ The codebase follows a layered service architecture under `src/windows_mcp/`:
 
 **Tree service** — `tree/service.py`: Captures the Windows accessibility tree from active and background windows. Identifies interactive elements and scrollable areas. Uses `ThreadPoolExecutor` for multi-threaded UI traversal. `tree/views.py` defines `TreeElementNode`, `ScrollElementNode`, `TreeState`. `tree/config.py` has control type configurations.
 
-**UIAutomation wrapper** — `uia/`: Low-level abstraction over the Windows UIAutomation COM API via `comtypes`. `core.py` wraps the main automation object, `controls.py` has control-specific logic, `patterns.py` wraps UIAutomation patterns, `enums.py` has COM enumerations, `events.py` handles event subscriptions.
+**UIAutomation wrapper** — `uia/`: Low-level abstraction over the Windows UIAutomation COM API via `comtypes`. `core.py` wraps the main automation object, `controls.py` has control-specific logic, `patterns.py` wraps UIAutomation patterns, `enums.py` has COM enumerations, `events.py` handles event subscriptions. `controls.py`, `core.py`, `patterns.py` and `enums.py` (2,000–6,400 lines each) derive from yinkaisheng's Python-UIAutomation-for-Windows (Apache 2.0): keep edits surgical and do not split them for size.
 
 **WatchDog** — `watchdog/service.py`: Runs in a separate thread monitoring UI focus changes via UIAutomation events. Notifies the Tree service of focus changes so the accessibility tree stays current.
 
@@ -88,6 +93,25 @@ The codebase follows a layered service architecture under `src/windows_mcp/`:
 | `WINDOWS_MCP_DEBUG` | `false` | Set to `1`/`true`/`yes`/`on` to enable debug mode. Checked in `config.py`. Also available as `--debug` CLI flag. |
 | `WINDOWS_MCP_READ_VSCODE` | _(off)_ | Set to `1`/`true`/`yes`/`on` to let Snapshot/WaitFor read the UI tree of VS Code-family windows (Code, Cursor, Windsurf, Antigravity, VSCodium). Off because one read pins VS Code at 100% CPU, "Not Responding" until restart, and returns nothing. Resolved in `tree/utils.py`. |
 | `WINDOWS_MCP_DISABLE_FLASH` | _(off)_ | Set to `1`/`true`/`yes`/`on` to suppress the orange-red glowing border that briefly appears after every screenshot. Resolved in `desktop/flash_overlay.py`. |
+
+`serve` flags can also be set by environment variable (click `envvar=` in `__main__.py`): `WINDOWS_MCP_AUTH_KEY`, `WINDOWS_MCP_IP_ALLOWLIST`, `WINDOWS_MCP_CORS_ORIGINS`, `WINDOWS_MCP_SSL_CERTFILE`, `WINDOWS_MCP_SSL_KEYFILE`, `WINDOWS_MCP_OAUTH_CLIENT_ID`, `WINDOWS_MCP_OAUTH_CLIENT_SECRET`, `WINDOWS_MCP_STATELESS_HTTP`, `WINDOWS_MCP_TOOLS`, `WINDOWS_MCP_EXCLUDE_TOOLS`. See `windows-mcp serve --help` for each one's meaning.
+
+## Working Conventions
+
+- This repo is a fork of `CursorTouch/Windows-MCP`. The open bug backlog is the active (not `completed/`) file in `Plan/`.
+- Commits use a type prefix (`fix:`, `docs:`, `style:`, `test:`) and cite the backlog item: `fix: Registry reads the (Default) value (round-2 3.25)`. When `ruff format` rewrites a file wholesale, commit that alone first as `style: ...` with "no behaviour change" in the body, then the fix on top.
+- Unit tests cannot prove input, focus or UI-tree behaviour. Prove those live with the `windows-mcp-live-test` skill: throwaway test window, in-process server, never a tree read of a VS Code-family window.
+- Never put personal details (user or machine names, private folder paths) in tracked files.
+
+## Skills and Keeping Them Current
+
+| Skill | Use |
+|---|---|
+| `.claude/skills/windows-mcp-tool-tester/` | Black-box test one tool through its MCP schema, with a structured report. |
+| `.claude/skills/windows-mcp-live-test/` | Prove a code change on the real desktop with a guarded test window. |
+| `Skills/Skill.md` | Field guide Claude Desktop reads before using the tools; notes where this repo ("local repo") and the PyPI release differ. |
+
+**Mandatory:** when a task teaches something new (a tool behaviour, a testing pitfall, a workaround) or makes any of these skills wrong or incomplete, update that skill in the same task, and name the change in the reply to the user. A fix that changes what a tool does, accepts or replies must update that tool's entry in `Skills/Skill.md`. Likewise, update this file when commands, environment variables, architecture or conventions change. Keep both short: record what is non-obvious, not what the code already says. (Skills outside this repo still need the user's approval before editing.)
 
 ## Security Context
 
