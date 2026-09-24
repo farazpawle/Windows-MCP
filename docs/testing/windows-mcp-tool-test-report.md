@@ -1,6 +1,6 @@
 ---
 Title: Windows-MCP tool test report (2026-09-22)
-Description: Live test results for all 20 windows-mcp tools on the maintainer's Windows 11 PC, run from Claude Code against the local repo on 2026-09-22. Round 1 - a verdict per tool, the ten bugs found and fixed, and post-restart re-tests. Round 2 (after every round-1 item was fixed) - per-tool verdicts again, confirmation that all round-1 fixes held, and 49 new bugs (6 High - registry paths act as wildcards and reach the file system, Snapshot labels renumbered by WaitFor, off-screen points clamped and clicked, an on-top unfocused window gets no Snapshot elements, pop-up menus don't hide covered elements; 16 Medium; 27 Low), plus a comparison with Claude Cowork computer use giving 14 improvements and 8 new-tool ideas, with how each was verified. Round-2 backlog - Plan/windows-mcp-open-issues-round2.md.
+Description: Live test results for all 20 windows-mcp tools on the maintainer's Windows 11 PC, run from Claude Code against the local repo on 2026-09-22. Round 1 - a verdict per tool, the ten bugs found and fixed, and post-restart re-tests. Round 2 (after every round-1 item was fixed) - per-tool verdicts again, confirmation that all round-1 fixes held, and 49 new bugs (6 High - registry paths act as wildcards and reach the file system, Snapshot labels renumbered by WaitFor, off-screen points clamped and clicked, an on-top unfocused window gets no Snapshot elements, pop-up menus don't hide covered elements; 16 Medium; 27 Low), plus a comparison with Claude Cowork computer use giving 14 improvements and 8 new-tool ideas, with how each was verified. Round-2 backlog (all done) - Plan/completed/windows-mcp-open-issues-round2.md.
 Tags: testing, qa, windows-mcp
 Updated: 2026-09-22
 ---
@@ -106,7 +106,7 @@ All held: FileSystem overwrite and yes/no booleans, Process exact-name kill, Reg
 
 ## New issues
 
-49 bugs, all recorded with steps, actual/expected, severity and a suggested fix in `Plan/windows-mcp-open-issues-round2.md` (Part A), plus improvements (Part B) and new tools (Part C) measured against Claude Cowork's computer use. The first five High ones:
+49 bugs, all recorded with steps, actual/expected, severity and a suggested fix in `Plan/completed/windows-mcp-open-issues-round2.md` (Part A), plus improvements (Part B) and new tools (Part C) measured against Claude Cowork's computer use. The first five High ones:
 
 1. Registry paths are treated as wildcards: `delete HKCU:\Software\WMCP-Test\A*` with `recursive=true` deleted keys A1 and A2; `[ ]` in a key name makes it unwritable.
 2. The Registry tool accepts file-system paths: `delete` on a `%TEMP%` folder removed the folder and its file, replying "Registry key ... deleted"; an empty path lists the home folder.

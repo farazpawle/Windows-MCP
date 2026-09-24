@@ -127,8 +127,10 @@ cd "<repo root>" && timeout 180 env -u SSLKEYLOGFILE \
 
 `scripts/dpi_check.py` (run as in section 3, hands off, ~30 s) checks Snapshot centres, label
 Clicks, Move and Screenshot region sizes on a 3-button test window at the current scaling and
-prints `RESULT: PASS`/`FAIL` with the monitor DPI. Passed at 100% on 2026-09-24. Over Remote
-Desktop the session's scaling comes from the connecting client, so change it at the PC itself.
+prints `RESULT: PASS`/`FAIL` with the monitor DPI. Passed at 100%, 125% and 150% on 2026-09-24.
+The test window is DPI-unaware (it reports DPI 96 and Windows stretches it), so this covers the
+harder case, stretched apps. Scale changes from Settings apply at once; no sign-out needed. Over
+Remote Desktop the session's scaling comes from the connecting client, so change it at the PC itself.
 
 ## Multi-monitor tests (this PC has one screen)
 
@@ -142,6 +144,10 @@ and `-Remove` (device, driver package and folder). It must run elevated, so each
 **the user to click Yes on UAC**: start it with `Start-Process powershell -Verb RunAs -Wait`
 and pass `-Log <file>`, because the elevated window's output is otherwise lost. Ask before every
 install, and move test windows back before removing it.
+
+The virtual screen gets its own taskbar, so its work area is 800x552, not 800x600. App `move`
+then pushes a window up to fit: assert "on the target screen and inside its work area", not an
+exact offset. A DPI-unaware window moved from a 150% to a 100% screen keeps its physical size.
 
 **Not over Remote Desktop.** In an RDP session (`query session` shows `rdp-tcp#N` Active;
 `GetSystemMetrics(SM_REMOTESESSION)` is 1) Windows shows only the session's own screen: the
