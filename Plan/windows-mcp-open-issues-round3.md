@@ -1,7 +1,7 @@
 ---
 Title: Windows-MCP open issues backlog - round 3 (2026-09-24)
-Description: Findings of the round-3 real-work scenario test (all 21 tools driven through the connected server at the PC, plus a per-tool timing pass), turned into a task file. Part A Bugs - 2 High (windows that cannot be maximized are missing from the window list; a full-screen capture misses some front windows such as Avast's alert), 2 Medium (false "covered"/"screen changed" refusals; screen_changed misses small changes), 5 Low. Part B Improvements (fixed 0.5 s pauses and other latency, encoded PowerShell command lines, App Paths lookup, OCR column gaps, process command lines, window positions in App list). Part C one new ability (pop-up detection, needs the user's design approval). Part D restructures the tool guide into a short main file plus references (next session), then the user installs it in Claude Desktop once it is verified. Details and evidence are in docs/testing/windows-mcp-tool-test-report.md (Round 3). Status 2026-09-24: all of Part A fixed and proved (live where the item asks) and the guide split (D.1) done; Parts B and C open (R3-I1 done), D.2 waits for the user.
-Total Tasks: 56
+Description: Findings of the round-3 real-work scenario test (all 21 tools driven through the connected server at the PC, plus a per-tool timing pass), turned into a task file. Part A Bugs - 2 High (windows that cannot be maximized are missing from the window list; a full-screen capture misses some front windows such as Avast's alert), 2 Medium (false "covered"/"screen changed" refusals; screen_changed misses small changes), 5 Low. Part B Improvements (fixed 0.5 s pauses and other latency, encoded PowerShell command lines, App Paths lookup, OCR column gaps, process command lines, window positions in App list). Part C one new ability (pop-up detection, needs the user's design approval). Part D restructures the tool guide into a short main file plus references (next session), then the user installs it in Claude Desktop once it is verified. Details and evidence are in docs/testing/windows-mcp-tool-test-report.md (Round 3). Status 2026-09-24: all of Part A fixed and proved (live where the item asks) and the guide split (D.1) done; Parts B and C open (R3-I1, R3-I2 done), D.2 waits for the user.
+Total Tasks: 57
 ---
 # Windows-MCP open issues - round 3
 
@@ -74,10 +74,12 @@ Evidence for every item: `docs/testing/windows-mcp-tool-test-report.md`, section
   - **Verify:** Timing pass - each under 0.3 s; harness still logs every click and key.
   - Result (2026-09-24): user chose a 0.1 s settle; `Desktop._SETTLE` replaces every 0.5 s wait in click, move, wheel, multi_select and type's click/clear (drag unchanged). `test_no_input_waits_more_than_100ms`. Live (two rounds, harness text box): Click 0.16 s, Move 0.11 s, Scroll 0.28 s, MultiSelect 0.36 s for 2 clicks, MultiEdit 0.68/1.18 s a field; 9/9 clicks, 2/2 wheels logged, text exact. MultiEdit misses 0.3 s: the rest is the short-text SendKeys path (R3-I2).
 
-- [ ] R3-I2 **Short Type slower than long** (10 chars 1.11 s, 60 chars 0.70 s).
-  - [ ] a. Unit: plain text under 20 characters goes through the Unicode path.
-  - [ ] b. Send all plain text through `SendUnicodeText`; keep SendKeys only for `\n`, `\t`, `{`, `}`.
+- [x] R3-I2 **Short Type slower than long** (10 chars 1.11 s, 60 chars 0.70 s).
+  - [x] a. Unit: plain text under 20 characters goes through the Unicode path.
+  - [x] b. Send all plain text through `SendUnicodeText`; keep SendKeys only for `\n`, `\t`, `{`, `}`.
   - **Verify:** Timing pass - Type 10 chars under 0.3 s; harness text exact.
+  - Result (2026-09-24): `_LONG_TEXT_THRESHOLD` removed; `test_short_plain_text_is_typed_as_unicode`, and the section-6 test that pinned SendKeys (and would have typed for real) now mocks `SendUnicodeText`. Live: Type 10 chars 0.02-0.04 s; "abcdefghij", "a+b^c%~(x)" and "héllo 🌍 ok" each arrived exact.
+  - [ ] Follow-up (new finding): MultiEdit is still ~0.95 s a field with typing now instant. Not measured where; suspect the clear's UIA focus read (`_finish_clear`). Profile one field before changing anything.
 
 - [ ] R3-I3 **Process list 1.6 s.**
   - [ ] a. Unit: `sort_by="memory"` makes no CPU sampling call.

@@ -47,8 +47,7 @@ Claude Code client cannot, such as an empty string.
 3. If the test overwrites the clipboard (Clipboard set, copy shortcuts), back it up right
    before that step and restore it after, every time. Text, an image (`clipboard.service`
    `save_image` then `set_image`) and a file list (`set_files`) can be restored; other formats
-   (HTML, Office data) cannot, so ask first. Type restores the clipboard itself after a paste
-   of 20+ characters. Check an empty clipboard with `EnumClipboardFormats(0) == 0`: pywin32's
+   (HTML, Office data) cannot, so ask first. Type never uses the clipboard. Check an empty clipboard with `EnumClipboardFormats(0) == 0`: pywin32's
    `CountClipboardFormats` raises on 0 instead of returning it.
 4. If the test reads the UI tree (Snapshot, WaitFor, App switch/resize), check for
    "Not Responding" windows first; one can stall the read:
@@ -91,6 +90,9 @@ Helpers (`scripts/livetest.py`):
 | `guarded_call(c, hwnd, tool, args, points=, keyboard=)` | Calls the tool only if every point is on the test window and, for keyboard input, the window is in front; otherwise aborts. Use it for **every** input call. |
 | `read_settled(path)` | Reads the log once it stops changing and retries while the file is locked. The window lags behind fast input, so an early read under-counts. |
 | `center`, `on_window`, `close_window`, `mcp_client` | Window centre point, the WindowFromPoint check, clean close by own handle, in-process client. |
+
+The harness text box ignores Ctrl+A (it is a multiline WinForms box), so Ctrl+A then
+Backspace deletes only the last character: compare the new tail, or use a fresh window per case.
 
 Snapshot's text block reaches the client JSON-escaped (`button \"Alpha\"`, line breaks as a
 literal `\n`): undo both before matching element lines with a regex, or it finds nothing or

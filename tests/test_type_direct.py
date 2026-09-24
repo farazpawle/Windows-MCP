@@ -27,6 +27,24 @@ def test_long_text_is_typed_without_the_clipboard():
     typed.assert_called_once_with(LONG)
 
 
+@pytest.mark.parametrize("text", ["hello", "a+b^c%~"])
+def test_short_plain_text_is_typed_as_unicode(text):
+    # Round-3 R3-I2: per-key SendKeys made 10 characters slower than 60.
+    typed, keys = MagicMock(), MagicMock()
+    with patch.object(uia, "SendUnicodeText", typed), patch.object(uia, "SendKeys", keys):
+        Desktop.__new__(Desktop).type(None, text)
+    typed.assert_called_once_with(text)
+    keys.assert_not_called()
+
+
+def test_text_with_line_breaks_still_uses_sendkeys():
+    typed, keys = MagicMock(), MagicMock()
+    with patch.object(uia, "SendUnicodeText", typed), patch.object(uia, "SendKeys", keys):
+        Desktop.__new__(Desktop).type(None, "a\nb")
+    typed.assert_not_called()
+    keys.assert_called_once()
+
+
 @pytest.fixture
 def batches(monkeypatch):
     sent = []

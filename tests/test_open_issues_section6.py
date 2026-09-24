@@ -1,7 +1,7 @@
 """Regression tests for Plan/windows-mcp-open-issues.md section 6 (missing abilities)."""
 
 import asyncio
-from unittest.mock import MagicMock, call, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -255,10 +255,14 @@ class TestNoLocation:
         assert "focused" in reply
 
     def test_service_type_without_location_does_not_click(self):
-        with patch.object(uia, "Click") as click, patch.object(uia, "SendKeys") as send:
+        with (
+            patch.object(uia, "Click") as click,
+            patch.object(uia, "SendKeys"),
+            patch.object(uia, "SendUnicodeText") as send,
+        ):
             _desktop().type(None, "hi")
         click.assert_not_called()
-        assert send.call_args_list[-1] == call("hi", interval=0.04, waitTime=0.05)
+        send.assert_called_once_with("hi")
 
 
 # 6.7 Wait accepts decimals

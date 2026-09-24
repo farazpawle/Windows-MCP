@@ -1103,16 +1103,6 @@ class Desktop:
         for i in range(clicks):
             press(x, y, waitTime=dbl_wait if i < clicks - 1 else 0)
 
-    # Strings this long are typed as chunked Unicode events (uia.SendUnicodeText)
-    # instead of per-key SendKeys. SendKeys at high cadence loses keystrokes on
-    # slower / loaded systems (Win11 VMs in particular) — observed
-    # "hello from windows-mcp drive test" rendering as
-    # "hello tttttttttttttttttttttttttt" on a 4-core Win11 VM. This used to paste
-    # through the clipboard, which lost any image or file list on it (round-2 2.14).
-    # Plain-text only; control chars route through SendKeys so escape sequences
-    # ({Enter}, {Tab}, …) still work.
-    _LONG_TEXT_THRESHOLD = 20
-
     def type(
         self,
         loc: tuple[int, int] | None,
@@ -1136,10 +1126,12 @@ class Desktop:
             uia.SendKeys("{Ctrl}a", waitTime=0.05)
             uia.SendKeys("{Back}", waitTime=0.05)
             self._finish_clear()
-        # Per-key SendKeys for short text (so escape sequences keep working);
-        # chunked Unicode events for long text (so the scan-code queue can't race).
+        # Plain text goes as chunked Unicode events: per-key SendKeys drops keys on
+        # slow VMs ("hello tttt…") and was slower for short text (round-3 R3-I2).
+        # The clipboard is never used (round-2 2.14). Line breaks, tabs and braces
+        # still go through SendKeys so {Enter}, {Tab}, … keep working.
         has_control_chars = any(c in text for c in ("\n", "\t", "{", "}"))
-        if len(text) >= self._LONG_TEXT_THRESHOLD and not has_control_chars:
+        if not has_control_chars:
             uia.SendUnicodeText(text)
         else:
             escaped_text = _escape_text_for_sendkeys(text)
