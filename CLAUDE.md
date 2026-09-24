@@ -101,7 +101,7 @@ The codebase follows a layered service architecture under `src/windows_mcp/`:
 
 - This repo is a fork of `CursorTouch/Windows-MCP`. The open bug backlog is the active (not `completed/`) file in `Plan/`.
 - Commits use a type prefix (`fix:`, `docs:`, `style:`, `test:`) and cite the backlog item: `fix: Registry reads the (Default) value (round-2 3.25)`. When `ruff format` rewrites a file wholesale, commit that alone first as `style: ...` with "no behaviour change" in the body, then the fix on top.
-- Zero warnings (user rule, 2026-09-24): a pytest, ruff, uv, git or live-test run counts as clean only with no warnings, not just no failures. Fix each warning's cause; never hide it with a filter, `noqa`, ignore setting or `2>/dev/null`. A warning that cannot be fixed here is reported to the user with the reason.
+- Zero warnings (user rule, 2026-09-24): a pytest, ruff, uv, git or live-test run counts as clean only with no warnings, not just no failures. Fix each warning's cause; never hide it with a filter, `noqa`, ignore setting or `2>/dev/null`. A warning that cannot be fixed here is reported to the user with the reason. Files are LF (`.gitattributes`): a script that rewrites a file must use `write_bytes` or `newline="\n"`, since Python's `write_text` writes CRLF on Windows and git then warns.
 - Unit tests cannot prove input, focus or UI-tree behaviour. Prove those live with the `windows-mcp-live-test` skill: throwaway test window, in-process server, never a tree read of a VS Code-family window.
 - Never put personal details (user or machine names, private folder paths) in tracked files.
 
