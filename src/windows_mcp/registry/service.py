@@ -133,6 +133,15 @@ def _value_name(name: str) -> tuple[str, str]:
     return ("(default)", "(Default)") if _is_default(name) else (name, name)
 
 
+# PowerShell expression showing $v in the shape set accepts: hex bytes, a JSON string list.
+# Shared by get and list so both show a value the same way (R3-9).
+_FORMAT_VALUE = (
+    "$(if ($v -is [byte[]]) { ($v | ForEach-Object { $_.ToString('x2') }) -join ',' } "
+    "elseif ($v -is [string[]]) { ConvertTo-Json -Compress -InputObject @($v) } "
+    "else { $v })"
+)
+
+
 def get_value(path: str, name: str) -> str:
     """Read a registry value at *path* with the given *name*."""
     name, shown_name = _value_name(name)
@@ -142,10 +151,7 @@ def get_value(path: str, name: str) -> str:
         # Property access, not -ExpandProperty: the latter unrolls a byte array
         # into loose objects, losing the type this formatting depends on.
         f"$v = (Get-ItemProperty -LiteralPath {q_path} -Name {q_name} -ErrorAction Stop).{q_name}; "
-        # Read values back in the shape set accepts: hex bytes, a JSON string list.
-        "if ($v -is [byte[]]) { ($v | ForEach-Object { $_.ToString('x2') }) -join ',' } "
-        "elseif ($v -is [string[]]) { ConvertTo-Json -Compress -InputObject @($v) } "
-        "else { $v }"
+        f"{_FORMAT_VALUE}"
     )
     response, status = PowerShellExecutor.execute_command(command)
     if status != 0:
@@ -253,8 +259,10 @@ def list_key(path: str) -> str:
     """List values and sub-keys under *path*."""
     q_path = ps_quote(path)
     command = (
-        f"$values = (Get-ItemProperty -LiteralPath {q_path} -ErrorAction Stop | "
-        f"Select-Object * -ExcludeProperty PS* | Format-List | Out-String).Trim(); "
+        f"$item = Get-ItemProperty -LiteralPath {q_path} -ErrorAction Stop; "
+        "$values = @(foreach ($p in @($item.PSObject.Properties | "
+        "Where-Object Name -notlike 'PS*')) { "
+        f'$v = $p.Value; "$($p.Name) : {_FORMAT_VALUE}" }}) -join "`n"; '
         f"$subkeys = (Get-ChildItem -LiteralPath {q_path} -ErrorAction SilentlyContinue | "
         f'Select-Object -ExpandProperty PSChildName) -join "`n"; '
         f'if ($values) {{ Write-Output "Values:`n$values" }}; '

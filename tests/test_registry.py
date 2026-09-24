@@ -342,3 +342,18 @@ class TestRegistryList:
         with patch(EXECUTE_COMMAND_PATH, return_value=("No values or sub-keys found.", 0)):
             result = registry.list_key(path="HKCU:\\Software\\Empty")
         assert "No values or sub-keys found" in result
+
+    def test_values_are_formatted_like_get(self):
+        # R3-9: list showed Binary as "{1, 2, 255}" while get shows "01,02,ff".
+        commands = []
+        for call in (
+            lambda: registry.list_key(path="HKCU:\\Software\\Test"),
+            lambda: registry.get_value(path="HKCU:\\Software\\Test", name="B"),
+        ):
+            with patch(EXECUTE_COMMAND_PATH, return_value=("", 0)) as run:
+                call()
+            commands.append(run.call_args[0][0])
+        list_cmd, get_cmd = commands
+        assert registry.service._FORMAT_VALUE in list_cmd
+        assert registry.service._FORMAT_VALUE in get_cmd
+        assert "Format-List" not in list_cmd

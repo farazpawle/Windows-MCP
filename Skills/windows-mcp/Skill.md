@@ -96,7 +96,7 @@ Coordinates: use Snapshot centres. Re-snapshot after any window move, resize or 
 - Binary, local repo: pass hex bytes `"01,02,ff"` / `"01 02 ff"` / `"0102ff"` or a decimal list `"[1, 2, 255]"`; anything else is refused before writing. **PyPI release accepts only a single byte** — there use PowerShell `Set-ItemProperty ... -Value ([byte[]](1,2,255)) -Type Binary`.
 - `list` shows ExpandString values already expanded (`%TEMP%` → full path); the stored raw value is intact.
 - MultiString, local repo: pass a JSON list, `["North","South"]`, for several items (verified 2026-09-24: stored as 4 separate strings). Plain text is one item. **PyPI: commas and newlines both become ONE item**; there use PowerShell `Set-ItemProperty -Path ... -Name X -Value @('a','b') -Type MultiString`.
-- Binary reads back as hex with `get` (`01,02,ff`) but as a decimal list with `list` (`{1, 2, 255}`); both are the same bytes.
+- Local repo: `get` and `list` show a value the same way, in the shape `set` accepts: Binary as hex (`01,02,ff`), MultiString as a JSON list (`["a","b c"]`); `list` prints one `name : value` line each. PyPI's `list` shows Binary as a decimal list (`{1, 2, 255}`), the same bytes.
 - `delete` WITH `name` removes one value. WITHOUT `name` it deletes the key and its values. Local repo: a key that has sub-keys is refused unless `recursive=true`. **PyPI release deletes the whole tree with no confirmation.**
 - A missing key returns an error (plain text in the local repo, noisy CLIXML on PyPI).
 

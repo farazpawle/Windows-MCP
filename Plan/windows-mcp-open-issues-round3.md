@@ -59,10 +59,11 @@ Evidence for every item: `docs/testing/windows-mcp-tool-test-report.md`, section
   - **Verify:** Unit only.
   - Result (2026-09-24): `_folder_size` sums every file (os.walk, links not followed, unreadable parts skipped) up to `MAX_SIZE_WALK` = 10,000 files; a "Size note" line says total or capped. Smoke: `src` 2.5 MB instantly; C:\Windows capped at 10,000 files in 1.4 s.
 
-- [ ] R3-9 **Low - Registry Binary shown two ways** (`get` hex, `list` `{1, 2, 255}`).
-  - [ ] a. Unit: `list` shows a Binary value as hex like `get`.
-  - [ ] b. Format Binary values as hex in `list`.
+- [x] R3-9 **Low - Registry Binary shown two ways** (`get` hex, `list` `{1, 2, 255}`).
+  - [x] a. Unit: `list` shows a Binary value as hex like `get`.
+  - [x] b. Format Binary values as hex in `list`.
   - **Verify:** Unit only.
+  - Result (2026-09-24): `get` and `list` share `_FORMAT_VALUE` (hex bytes, JSON string list); `list` drops Format-List for `name : value` lines. Smoke on a throwaway `HKCU:\Software\WMCP-Test\R39` (deleted after): Binary `01,02,ff` and MultiString `["a","b c"]` identical in both.
 
 # Part B - Improvements
 
