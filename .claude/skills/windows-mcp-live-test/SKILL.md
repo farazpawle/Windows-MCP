@@ -134,6 +134,11 @@ one started restores the user's earlier tabs (unsaved notes, saved files). On 20
 clean-up WM_CLOSE on that window raised "save changes to Untitled.txt?" over the user's own
 notes. Close only the tab the test opened (switch to it, Ctrl+W), never the window, and never
 kill Notepad. If a save prompt does appear, choose Cancel: nothing of the user's is changed.
+To get Notepad's "save changes?" question safely: App `launch name=Notepad` (the reply gives the
+new window's handle), App `switch handle=` (a launched window is not always put in front, and
+`guarded_call` then aborts), Type one letter, Ctrl+W, then press the dialog's "Don't save"
+through UIA (`FindFirst` by name, `GetInvokePattern().Invoke()`): only the test tab is lost.
+The question is a UIA element inside the window (`IsDialog`), not a window of its own.
 
 ## 3. Run it
 

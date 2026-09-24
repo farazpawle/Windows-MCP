@@ -121,6 +121,11 @@ Coordinates · What the replies report · Shrunk screenshots
   since the previous input action, including a pop-up that came up after that reply. Read
   it before the next step: a question or alert may be waiting and take the next keys. Each
   window is named once; one opened on purpose (a Save dialog) is named too.
+- Apps built on Windows' newer app toolkit (Notepad, Settings, Terminal, Photos) draw their
+  questions inside their own window instead. For those the reply ends with
+  `Note: a dialog is open: "Notepad" in "*x - Notepad": "Do you want to save changes to x.txt?"`,
+  usually already on the reply of the key that caused it. Answer it before anything else.
+  In-window questions of other apps (a web page's pop-up) are not noted: take a Screenshot.
 - This is evidence, not a guarantee: still verify important results.
 
 ## Shrunk screenshots
