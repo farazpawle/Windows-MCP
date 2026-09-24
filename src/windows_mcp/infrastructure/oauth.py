@@ -21,8 +21,8 @@ from dataclasses import dataclass, field
 from starlette.requests import Request
 from starlette.responses import JSONResponse, RedirectResponse
 
-TOKEN_LIFETIME = 3600   # 1 hour
-CODE_LIFETIME = 300     # 5 minutes
+TOKEN_LIFETIME = 3600  # 1 hour
+CODE_LIFETIME = 300  # 5 minutes
 
 
 # ---------------------------------------------------------------------------
@@ -111,15 +111,17 @@ def build_oauth_routes(
         )
 
     async def metadata(request: Request):
-        return JSONResponse({
-            "issuer": issuer,
-            "authorization_endpoint": f"{issuer}/oauth/authorize",
-            "token_endpoint": f"{issuer}/oauth/token",
-            "response_types_supported": ["code"],
-            "grant_types_supported": ["authorization_code"],
-            "code_challenge_methods_supported": ["S256"],
-            "token_endpoint_auth_methods_supported": ["client_secret_post"],
-        })
+        return JSONResponse(
+            {
+                "issuer": issuer,
+                "authorization_endpoint": f"{issuer}/oauth/authorize",
+                "token_endpoint": f"{issuer}/oauth/token",
+                "response_types_supported": ["code"],
+                "grant_types_supported": ["authorization_code"],
+                "code_challenge_methods_supported": ["S256"],
+                "token_endpoint_auth_methods_supported": ["client_secret_post"],
+            }
+        )
 
     async def register(request: Request):
         return JSONResponse(
@@ -153,19 +155,28 @@ def build_oauth_routes(
 
         if code_challenge_method != "S256":
             return JSONResponse(
-                {"error": "invalid_request", "error_description": "code_challenge_method must be S256"},
+                {
+                    "error": "invalid_request",
+                    "error_description": "code_challenge_method must be S256",
+                },
                 status_code=400,
             )
 
         if not _is_loopback_redirect_uri(redirect_uri):
             return JSONResponse(
-                {"error": "invalid_request", "error_description": "redirect_uri must be a loopback http(s) URI"},
+                {
+                    "error": "invalid_request",
+                    "error_description": "redirect_uri must be a loopback http(s) URI",
+                },
                 status_code=400,
             )
 
         if not configured_client_id or not configured_client_secret:
             return JSONResponse(
-                {"error": "server_error", "error_description": "OAuth requires a configured client ID and secret"},
+                {
+                    "error": "server_error",
+                    "error_description": "OAuth requires a configured client ID and secret",
+                },
                 status_code=500,
             )
 
@@ -222,12 +233,14 @@ def build_oauth_routes(
 
         if auth_code.client_id != client_id:
             return JSONResponse(
-                {"error": "invalid_grant", "error_description": "client_id mismatch"}, status_code=400
+                {"error": "invalid_grant", "error_description": "client_id mismatch"},
+                status_code=400,
             )
 
         if auth_code.redirect_uri != redirect_uri:
             return JSONResponse(
-                {"error": "invalid_grant", "error_description": "redirect_uri mismatch"}, status_code=400
+                {"error": "invalid_grant", "error_description": "redirect_uri mismatch"},
+                status_code=400,
             )
 
         if time.time() > auth_code.expires_at:
@@ -236,9 +249,12 @@ def build_oauth_routes(
                 {"error": "invalid_grant", "error_description": "code expired"}, status_code=400
             )
 
-        if not _verify_pkce(code_verifier, auth_code.code_challenge, auth_code.code_challenge_method):
+        if not _verify_pkce(
+            code_verifier, auth_code.code_challenge, auth_code.code_challenge_method
+        ):
             return JSONResponse(
-                {"error": "invalid_grant", "error_description": "PKCE verification failed"}, status_code=400
+                {"error": "invalid_grant", "error_description": "PKCE verification failed"},
+                status_code=400,
             )
 
         del store.codes[code_value]  # one-time use
@@ -258,11 +274,13 @@ def build_oauth_routes(
             expires_at=time.time() + TOKEN_LIFETIME,
         )
 
-        return JSONResponse({
-            "access_token": access_token,
-            "token_type": "Bearer",
-            "expires_in": TOKEN_LIFETIME,
-        })
+        return JSONResponse(
+            {
+                "access_token": access_token,
+                "token_type": "Bearer",
+                "expires_in": TOKEN_LIFETIME,
+            }
+        )
 
     return {
         "/.well-known/oauth-authorization-server": (metadata, ["GET"]),

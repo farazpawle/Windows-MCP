@@ -12,14 +12,16 @@ from starlette.types import ASGIApp
 
 
 def _is_private_target(ip: ipaddress._BaseAddress) -> bool:
-    return any((
-        ip.is_private,
-        ip.is_loopback,
-        ip.is_link_local,
-        ip.is_multicast,
-        ip.is_reserved,
-        ip.is_unspecified,
-    ))
+    return any(
+        (
+            ip.is_private,
+            ip.is_loopback,
+            ip.is_link_local,
+            ip.is_multicast,
+            ip.is_reserved,
+            ip.is_unspecified,
+        )
+    )
 
 
 def validate_url(url: str, *, allow_private: bool = False) -> None:

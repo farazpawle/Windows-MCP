@@ -33,11 +33,15 @@ def test_covered_elements_dropped_from_lists_and_tree():
     )
     group = SemanticNode(control_type="Group", element_type="structural", name="g")
     for n, kind in ((hidden, "interactive"), (visible, "interactive"), (scroll, "scrollable")):
-        group.add_child(SemanticNode(control_type="Button", element_type=kind, name=n.name, center=n.center))
+        group.add_child(
+            SemanticNode(control_type="Button", element_type=kind, name=n.name, center=n.center)
+        )
     window = SemanticNode(control_type="Window", element_type="window", name="Back")
     window.add_child(group)
 
-    interactive, scrollable = drop_occluded(BACK, [hidden, visible], [scroll], window, window_at=_window_at)
+    interactive, scrollable = drop_occluded(
+        BACK, [hidden, visible], [scroll], window, window_at=_window_at
+    )
 
     assert [n.name for n in interactive] == ["visible"]
     assert scrollable == []

@@ -39,9 +39,7 @@ def run_capturing_waits(watchdog, monkeypatch, event_loop):
     """Drive _run synchronously, recording what it would have slept."""
     waits = []
     monkeypatch.setattr(watchdog, "_event_loop", event_loop)
-    monkeypatch.setattr(
-        watchdog.is_running, "wait", lambda timeout: waits.append(timeout) or False
-    )
+    monkeypatch.setattr(watchdog.is_running, "wait", lambda timeout: waits.append(timeout) or False)
     watchdog.is_running.set()
     watchdog._run()
     return waits
@@ -121,7 +119,9 @@ class TestClientIsRebuiltEachCycle:
     def test_every_cycle_gets_a_fresh_client_and_clean_counters(self, watchdog, monkeypatch):
         """#334's contract: never reuse a client that just reported failure."""
         clients = []
-        monkeypatch.setattr(watchdog, "_create_uia", lambda: clients.append(object()) or clients[-1])
+        monkeypatch.setattr(
+            watchdog, "_create_uia", lambda: clients.append(object()) or clients[-1]
+        )
         runs = {"n": 0}
         seen_counts = []
 

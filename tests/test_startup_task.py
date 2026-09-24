@@ -40,8 +40,10 @@ def test_install_writes_start_script_and_creates_task(
     monkeypatch.setattr(
         cli,
         "_register_task_powershell",
-        lambda task_name, script_path: registrations.append((task_name, script_path))
-        or Mock(returncode=0, stdout="", stderr=""),
+        lambda task_name, script_path: (
+            registrations.append((task_name, script_path))
+            or Mock(returncode=0, stdout="", stderr="")
+        ),
     )
 
     result = runner.invoke(

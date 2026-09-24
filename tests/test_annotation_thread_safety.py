@@ -32,6 +32,7 @@ Notes
   windows_mcp test suite). It will fail to import on Linux/macOS.
 - Adjust the import path below to match your repo layout if it differs.
 """
+
 import hashlib
 import io
 import sys
@@ -59,13 +60,21 @@ def _make_nodes(n: int) -> list[TreeElementNode]:
         left = 20 + col * (box_w - 20)
         top = 20 + row * (box_h - 15)
         box = BoundingBox(
-            left=left, top=top, right=left + box_w, bottom=top + box_h,
-            width=box_w, height=box_h,
+            left=left,
+            top=top,
+            right=left + box_w,
+            bottom=top + box_h,
+            width=box_w,
+            height=box_h,
         )
         nodes.append(
             TreeElementNode(
-                name=f"node-{i}", control_type="Button", bounding_box=box,
-                center=box.get_center(), window_name="TestWindow", metadata={},
+                name=f"node-{i}",
+                control_type="Button",
+                bounding_box=box,
+                center=box.get_center(),
+                window_name="TestWindow",
+                metadata={},
             )
         )
     return nodes
@@ -81,12 +90,16 @@ def _image_hash(img: Image.Image) -> str:
 def desktop(monkeypatch):
     d = Desktop()
     # Bypass real screen capture -- we only care about the drawing step.
-    monkeypatch.setattr(d, "get_screenshot", lambda capture_rect=None:
-                         Image.new("RGB", (2000, 1400), color=(255, 255, 255)))
+    monkeypatch.setattr(
+        d,
+        "get_screenshot",
+        lambda capture_rect=None: Image.new("RGB", (2000, 1400), color=(255, 255, 255)),
+    )
     # Make color assignment order-independent: fixed value regardless of
     # call order, so the ONLY source of run-to-run difference left is
     # thread interleaving itself, not scheduling-dependent color choice.
     import windows_mcp.desktop.service as core_module
+
     monkeypatch.setattr(core_module.random, "randint", lambda a, b: 0x336699)
     return d
 
@@ -112,8 +125,9 @@ def test_annotated_screenshot_is_deterministic(desktop):
 
     hashes = set()
     for _ in range(TRIALS):
-        img = desktop.get_annotated_screenshot(nodes=nodes, cursor_pos=None,
-                                                grid_lines=None, capture_rect=None)
+        img = desktop.get_annotated_screenshot(
+            nodes=nodes, cursor_pos=None, grid_lines=None, capture_rect=None
+        )
         hashes.add(_image_hash(img))
 
     assert len(hashes) == 1, (

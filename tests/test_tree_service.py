@@ -295,9 +295,7 @@ class TestElementBudgetStopsTraversal:
     see budget.py. These tests exercise the wiring in tree_traversal / get_window_wise_nodes.
     """
 
-    def test_stops_appending_and_recursing_once_budget_exhausted(
-        self, tree_instance, monkeypatch
-    ):
+    def test_stops_appending_and_recursing_once_budget_exhausted(self, tree_instance, monkeypatch):
         parent = _make_pane_parent()
         children = [_make_button_child(f"btn{i}", 10 * i) for i in range(5)]
 

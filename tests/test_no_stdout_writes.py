@@ -92,9 +92,7 @@ class TestNoStdoutWrites:
         """Fail loudly rather than passing vacuously on a bad path."""
         assert _source_files(), f"no Python sources under {SRC_ROOT}"
 
-    @pytest.mark.parametrize(
-        "path", _source_files(), ids=lambda p: str(p.relative_to(SRC_ROOT))
-    )
+    @pytest.mark.parametrize("path", _source_files(), ids=lambda p: str(p.relative_to(SRC_ROOT)))
     def test_no_bare_print(self, path: Path):
         offenders = _find_stdout_prints(path)
         assert offenders == [], "\n".join(

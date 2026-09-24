@@ -76,7 +76,13 @@ class TestResolveMaxTreeElements:
         )
 
     def test_zero_falls_back_to_default(self):
-        assert resolve_max_tree_elements({"WINDOWS_MCP_MAX_TREE_ELEMENTS": "0"}) == DEFAULT_MAX_TREE_ELEMENTS
+        assert (
+            resolve_max_tree_elements({"WINDOWS_MCP_MAX_TREE_ELEMENTS": "0"})
+            == DEFAULT_MAX_TREE_ELEMENTS
+        )
 
     def test_negative_falls_back_to_default(self):
-        assert resolve_max_tree_elements({"WINDOWS_MCP_MAX_TREE_ELEMENTS": "-5"}) == DEFAULT_MAX_TREE_ELEMENTS
+        assert (
+            resolve_max_tree_elements({"WINDOWS_MCP_MAX_TREE_ELEMENTS": "-5"})
+            == DEFAULT_MAX_TREE_ELEMENTS
+        )

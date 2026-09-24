@@ -149,20 +149,18 @@ We use **[Ruff](https://github.com/astral-sh/ruff)** for code formatting and lin
 
 ```python
 def click_tool(
-    loc: list[int],
-    button: Literal['left', 'right', 'middle'] = 'left',
-    clicks: int = 1
+    loc: list[int], button: Literal["left", "right", "middle"] = "left", clicks: int = 1
 ) -> str:
     """Click on UI elements at specific coordinates.
-    
+
     Args:
         loc: List of [x, y] coordinates to click
         button: Mouse button to use (left, right, or middle)
         clicks: Number of clicks (1=single, 2=double, 3=triple)
-    
+
     Returns:
         Confirmation message describing the action performed
-    
+
     Raises:
         ValueError: If loc doesn't contain exactly 2 integers
     """
@@ -220,6 +218,7 @@ When adding new features:
 ```python
 import pytest
 from src.desktop.service import Desktop
+
 
 def test_click_tool_validates_coordinates():
     """Test that click_tool raises ValueError for invalid coordinates."""

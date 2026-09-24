@@ -1489,7 +1489,7 @@ class TextRange:
             upgraded = self.textRange.QueryInterface(
                 getattr(_AutomationClient.instance().UIAutomationCore, interfaceName)
             )
-        except (comtypes.COMError, OSError):
+        except comtypes.COMError, OSError:
             return None
         return upgraded if upgraded else None
 

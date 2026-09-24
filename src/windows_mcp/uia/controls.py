@@ -168,10 +168,8 @@ def _get_reserved_not_supported_address() -> int:
     if _reservedNotSupportedAddress is None:
         try:
             reserved = _AutomationClient.instance().IUIAutomation.ReservedNotSupportedValue
-            _reservedNotSupportedAddress = (
-                ctypes.cast(reserved, ctypes.c_void_p).value or 0
-            )
-        except (COMError, AttributeError, ValueError):
+            _reservedNotSupportedAddress = ctypes.cast(reserved, ctypes.c_void_p).value or 0
+        except COMError, AttributeError, ValueError:
             _reservedNotSupportedAddress = 0
     return _reservedNotSupportedAddress
 
@@ -182,7 +180,7 @@ def _is_reserved_value(value: Any, reservedAddress: int) -> bool:
         return False
     try:
         return ctypes.cast(value, ctypes.c_void_p).value == reservedAddress
-    except (ctypes.ArgumentError, ValueError):
+    except ctypes.ArgumentError, ValueError:
         return False
 
 
@@ -374,7 +372,7 @@ class Control:
             elementArray = rawValue.QueryInterface(
                 _AutomationClient.instance().UIAutomationCore.IUIAutomationElementArray
             )
-        except (COMError, ValueError, AttributeError):
+        except COMError, ValueError, AttributeError:
             return []
         controls: List["Control"] = []
         for i in range(elementArray.Length):
@@ -401,7 +399,7 @@ class Control:
             element = rawValue.QueryInterface(
                 _AutomationClient.instance().UIAutomationCore.IUIAutomationElement
             )
-        except (COMError, ValueError, AttributeError):
+        except COMError, ValueError, AttributeError:
             return None
         try:
             return Control.CreateControlFromElement(element)
@@ -1221,7 +1219,9 @@ class Control:
         pointRange.ExpandToEnclosingUnit(TextUnit.Word)
         return pointRange.GetBoundingRectangles()
 
-    def GetWordFontSize(self, word: str, backward: bool = False, ignoreCase: bool = True) -> float | None:
+    def GetWordFontSize(
+        self, word: str, backward: bool = False, ignoreCase: bool = True
+    ) -> float | None:
         """
         Find `word` in the control's text (via `TextPattern`) and return its font size in points.
         Return float or None if the control has no `TextPattern`, the word wasn't found,
@@ -1254,9 +1254,12 @@ class Control:
         for visibleRange in textPattern.GetVisibleRanges():
             wordRange = visibleRange.Clone()
             wordRange.ExpandToEnclosingUnit(TextUnit.Word, waitTime=0)
-            while wordRange.CompareEndpoints(
-                TextPatternRangeEndpoint.Start, visibleRange, TextPatternRangeEndpoint.End
-            ) < 0:
+            while (
+                wordRange.CompareEndpoints(
+                    TextPatternRangeEndpoint.Start, visibleRange, TextPatternRangeEndpoint.End
+                )
+                < 0
+            ):
                 text = wordRange.GetText(-1).strip()
                 if text:
                     yield text, wordRange
@@ -1279,7 +1282,9 @@ class Control:
         dpi = _get_system_dpi() or 96
         # Font size is virtually always uniform across a control — look it up once on the
         # whole document instead of once per word (each TextRange COM call is expensive).
-        doc_font_size = textPattern.DocumentRange.GetAttributeValue(TextAttributeId.FontSizeAttribute)
+        doc_font_size = textPattern.DocumentRange.GetAttributeValue(
+            TextAttributeId.FontSizeAttribute
+        )
         uniform_font_size = doc_font_size if isinstance(doc_font_size, (int, float)) else None
         words: List[Tuple[str, List[Rect]]] = []
         for text, wordRange in self._iter_word_ranges(textPattern):
@@ -1329,7 +1334,9 @@ class Control:
         # but the value turned out mixed) is looked up per-word -- but batched into a single
         # `GetAttributeValues` COM call per word instead of one `GetAttributeValue` call per
         # attribute per word.
-        per_word_ids = [attribute_id for attribute_id in attribute_ids if attribute_id not in uniform_values]
+        per_word_ids = [
+            attribute_id for attribute_id in attribute_ids if attribute_id not in uniform_values
+        ]
 
         results: List[Tuple[str, List[Rect], Dict[int, Any]]] = []
         for text, wordRange in self._iter_word_ranges(textPattern):
@@ -1361,7 +1368,9 @@ class Control:
         Return [] if there are no hyperlink descendants (never None -- this doesn't depend on
         `TextPattern` support).
         """
-        condition = CreatePropertyCondition(PropertyId.ControlTypeProperty, ControlType.HyperlinkControl)
+        condition = CreatePropertyCondition(
+            PropertyId.ControlTypeProperty, ControlType.HyperlinkControl
+        )
         hyperlinks: List[Tuple[str, Rect, str]] = []
         for link_control in self.FindAll(TreeScope.TreeScope_Descendants, condition):
             try:
@@ -1469,7 +1478,7 @@ class Control:
                     value = self.Element.GetCachedPropertyValue(propertyId)
                 else:
                     value = self.Element.GetCurrentPropertyValueEx(propertyId, 1)
-            except (COMError, ValueError):
+            except COMError, ValueError:
                 if includeUnsupported:
                     values[name] = PROPERTY_NOT_SUPPORTED
                 continue

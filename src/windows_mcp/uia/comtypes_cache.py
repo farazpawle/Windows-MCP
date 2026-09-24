@@ -139,7 +139,7 @@ def safe_get_module(tlib: str, required_attr: Optional[str] = None) -> ModuleTyp
                         % (getattr(module, "__name__", tlib), required_attr)
                     )
                 return module
-            except (ImportError, AttributeError):
+            except ImportError, AttributeError:
                 if attempt:
                     raise
                 _clear_gen_cache()

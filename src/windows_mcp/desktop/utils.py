@@ -22,6 +22,7 @@ def is_window_hung(hwnd: int) -> bool:
     callers must check this before touching the window through UIA.
     """
     import ctypes
+
     try:
         return bool(ctypes.windll.user32.IsHungAppWindow(hwnd))
     except Exception:
@@ -31,9 +32,10 @@ def is_window_hung(hwnd: int) -> bool:
 def is_elevated() -> bool:
     """Check if the current process has administrative privileges."""
     import ctypes
+
     try:
         return ctypes.windll.shell32.IsUserAnAdmin() != 0
-    except (AttributeError, Exception):
+    except AttributeError, Exception:
         # Not on Windows or Win32 API unavailable
         return False
 
@@ -74,20 +76,20 @@ def resolve_known_folder_guid_path(path_text: str) -> str:
 
 
 _PRIVATE_USE_RE = re.compile(
-    r'['
-    r'\uE000-\uF8FF'          # BMP Private Use Area
-    r'\U000F0000-\U000FFFFD'  # Supplementary Private Use Area-A
-    r'\U00100000-\U0010FFFD'  # Supplementary Private Use Area-B
-    r']+'
+    r"["
+    r"\uE000-\uF8FF"  # BMP Private Use Area
+    r"\U000F0000-\U000FFFFD"  # Supplementary Private Use Area-A
+    r"\U00100000-\U0010FFFD"  # Supplementary Private Use Area-B
+    r"]+"
 )
 
 
 def remove_private_use_chars(text: str) -> str:
     """Remove Unicode Private Use Area characters that may cause rendering issues."""
-    return _PRIVATE_USE_RE.sub('', text)
+    return _PRIVATE_USE_RE.sub("", text)
 
 
-_SURROGATE_RE = re.compile(r'[\ud800-\udfff]')
+_SURROGATE_RE = re.compile(r"[\ud800-\udfff]")
 
 
 def repair_surrogates(text: str) -> str:
@@ -117,6 +119,6 @@ def repair_surrogates(text: str) -> str:
                 out.append(chr(0x10000 + ((code - 0xD800) << 10) + (low - 0xDC00)))
                 i += 2
                 continue
-        out.append('\ufffd' if 0xD800 <= code <= 0xDFFF else text[i])
+        out.append("\ufffd" if 0xD800 <= code <= 0xDFFF else text[i])
         i += 1
-    return ''.join(out)
+    return "".join(out)

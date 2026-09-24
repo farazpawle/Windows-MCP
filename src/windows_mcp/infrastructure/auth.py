@@ -11,13 +11,15 @@ from starlette.responses import JSONResponse
 from starlette.types import ASGIApp
 
 
-_PUBLIC_PATHS = frozenset({
-    "/health",
-    "/.well-known/oauth-authorization-server",
-    "/oauth/register",
-    "/oauth/authorize",
-    "/oauth/token",
-})
+_PUBLIC_PATHS = frozenset(
+    {
+        "/health",
+        "/.well-known/oauth-authorization-server",
+        "/oauth/register",
+        "/oauth/authorize",
+        "/oauth/token",
+    }
+)
 
 
 class AuthKeyMiddleware(BaseHTTPMiddleware):
@@ -27,7 +29,9 @@ class AuthKeyMiddleware(BaseHTTPMiddleware):
     a valid OAuth access token as a fallback.
     """
 
-    def __init__(self, app: ASGIApp, *, auth_key: str, oauth_validator: Callable[[str], bool] | None = None) -> None:
+    def __init__(
+        self, app: ASGIApp, *, auth_key: str, oauth_validator: Callable[[str], bool] | None = None
+    ) -> None:
         super().__init__(app)
         self._key = auth_key.encode()
         self.oauth_validator = oauth_validator

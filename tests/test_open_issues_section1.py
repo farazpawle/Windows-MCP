@@ -87,7 +87,9 @@ class TestAsBool:
     def test_filesystem_recursive_yes(self, tmp_path):
         (tmp_path / "sub").mkdir()
         (tmp_path / "sub" / "hit.txt").write_text("x", encoding="utf-8")
-        result = _filesystem_tool()(mode="search", path=str(tmp_path), pattern="*.txt", recursive="yes")
+        result = _filesystem_tool()(
+            mode="search", path=str(tmp_path), pattern="*.txt", recursive="yes"
+        )
         assert "hit.txt" in result
 
     def test_filesystem_rejects_unknown_word(self, tmp_path):

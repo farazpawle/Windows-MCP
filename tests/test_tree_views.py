@@ -78,7 +78,9 @@ class TestTreeState:
     def test_truncated_appends_note_to_scrollable_elements(
         self, sample_scroll_element_node: ScrollElementNode
     ) -> None:
-        ts = TreeState(scrollable_nodes=[sample_scroll_element_node], truncated=True, element_limit=42)
+        ts = TreeState(
+            scrollable_nodes=[sample_scroll_element_node], truncated=True, element_limit=42
+        )
         result = ts.scrollable_elements_to_string()
         assert "42-element capture limit" in result
 
@@ -98,7 +100,7 @@ class TestTreeState:
         root.add_child(window)
         ts = TreeState(semantic_tree_root=root, truncated=True, element_limit=500)
         result = ts.semantic_tree_to_string()
-        assert "window \"Notepad\"" in result
+        assert 'window "Notepad"' in result
         assert "500-element capture limit" in result
 
     def test_semantic_tree_not_truncated_omits_note(self) -> None:
@@ -113,10 +115,9 @@ class TestTreeState:
         ts = TreeState(interactive_nodes=[sample_tree_element_node])
         result = ts.interactive_elements_to_string()
         lines = result.split("\n")
-        assert lines[0] == "window \"Notepad\""
+        assert lines[0] == 'window "Notepad"'
         assert (
-            lines[1]
-            == "\u2514\u2500\u2500 (200,100) button \"OK\"  [action: click]  "
+            lines[1] == '\u2514\u2500\u2500 (200,100) button "OK"  [action: click]  '
             "[focused]  [shortcut:Alt+O]"
         )
 
@@ -134,11 +135,10 @@ class TestTreeState:
         result = ts.interactive_elements_to_string()
         lines = result.split("\n")
         assert (
-            lines[1]
-            == "\u251c\u2500\u2500 (200,100) button \"OK\"  [action: click]  "
+            lines[1] == '\u251c\u2500\u2500 (200,100) button "OK"  [action: click]  '
             "[focused]  [shortcut:Alt+O]"
         )
-        assert lines[2] == "\u2514\u2500\u2500 (200,100) button \"Cancel\"  [action: click]"
+        assert lines[2] == '\u2514\u2500\u2500 (200,100) button "Cancel"  [action: click]'
 
     def test_scrollable_elements_to_string_empty(self):
         ts = TreeState()
@@ -155,10 +155,9 @@ class TestTreeState:
         )
         result = ts.scrollable_elements_to_string()
         lines = result.split("\n")
-        assert lines[0] == "window \"Notepad\""
+        assert lines[0] == 'window "Notepad"'
         assert (
-            lines[1]
-            == "\u2514\u2500\u2500 (200,100) pane \"Document\"  [action: click]  [v:42.5%]"
+            lines[1] == '\u2514\u2500\u2500 (200,100) pane "Document"  [action: click]  [v:42.5%]'
         )
 
     def test_scrollable_elements_are_independent_from_interactive_count(
@@ -173,10 +172,9 @@ class TestTreeState:
         )
         result = ts.scrollable_elements_to_string()
         lines = result.split("\n")
-        assert lines[0] == "window \"Notepad\""
+        assert lines[0] == 'window "Notepad"'
         assert (
-            lines[1]
-            == "\u2514\u2500\u2500 (200,100) pane \"Document\"  [action: click]  [v:42.5%]"
+            lines[1] == '\u2514\u2500\u2500 (200,100) pane "Document"  [action: click]  [v:42.5%]'
         )
 
 

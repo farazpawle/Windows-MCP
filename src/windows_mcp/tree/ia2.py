@@ -220,7 +220,7 @@ def _acc_state(iacc) -> int:
     try:
         state = iacc.accState(CHILDID_SELF)
         return state if isinstance(state, int) else 0
-    except (COMError, TypeError, ValueError):
+    except COMError, TypeError, ValueError:
         return 0
 
 
@@ -246,14 +246,14 @@ def _acc_location(iacc) -> Optional[tuple[int, int, int, int]]:
         # accLocation has out-params; comtypes returns a tuple.
         left, top, width, height = iacc.accLocation(CHILDID_SELF)
         return int(left), int(top), int(width), int(height)
-    except (COMError, TypeError, ValueError):
+    except COMError, TypeError, ValueError:
         return None
 
 
 def _acc_child_count(iacc) -> int:
     try:
         return int(iacc.accChildCount)
-    except (COMError, TypeError, ValueError):
+    except COMError, TypeError, ValueError:
         return 0
 
 
@@ -271,7 +271,7 @@ def _iter_children(iacc, iface):
             continue
         try:
             child = disp.QueryInterface(iface)
-        except (COMError, AttributeError):
+        except COMError, AttributeError:
             continue
         yield child
 

@@ -29,9 +29,7 @@ def test_default_is_false():
 def test_load_stateless_http_true(tmp_path: Path):
     p = tmp_path / "config.toml"
     p.write_text(
-        '[server]\n'
-        'transport = "streamable-http"\n'
-        'stateless_http = true\n',
+        '[server]\ntransport = "streamable-http"\nstateless_http = true\n',
         encoding="utf-8",
     )
     cfg = load_config(p)
@@ -42,8 +40,7 @@ def test_load_stateless_http_true(tmp_path: Path):
 def test_load_stateless_http_false_explicit(tmp_path: Path):
     p = tmp_path / "config.toml"
     p.write_text(
-        '[server]\n'
-        'stateless_http = false\n',
+        "[server]\nstateless_http = false\n",
         encoding="utf-8",
     )
     cfg = load_config(p)
@@ -53,8 +50,7 @@ def test_load_stateless_http_false_explicit(tmp_path: Path):
 def test_load_stateless_http_rejects_non_bool(tmp_path: Path):
     p = tmp_path / "config.toml"
     p.write_text(
-        '[server]\n'
-        'stateless_http = "yes"\n',
+        '[server]\nstateless_http = "yes"\n',
         encoding="utf-8",
     )
     with pytest.raises(ValueError, match="server.stateless_http"):

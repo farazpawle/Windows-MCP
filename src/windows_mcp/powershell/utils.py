@@ -21,7 +21,7 @@ def ps_quote(value: str) -> str:
 
 def ps_quote_for_xml(value: str) -> str:
     """XML-escape then ps_quote. Use for values in XML passed to PowerShell."""
-    escaped = xml_escape(value, {'"': '&quot;', "'": '&apos;'})
+    escaped = xml_escape(value, {'"': "&quot;", "'": "&apos;"})
     return ps_quote(escaped)
 
 
@@ -30,18 +30,18 @@ def check_pid_exists(pid: int) -> bool:
     try:
         proc = psutil.Process(pid)
         return proc.status() not in (psutil.STATUS_DEAD, psutil.STATUS_ZOMBIE)
-    except (psutil.NoSuchProcess, psutil.AccessDenied):
+    except psutil.NoSuchProcess, psutil.AccessDenied:
         return False
 
 
 def run_with_graceful_timeout(
-        *popenargs,
-        input=None,
-        capture_output=False,
-        timeout=None,
-        check=False,
-        grace_period: float = 2.0,
-        **kwargs,
+    *popenargs,
+    input=None,
+    capture_output=False,
+    timeout=None,
+    check=False,
+    grace_period: float = 2.0,
+    **kwargs,
 ):
     """A Windows-oriented variant migrated from ``subprocess.run``.
 
@@ -115,11 +115,11 @@ def run_with_graceful_timeout(
 
         except subprocess.TimeoutExpired as exc1:
             # Try graceful shutdown first
-            logger.debug('Process did not exit within timeout, attempting graceful shutdown.')
+            logger.debug("Process did not exit within timeout, attempting graceful shutdown.")
             try:
                 process.send_signal(signal.CTRL_BREAK_EVENT)
             except Exception:
-                logger.debug('Failed to send CTRL_BREAK_EVENT, attempting to terminate process.')
+                logger.debug("Failed to send CTRL_BREAK_EVENT, attempting to terminate process.")
 
             try:
                 exc1.stdout, exc1.stderr = process.communicate(timeout=grace_period)
@@ -156,7 +156,7 @@ def run_with_graceful_timeout(
 
         except BaseException:
             # Keep cleanup strategy consistent with timeout path
-            logger.debug('Other exception occurred, attempting to kill process...')
+            logger.debug("Other exception occurred, attempting to kill process...")
             subprocess.run(
                 ["taskkill", "/PID", str(process.pid), "/T", "/F"],
                 stdout=subprocess.DEVNULL,
@@ -168,8 +168,6 @@ def run_with_graceful_timeout(
 
         retcode = process.poll()
         if check and retcode:
-            raise subprocess.CalledProcessError(
-                retcode, process.args, output=stdout, stderr=stderr
-            )
+            raise subprocess.CalledProcessError(retcode, process.args, output=stdout, stderr=stderr)
 
         return subprocess.CompletedProcess(process.args, retcode, stdout, stderr)

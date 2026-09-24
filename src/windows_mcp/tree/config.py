@@ -64,14 +64,16 @@ INTERACTIVE_ROLES = {
 
 DOCUMENT_CONTROL_TYPE_NAMES = set(["DocumentControl"])
 
-STRUCTURAL_CONTROL_TYPE_NAMES = set([
-    "PaneControl",
-    "GroupControl",
-    "CustomControl",
-    "ToolBarControl",
-    "TabControl",
-    "MenuBarControl",
-])
+STRUCTURAL_CONTROL_TYPE_NAMES = set(
+    [
+        "PaneControl",
+        "GroupControl",
+        "CustomControl",
+        "ToolBarControl",
+        "TabControl",
+        "MenuBarControl",
+    ]
+)
 
 INFORMATIVE_CONTROL_TYPE_NAMES = set(
     [

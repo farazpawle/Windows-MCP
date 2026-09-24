@@ -19,7 +19,9 @@ def process_names(monkeypatch):
     monkeypatch.delenv("WINDOWS_MCP_READ_VSCODE", raising=False)
 
 
-@pytest.mark.parametrize("exe", ["Code.exe", "Cursor.exe", "Windsurf.exe", "Antigravity.exe", "VSCodium.exe"])
+@pytest.mark.parametrize(
+    "exe", ["Code.exe", "Cursor.exe", "Windsurf.exe", "Antigravity.exe", "VSCodium.exe"]
+)
 def test_vscode_family_blocked(monkeypatch, exe):
     monkeypatch.setattr(utils, "_process_name", lambda handle: exe)
     monkeypatch.delenv("WINDOWS_MCP_READ_VSCODE", raising=False)

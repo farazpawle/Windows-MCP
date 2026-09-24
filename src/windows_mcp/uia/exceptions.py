@@ -10,7 +10,9 @@ class UIAException(Exception):
     def __init__(self, code: int, original: Exception | None = None):
         self.code = code
         self.original = original
-        name = UIAError(code).name if code in UIAError._value2member_map_ else hex(code & 0xFFFFFFFF)
+        name = (
+            UIAError(code).name if code in UIAError._value2member_map_ else hex(code & 0xFFFFFFFF)
+        )
         super().__init__(f"{name} ({code})")
 
     @property
