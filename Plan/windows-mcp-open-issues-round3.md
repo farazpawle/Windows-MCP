@@ -9,11 +9,12 @@ Evidence for every item: `docs/testing/windows-mcp-tool-test-report.md`, section
 
 # Part A - Bugs
 
-- [ ] R3-1 **High - windows that cannot be maximized are missing from the window list.** `Desktop.get_windows` (`desktop/service.py`) keeps only windows whose WindowPattern has CanMinimize and CanMaximize, so fixed-size dialogs, Avast's alert and an app showing a modal question vanish from App `list`, and `switch`/`close`/`resize` by name and Click `window=` say "not found".
-  - [ ] a. Unit: a fake fixed-size top-level window (CanMaximize False) appears in `get_windows`.
-  - [ ] b. Replace the CanMinimize-and-CanMaximize filter with a top-level-window test (visible, not a tool window, has a title or is the foreground window).
-  - [ ] c. Check the Snapshot "Opened Windows" list still leaves out helper windows.
+- [x] R3-1 **High - windows that cannot be maximized are missing from the window list.** `Desktop.get_windows` (`desktop/service.py`) keeps only windows whose WindowPattern has CanMinimize and CanMaximize, so fixed-size dialogs, Avast's alert and an app showing a modal question vanish from App `list`, and `switch`/`close`/`resize` by name and Click `window=` say "not found".
+  - [x] a. Unit: a fake fixed-size top-level window (CanMaximize False) appears in `get_windows`.
+  - [x] b. Replace the CanMinimize-and-CanMaximize filter with a top-level-window test (visible, not a tool window, has a title or is the foreground window).
+  - [x] c. Check the Snapshot "Opened Windows" list still leaves out helper windows.
   - **Verify:** Live - a WinForms FixedDialog form is listed by App `list`, closed by `close name=...`, and Click `element=... window=...` reaches it.
+  - Result (2026-09-24): rule is WindowPattern present and (foreground, or titled and not WS_EX_TOOLWINDOW); `tests/test_get_windows_filter.py`. Live: old and new lists identical on the working desktop (no helpers added); a `fixed_dialog=True` harness window was listed, Click `element="button:Alpha" window=...` logged `click Alpha`, `close name=...` closed it.
 
 - [ ] R3-2 **High - a full-screen capture can miss a window that is in front.** `DxcamBackend.is_available` (`desktop/screenshot.py`) returns False without a region, so full captures use GDI (pillow), which missed Avast's alert.
   - [ ] a. Unit: `auto` picks dxcam for a full capture of one display when dxcam is available.
@@ -121,7 +122,7 @@ Evidence for every item: `docs/testing/windows-mcp-tool-test-report.md`, section
 # Part D - Tool guide restructure (user decision 2026-09-24: do it next session)
 
 - [ ] D.1 **Split the tool guide into a short main file plus references.** Today it is one file of 127 lines / 34,000 characters, 18 lines over 600 characters (longest 2,074), mixing how-to, PyPI differences (65 mentions) and dated test evidence (32 dates). The user already moved it from `Skills/Skill.md` to `Skills/windows-mcp/Skill.md` (uncommitted at the end of the 2026-09-24 session).
-  - [ ] a. Commit the user's move to `Skills/windows-mcp/` on its own (`git mv` history kept).
+  - [x] a. Commit the user's move to `Skills/windows-mcp/` on its own (`git mv` history kept).
   - [ ] b. Rename the main file to `SKILL.md` (the skill-folder convention), keeping its frontmatter `name`/`description`.
   - [ ] c. Write the main file: golden rules, which tool for which job, the UI workflow, and a one-line pointer to each reference.
   - [ ] d. Write `references/observe.md` (Screenshot, Snapshot, FindText, WaitFor, Wait, DisplayInventory).

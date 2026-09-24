@@ -33,6 +33,7 @@ def start_window(
     scrollbars: bool = False,
     buttons: tuple[str, ...] = (),
     seconds: int = 90,
+    fixed_dialog: bool = False,
 ) -> tuple[subprocess.Popen, int]:
     """Open the logging test window and wait until it is visible.
 
@@ -53,6 +54,8 @@ def start_window(
         cmd.append("-ScrollBars")
     if buttons:
         cmd += ["-Buttons", ",".join(buttons)]
+    if fixed_dialog:
+        cmd.append("-FixedDialog")
     proc = subprocess.Popen(
         cmd, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
     )

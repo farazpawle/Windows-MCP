@@ -10,7 +10,8 @@ param(
     [int]$Seconds = 90,
     [switch]$TextBox,
     [switch]$ScrollBars,  # with -TextBox: a vertical scroll bar (a ScrollPattern for UIA)
-    [string]$Buttons = ""  # comma-separated names: a row of buttons, each logs "click <name>"
+    [string]$Buttons = "",  # comma-separated names: a row of buttons, each logs "click <name>"
+    [switch]$FixedDialog  # fixed-size dialog border, no Maximize/Minimize (UIA CanMaximize False)
 )
 Add-Type -ReferencedAssemblies System.Windows.Forms, System.Drawing -TypeDefinition @"
 using System;
@@ -59,6 +60,11 @@ $form.StartPosition = "Manual"
 $form.Location = New-Object Drawing.Point($X, $Y)
 $form.Size = New-Object Drawing.Size($Width, $Height)
 $form.TopMost = $true
+if ($FixedDialog) {
+    $form.FormBorderStyle = "FixedDialog"
+    $form.MaximizeBox = $false
+    $form.MinimizeBox = $false
+}
 if ($TextBox) {
     $box = New-Object Windows.Forms.TextBox
     $box.Multiline = $true

@@ -1548,6 +1548,7 @@ class Desktop:
             windows = []
             window_handles = set()
             controls_handles = controls_handles or self.get_controls_handles()
+            foreground = uia.GetForegroundWindow()
             for depth, hwnd in enumerate(controls_handles):
                 try:
                     child = uia.ControlFromHandle(hwnd)
@@ -1563,7 +1564,14 @@ class Desktop:
                     if window_pattern is None:
                         continue
 
-                    if window_pattern.CanMinimize and window_pattern.CanMaximize:
+                    # Not CanMaximize: fixed-size dialogs and apps showing a modal question
+                    # can't maximize but are real windows. Helpers are tool windows or
+                    # untitled; whatever is in front always counts (e.g. antivirus alerts).
+                    is_tool = (
+                        win32gui.GetWindowLong(hwnd, win32con.GWL_EXSTYLE)
+                        & win32con.WS_EX_TOOLWINDOW
+                    )
+                    if hwnd == foreground or (child.Name.strip() and not is_tool):
                         status = self.get_window_status(child)
 
                         bounding_rect = child.BoundingRectangle
