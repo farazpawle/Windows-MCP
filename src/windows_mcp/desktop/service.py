@@ -731,14 +731,15 @@ class Desktop:
             )
         else:
             window_control = uia.ControlFromHandle(target_window.handle)
+            # window_loc/window_size mean the visible window, as App list and screenshots
+            # show it. MoveWindow takes the outer rect, which adds invisible resize borders
+            # (7 px left, right and bottom on Windows 11), so add them back (round-3 R3-I11).
+            outer = window_control.BoundingRectangle
+            visible = uia.DwmGetWindowExtendFrameBounds(target_window.handle) or outer
             if loc is None:
-                x = window_control.BoundingRectangle.left
-                y = window_control.BoundingRectangle.top
-                loc = (x, y)
+                loc = (visible.left, visible.top)
             if size is None:
-                width = window_control.BoundingRectangle.width()
-                height = window_control.BoundingRectangle.height()
-                size = (width, height)
+                size = (visible.width(), visible.height())
             x, y = loc
             width, height = size
             # A window fully off every display is unreachable by mouse and looks lost.
@@ -755,7 +756,11 @@ class Desktop:
                     f"{target_window.name} fully off every display.",
                     1,
                 )
-            window_control.MoveWindow(x, y, width, height)
+            left, top = visible.left - outer.left, visible.top - outer.top
+            right, bottom = outer.right - visible.right, outer.bottom - visible.bottom
+            window_control.MoveWindow(
+                x - left, y - top, width + left + right, height + top + bottom
+            )
             return (f"{target_window.name} resized to {width}x{height} at {x},{y}.{note}", 0)
 
     def app(

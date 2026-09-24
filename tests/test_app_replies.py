@@ -29,8 +29,35 @@ def _desktop(windows):
 @pytest.fixture
 def control():
     ctrl = MagicMock(BoundingRectangle=Rect(100, 100, 900, 700))
-    with patch(f"{SERVICE}.uia.ControlFromHandle", return_value=ctrl):
+    with (
+        patch(f"{SERVICE}.uia.ControlFromHandle", return_value=ctrl),
+        patch(f"{SERVICE}.uia.DwmGetWindowExtendFrameBounds", return_value=None),
+    ):
         yield ctrl
+
+
+# Round-3 R3-I11, measured live: GetWindowRect (300,250,940,610) was visible (307,250,933,603),
+# so resize put the visible window 7 px off from what window_loc/window_size asked.
+@pytest.mark.parametrize(
+    ("loc", "size", "moved", "reply"),
+    [
+        (None, [700, 400], (300, 250, 714, 407), "resized to 700x400 at 307,250."),
+        ([400, 300], [500, 300], (393, 300, 514, 307), "resized to 500x300 at 400,300."),
+        ([400, 300], None, (393, 300, 640, 360), "resized to 626x353 at 400,300."),
+    ],
+)
+def test_resize_means_the_visible_window(loc, size, moved, reply):
+    ctrl = MagicMock(BoundingRectangle=Rect(300, 250, 940, 610))
+    with (
+        patch(f"{SERVICE}.uia.ControlFromHandle", return_value=ctrl),
+        patch(
+            f"{SERVICE}.uia.DwmGetWindowExtendFrameBounds", return_value=Rect(307, 250, 933, 603)
+        ),
+    ):
+        text, status = _desktop([_window("WMCP Harness", 1)]).resize_app("WMCP Harness", size, loc)
+    assert status == 0
+    ctrl.MoveWindow.assert_called_once_with(*moved)
+    assert text.endswith(reply)
 
 
 # a. window_size must be two positive numbers

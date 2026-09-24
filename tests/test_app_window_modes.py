@@ -282,7 +282,10 @@ def test_resize_by_handle_picks_that_window():
     ctrl = MagicMock(BoundingRectangle=Rect(100, 100, 900, 700))
     desktop = _desktop([_window("Notepad", 11), _window("Notepad", 22)])
     desktop.get_displays = lambda: [SimpleNamespace(rect=Rect(0, 0, 1920, 1080))]
-    with patch("windows_mcp.desktop.service.uia.ControlFromHandle", return_value=ctrl) as from_h:
+    with (
+        patch("windows_mcp.desktop.service.uia.ControlFromHandle", return_value=ctrl) as from_h,
+        patch("windows_mcp.desktop.service.uia.DwmGetWindowExtendFrameBounds", return_value=None),
+    ):
         desktop.app("resize", size=[800, 600], handle=22)
     from_h.assert_called_once_with(22)
     ctrl.MoveWindow.assert_called_once_with(100, 100, 800, 600)

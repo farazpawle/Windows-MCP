@@ -136,10 +136,11 @@ Evidence for every item: `docs/testing/windows-mcp-tool-test-report.md`, section
   - **Verify:** Live - `list name=pwsh details=true` shows the command line of a known test process.
   - Result (2026-09-24): `details=true` adds Started (local time) and Command line (`subprocess.list2cmdline`, then `redact`; `-` when access is denied); a plain list reads no command lines. Tests in `test_process_self_cpu.py`. Live: a hidden `pwsh -NoProfile -Command "Start-Sleep 30 # wmcp-r3i10 -Token fakesecret123"` was listed with its start time and command line, the token shown as [hidden]; stderr empty; the test process was killed after. Note: `redact` also eats a closing quote right after a hidden value (cosmetic).
 
-- [ ] R3-I11 **App `list` gives no window position.** Clicking the Avast alert safely needed its rectangle from a separate script; `list` shows handle, PID, state and title only.
-  - [ ] a. Unit: each `list` line includes the window's position and size in caller coordinates.
-  - [ ] b. Add it to `format_list`.
+- [x] R3-I11 **App `list` gives no window position.** Clicking the Avast alert safely needed its rectangle from a separate script; `list` shows handle, PID, state and title only.
+  - [x] a. Unit: each `list` line includes the window's position and size in caller coordinates.
+  - [x] b. Add it to `format_list`.
   - **Verify:** Live - the listed rectangle of a test window matches `GetWindowRect`.
+  - Result (2026-09-24): lines end `at (left,top) size WxH`, the visible window in screen pixels (DWM extended frame, as Snapshot's window list). Live, the verify as written does not hold by design: GetWindowRect (300,250) 640x360 listed as (307,250) 626x353, the 7 px being Windows 11's invisible resize borders. That showed `resize` meant the outer rect (700x400 gave a visible 686x393; window_loc 400,300 put it at 407,300). User decision (2026-09-24): positions mean the visible window everywhere, so `resize_app` now adds the borders back before MoveWindow. Live after: size-only 700x400 gave visible (307,250) 700x400 twice with no drift, loc 400,300 size 500x300 gave exactly that. Tests in `test_app_window_modes.py` and `test_app_replies.py`.
 
 # Part C - New tools / abilities
 

@@ -42,8 +42,8 @@
 ## resize
 
 - `name`, `window_loc=[x,y]`, `window_size=[w,h]`; either one alone keeps the other.
-- The outer window rectangle is set exactly; the visible frame is a few px smaller (invisible
-  borders).
+- Position and size mean the visible window, as `list` and screenshots show it (screen
+  pixels): a `list` position fed back keeps the window in place.
 - With no `name` it acts on the window in front right now.
 - A maximized or minimized window is refused ("Cannot resize ...: it is maximized"): restore
   first. A `window_size` that is not two positive numbers, or a `window_loc` fully off every
@@ -55,7 +55,8 @@
   ("Notepad is now minimized.").
 - `close`: like the X button, never a kill; **name or handle required**. Replies "Closed X."
   or says it is still open (e.g. asking to save).
-- `list`: one line per window: `handle=... pid=... program State "title"`.
+- `list`: one line per window: `handle=... pid=... program State at (left,top) size WxH "title"`,
+  the visible window in screen pixels (the units `resize` takes).
 - `move` with `display=N` (numbering as in DisplayInventory): keeps the offset but moves the
   window up/left to stay inside the work area (taskbar excluded), shrinks it to fit, and
   re-maximizes a maximized window; a minimized one is refused. Works across screens with
