@@ -1,7 +1,7 @@
 ---
 Title: Windows-MCP open issues backlog - round 3 (2026-09-24)
 Description: Findings of the round-3 real-work scenario test (all 21 tools driven through the connected server at the PC, plus a per-tool timing pass), turned into a task file. Part A Bugs - 2 High (windows that cannot be maximized are missing from the window list; a full-screen capture misses some front windows such as Avast's alert), 2 Medium (false "covered"/"screen changed" refusals; screen_changed misses small changes), 5 Low. Part B Improvements (fixed 0.5 s pauses and other latency, encoded PowerShell command lines, App Paths lookup, OCR column gaps, process command lines, window positions in App list). Part C one new ability (pop-up detection, needs the user's design approval). Part D restructures the tool guide into a short main file plus references (next session), then the user installs it in Claude Desktop once it is verified. Details and evidence are in docs/testing/windows-mcp-tool-test-report.md (Round 3). Status 2026-09-24: all of Part A fixed and proved (live where the item asks) and the guide split (D.1) done; Parts B and C open (R3-I1, R3-I2 done), D.2 waits for the user.
-Total Tasks: 58
+Total Tasks: 59
 ---
 # Windows-MCP open issues - round 3
 
@@ -82,16 +82,18 @@ Evidence for every item: `docs/testing/windows-mcp-tool-test-report.md`, section
   - [x] Follow-up (new finding): MultiEdit is still ~0.95 s a field with typing now instant. Not measured where; suspect the clear's UIA focus read (`_finish_clear`). Profile one field before changing anything.
   - Result (2026-09-24): profiled live: `_finish_clear` took 0.51 s only when Ctrl+A left text, all of it `ValuePattern.SetValue`'s default 0.5 s wait. Now `waitTime=0.05`; `test_clear_fallback_does_not_wait_half_a_second`. Live: 0.44-0.49 s a field (was 0.94), text exact; the rest is click 0.15 s, settle 0.1 s, Ctrl+A/Back ~0.17 s.
 
-- [ ] R3-I3 **Process list 1.6 s.**
+- [x] R3-I3 **Process list 1.6 s.**
   - [x] a. Unit: `sort_by="memory"` makes no CPU sampling call.
   - [x] b. Sample CPU only for `sort_by="cpu"`.
   - **Verify:** Timing pass - memory list under 0.3 s.
   - Result so far (2026-09-24): CPU sampled (and the CPU% column shown) only for `sort_by="cpu"`; `test_other_sorts_do_not_sample_cpu`. Real run: memory 0.60 s, name 0.60 s, cpu 1.77 s. Verify not met: profiling shows 0.58 s of the 0.60 s is psutil `memory_info` on the 161 of 473 processes it cannot open, where it falls back to a whole-system snapshot per process (312 openable ones take 0.004 s in total).
-  - [ ] c. [User] Decide (design choice): read every process's memory from one system snapshot (`NtQuerySystemInformation` via ctypes, ~30 lines) or accept ~0.6 s.
+  - [x] c. [User] Decide (design choice): read every process's memory from one system snapshot (`NtQuerySystemInformation` via ctypes, ~30 lines) or accept ~0.6 s. User (2026-09-24): accept ~0.6 s; the 0.3 s target is dropped.
 
 - [ ] R3-I4 **Encoded PowerShell command lines look like malware.**
   - [ ] a. Run scripts from a temp `.ps1` with `-File` instead of `-EncodedCommand`, deleting it afterwards.
   - **Verify:** Unit - the command line has no `-EncodedCommand`; suite green; OCR still works live.
+  - Attempt (2026-09-24), reverted, not committed: (a) rejected - `-File` fails under an AllSigned policy and exits 0 when the last command failed. Tried instead: fixed `-Command` `$s = [IO.StreamReader]::new([Console]::OpenStandardInput(), [Text.Encoding]::UTF8).ReadToEnd(); try { $b = [scriptblock]::Create($s) } catch { [Console]::Error.WriteLine($_.Exception.InnerException.Message); exit 1 }; . $b`, the script passed as `input=` bytes with `\nif (-not $?) { exit 1 }` appended. A side-by-side of 16 cases on pwsh and powershell 5.1 matched the encoded way in output and exit code (Unicode, failed last command, native exit 3, `exit 7`, throw, multi-line, syntax error); stderr became plain text instead of CLIXML. Suite green (1525) with 12 new tests; live PowerShell, Registry get/list, Notification and FindText (ran; title not found in the given region) worked. Stopped on App launch: one run raised COMError -2146233083 (UIA timeout in the post-launch window search, `service.py` ~798-806), one run said "Calculator launched", and several live-test runs printed nothing (output lost, not diagnosed) and left Calculator windows open. The user stopped the slow Calculator loop (2026-09-24).
+  - [ ] b. Before retrying: make the live-test script's output reliable (print with flush, run with `2>&1` into a file) and learn why runs printed nothing; then compare App launch old vs new 3 times each.
 
 - [ ] R3-I5 **`launch_executable` bare names miss App Paths** (msedge.exe).
   - [ ] a. Unit: a bare name found only under `HKLM/HKCU\...\App Paths` resolves.
