@@ -16,8 +16,15 @@ from windows_mcp.uia.core import Rect
 WC = "windows_mcp.desktop.window_control"
 
 
-def _window(name, handle, status=Status.NORMAL, pid=None):
-    return SimpleNamespace(name=name, handle=handle, process_id=pid or handle, status=status)
+def _window(name, handle, status=Status.NORMAL, pid=None, box=(100, 50, 800, 600)):
+    left, top, width, height = box
+    return SimpleNamespace(
+        name=name,
+        handle=handle,
+        process_id=pid or handle,
+        status=status,
+        bounding_box=SimpleNamespace(left=left, top=top, width=width, height=height),
+    )
 
 
 def _desktop(windows, active=None):
@@ -128,15 +135,15 @@ def test_close_says_when_window_stays_open():
 def test_list_shows_handle_pid_process_state_and_title():
     windows = [
         _window("notes.txt - Notepad", 1234, pid=4120),
-        _window("Inbox", 5678, Status.MAXIMIZED, pid=8812),
+        _window("Inbox", 5678, Status.MAXIMIZED, pid=8812, box=(-8, -8, 1936, 1048)),
     ]
     names = {4120: "notepad.exe", 8812: "chrome.exe"}
     with patch(f"{WC}.Process", side_effect=lambda pid: SimpleNamespace(name=lambda: names[pid])):
         reply = window_control.format_list(windows)
     assert reply.splitlines() == [
         "2 windows:",
-        'handle=1234 pid=4120 notepad.exe Normal "notes.txt - Notepad"',
-        'handle=5678 pid=8812 chrome.exe Maximized "Inbox"',
+        'handle=1234 pid=4120 notepad.exe Normal at (100,50) size 800x600 "notes.txt - Notepad"',
+        'handle=5678 pid=8812 chrome.exe Maximized at (-8,-8) size 1936x1048 "Inbox"',
     ]
 
 

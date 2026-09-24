@@ -64,8 +64,11 @@ def format_list(windows) -> str:
             exe = Process(window.process_id).name()
         except Exception:
             exe = "?"
+        # Position and size in screen pixels, the units App move/resize take (round-3 R3-I11).
+        box = window.bounding_box
         lines.append(
-            f'handle={window.handle} pid={window.process_id} {exe} {window.status.value} "{window.name}"'
+            f"handle={window.handle} pid={window.process_id} {exe} {window.status.value} "
+            f'at ({box.left},{box.top}) size {box.width}x{box.height} "{window.name}"'
         )
     return "\n".join(lines)
 
