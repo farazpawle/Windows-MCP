@@ -3,7 +3,8 @@
 For games, remote desktops and canvas UIs, which expose no accessibility tree.
 Windows.Media.Ocr is a WinRT API; with no WinRT package in the project, Windows
 PowerShell 5.1 (pwsh 7 cannot load WinRT types) reads a temporary PNG. A full
-1920x1080 screen takes about 2.6 s at the 3x enlargement, process start included.
+1920x1080 screen takes about 1.6 s at the 3x enlargement, process start included
+(measured 2026-09-24; a small region about 0.6 s).
 """
 
 import json

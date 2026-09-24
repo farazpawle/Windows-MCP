@@ -1,6 +1,6 @@
 ---
 Title: Windows-MCP open issues backlog - round 3 (2026-09-24)
-Description: Findings of the round-3 real-work scenario test (all 21 tools driven through the connected server at the PC, plus a per-tool timing pass), turned into a task file. Part A Bugs - 2 High (windows that cannot be maximized are missing from the window list; a full-screen capture misses some front windows such as Avast's alert), 2 Medium (false "covered"/"screen changed" refusals; screen_changed misses small changes), 5 Low. Part B Improvements (fixed 0.5 s pauses and other latency, encoded PowerShell command lines, App Paths lookup, OCR column gaps, process command lines, window positions in App list). Part C one new ability (pop-up detection, needs the user's design approval). Part D restructures the tool guide into a short main file plus references (next session), then the user installs it in Claude Desktop once it is verified. Details and evidence are in docs/testing/windows-mcp-tool-test-report.md (Round 3). Status 2026-09-24: all of Part A fixed and proved (live where the item asks) and the guide split (D.1) done; Parts B and C open (R3-I1 to R3-I4 done; new bug R3-10 found and fixed), D.2 waits for the user.
+Description: Findings of the round-3 real-work scenario test (all 21 tools driven through the connected server at the PC, plus a per-tool timing pass), turned into a task file. Part A Bugs - 2 High (windows that cannot be maximized are missing from the window list; a full-screen capture misses some front windows such as Avast's alert), 2 Medium (false "covered"/"screen changed" refusals; screen_changed misses small changes), 5 Low. Part B Improvements (fixed 0.5 s pauses and other latency, encoded PowerShell command lines, App Paths lookup, OCR column gaps, process command lines, window positions in App list). Part C one new ability (pop-up detection, needs the user's design approval). Part D restructures the tool guide into a short main file plus references (next session), then the user installs it in Claude Desktop once it is verified. Details and evidence are in docs/testing/windows-mcp-tool-test-report.md (Round 3). Status 2026-09-24: all of Part A fixed and proved (live where the item asks) and the guide split (D.1) done; Parts B and C open (R3-I1 to R3-I9 done; R3-I10, R3-I11 and R3-N1 open; new bug R3-10 found and fixed), D.2 waits for the user.
 Total Tasks: 62
 ---
 # Windows-MCP open issues - round 3
@@ -114,18 +114,21 @@ Evidence for every item: `docs/testing/windows-mcp-tool-test-report.md`, section
   - **Verify:** Live - "North 460 units" found in a column-aligned Notepad text.
   - Result (2026-09-24): `_rows` joins OCR lines whose vertical centres are within half a line height, words left to right. Found on the way: Windows OCR returned `TextAngle` 1.5 for level text drawn in columns and gave word boxes in that tilted frame (one row's words 18 px apart, click points off), so the script now prints the angle and `_turn_back` turns each box centre back about the image centre. Tests use the real engine numbers. Real OCR on a drawn table (Arial 30): rows "North 460 units" / "South 215 units", match centre x 402 = drawn 402; "units South" not found. Consolas 22: the engine misses the lone "460" (reading gap, noted in the guide). Live: harness text box with columns typed, FindText "North 460 units" found once at (286,240) on the first row, "units South" not found, stderr empty.
 
-- [ ] R3-I7 **Right-click menu appears ~1 s after Click returns.**
-  - [ ] a. Say in the Click description and guide to WaitFor before reading a menu (no code change), or wait for a menu after a right click.
+- [x] R3-I7 **Right-click menu appears ~1 s after Click returns.**
+  - [x] a. Say in the Click description and guide to WaitFor before reading a menu (no code change), or wait for a menu after a right click.
   - **Verify:** Guide/description updated.
+  - Result (2026-09-24): the Click description now says a context menu can appear up to ~1 s after the reply and to WaitFor `element_exists` or `screen_idle` first; `references/input.md` already said so.
 
-- [ ] R3-I8 **Snapshot tree lists empty `window ""` lines.**
-  - [ ] a. Unit: a window with no name and no listed children is left out of the printed tree.
-  - [ ] b. Skip such windows when printing.
+- [x] R3-I8 **Snapshot tree lists empty `window ""` lines.**
+  - [x] a. Unit: a window with no name and no listed children is left out of the printed tree.
+  - [x] b. Skip such windows when printing.
   - **Verify:** Unit only.
+  - Result (2026-09-24): `_prune_structural` also drops unnamed windows with no children (named empty windows and unnamed ones with content stay). `tests/test_semantic_prune.py`.
 
-- [ ] R3-I9 **FindText description says ~2.5 s full screen; measured 1.24 s.**
-  - [ ] a. Update the FindText and WaitFor descriptions.
+- [x] R3-I9 **FindText description says ~2.5 s full screen; measured 1.24 s.**
+  - [x] a. Update the FindText and WaitFor descriptions.
   - **Verify:** Stdio handshake test still green.
+  - Result (2026-09-24): re-measured on today's screen, full 1.53-1.74 s, 400x200 region 0.58-0.63 s (PowerShell start is the same ~0.21 s with the stdin runner and the old encoded way, so the change from 1.24 s is screen content). FindText and WaitFor descriptions, the OCR module docstring and the guide now say ~1.6 s / ~0.6 s. Suite green including the stdio handshake.
 
 - [ ] R3-I10 **Process list cannot tell which program is behind a process.** Tracing the Avast alert needed a separate PowerShell `Win32_Process` query: the only clue was a hidden `powershell.exe` whose command line named another app's tray script.
   - [ ] a. Unit: `list` with a new `details=true` shows each process's command line (secrets hidden via `action_log.redact`) and start time.

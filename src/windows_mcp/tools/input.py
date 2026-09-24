@@ -415,6 +415,8 @@ def register(
         description=(
             "Performs mouse clicks at specified coordinates [x, y] or passing a UI element's label/id. "
             "Supports button types: 'left' for selection/activation, 'right' for context menus, 'middle'. "
+            "A context menu can appear up to ~1 s after the reply: WaitFor element_exists (or "
+            "screen_idle) before reading or clicking it. "
             "Supports clicks: 0=hover only (no click), 1=single click (select/focus), 2=double click (open/activate), "
             "3=triple click (select a line/paragraph). "
             "Provide loc or label; with neither, clicks at the current mouse position. "
@@ -753,7 +755,7 @@ def register(
             "inside the tool to avoid repeated Snapshot calls. Conditions: text_exists, "
             "active_window, element_exists, element_enabled, focused_element. Provide text "
             "and/or window_name depending on the condition. Set use_dom=True for browser DOM text. "
-            "screen_text instead reads the screen's pixels (Windows OCR, ~2.5 s per full-screen look, under 1 s for a small region) for apps "
+            "screen_text instead reads the screen's pixels (Windows OCR, ~1.6 s per full-screen look, ~0.6 s for a small region) for apps "
             "with no accessibility data, and reports where the text is. screen_changed waits "
             "for the screen to change from how it looked when WaitFor started (it misses a "
             "change that already happened) and says where; screen_idle waits until nothing "

@@ -44,7 +44,7 @@
 - `text`: case ignored, words in order on one line, may be part of a word. Optional `region`.
 - Lists every spot with a clickable `(x,y)`, within 1 px of the real centre.
 - Not found is a normal reply, not an error.
-- ~1.2 s for the full screen, ~0.4 s for a small region.
+- ~1.6 s for the full screen, ~0.6 s for a small region.
 - It reads visible pixels only: tiny, stylised or low-contrast text can be missed. A phrase
   may run across table columns on one row ("North 460 units"). A short number alone in a
   column can be missed in some fonts (Consolas "460"): then search a longer neighbour.
@@ -58,7 +58,7 @@
 - `text_exists` searches the active window, or the windows matching `window_name`, including
   plain labels ("Saved").
 - `screen_text` (`text`, optional `region`, no `window_name`) reads the screen by OCR on each
-  look and reports where the text is: ~1.2 s a look full screen, under 1 s for a small region.
+  look and reports where the text is: ~1.6 s a look full screen, ~0.6 s for a small region.
 - `screen_changed` waits until the screen (or `region`) differs from how it looked when
   WaitFor started, and says where (`changed around [l, t, r, b]`, a window's drop shadow
   included). It misses a change that already happened during the click before it.

@@ -82,7 +82,7 @@ System tools have no focus problems: prefer them over the UI when both can do th
 - Under 0.1 s: DisplayInventory, Clipboard, FileSystem, App list/switch, Screenshot,
   Snapshot of a region, Shortcut.
 - ~0.2 s WaitFor; ~0.3 s PowerShell and Registry (a new PowerShell each call).
-- FindText 0.4 s for a region, 1.2 s for the full screen.
+- FindText ~0.6 s for a region, ~1.6 s for the full screen.
 - Move ~0.1 s, Click ~0.15 s, Scroll ~0.3 s, MultiSelect ~0.2 s per click (a 0.1 s pause
   after each action; a slow app may need WaitFor `screen_idle` before a Screenshot).
 - Type without `loc` well under 0.1 s for short text; MultiEdit ~0.45 s per field;

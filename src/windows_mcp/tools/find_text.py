@@ -50,8 +50,8 @@ def register(
             "no accessibility data: games, remote desktops, canvas and drawing apps. Returns "
             "every place the phrase appears (case ignored, words in order on one line, may be "
             "part of a word) with a clickable [x, y] position. Searches every screen, or "
-            "region=[left, top, right, bottom] only (faster, fewer stray matches). About 2.5 s "
-            "for a full screen, under 1 s for a small region. Prefer Snapshot or Click element= "
+            "region=[left, top, right, bottom] only (faster, fewer stray matches). About 1.6 s "
+            "for a full screen, about 0.6 s for a small region. Prefer Snapshot or Click element= "
             "where UI elements exist. To wait for text to appear, use WaitFor "
             "condition='screen_text'."
         ),
