@@ -647,8 +647,10 @@ class Desktop:
             for w in window_list
             if w not in found and query in _ZERO_WIDTH.sub("", w.name).casefold()
         ]
-        if found:
-            return found, ""
+        # A whole title wins outright; only other windows with that same title stay (R3-6).
+        exact = [w for w in found if _ZERO_WIDTH.sub("", w.name).casefold().strip() == query]
+        if exact or found:
+            return exact or found, ""
         query = query.removesuffix(".exe")
         for window in window_list:
             try:

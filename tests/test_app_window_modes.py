@@ -59,6 +59,12 @@ class TestPickWindow:
         window, note = _desktop(windows).pick_window("Notepad", None)
         assert window.handle == 11 and "Also matched" in note
 
+    def test_exact_title_wins_without_a_note(self):
+        # R3-6: partial matches are not "also matched" when the name is a whole title.
+        windows = [_window("Notepad - draft.txt", 11), _window("notepad", 22)]
+        window, note = _desktop(windows).pick_window("Notepad", None)
+        assert window.handle == 22 and note == ""
+
 
 # --- minimize / maximize / restore -----------------------------------------------------
 

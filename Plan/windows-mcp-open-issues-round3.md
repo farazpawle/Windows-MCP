@@ -41,10 +41,11 @@ Evidence for every item: `docs/testing/windows-mcp-tool-test-report.md`, section
   - [ ] b. Prefer the match on top at its centre; refuse only when both are visible.
   - **Verify:** Live - Click `element="Copy as path"` in Explorer's context menu copies the paths.
 
-- [ ] R3-6 **Low - "Also matched ..." after an exact title.**
-  - [ ] a. Unit: an exact (case-ignored) title match gives no "Also matched" note.
-  - [ ] b. Skip the note when the name equals the chosen window's title.
+- [x] R3-6 **Low - "Also matched ..." after an exact title.**
+  - [x] a. Unit: an exact (case-ignored) title match gives no "Also matched" note.
+  - [x] b. Skip the note when the name equals the chosen window's title.
   - **Verify:** Unit only.
+  - Result (2026-09-24): `_find_windows_by_name` returns only whole-title matches when there are any, so the exact window is picked even if listed after a partial one, and the note names only same-titled windows (still useful). `test_exact_title_wins_without_a_note`.
 
 - [ ] R3-7 **Low - Notification reply doubles a full stop.**
   - [ ] a. Unit: a message ending in "." gives one full stop in the reply.
