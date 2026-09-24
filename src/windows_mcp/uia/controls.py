@@ -1235,10 +1235,11 @@ class Control:
         value = wordRange.GetAttributeValue(TextAttributeId.FontSizeAttribute)
         return float(value) if isinstance(value, (int, float)) else None
 
-    def _iter_word_ranges(self, textPattern) -> Generator[Tuple[str, "TextRange"], None, None]:
+    def _iter_word_ranges(self, textPattern) -> Generator[Tuple[str, "TextRange", str], None, None]:
         """
         Foundation for every word-level `TextPattern` feature (bounding boxes, attributes,
-        selection): yields (word_text, word_range) for each word in the control's visible text.
+        selection): yields (word_text, word_range, raw_text) for each word in the control's
+        visible text; raw_text is the range's unstripped text (for `_trim_trailing_space`).
         Walks each visible range word-by-word via `TextRange.Move(TextUnit.Word, 1)`.
 
         waitTime=0 on `ExpandToEnclosingUnit`/`Move`: these are read-only navigation calls, not
@@ -1258,9 +1259,10 @@ class Control:
                 )
                 < 0
             ):
-                text = wordRange.GetText(-1).strip()
+                raw = wordRange.GetText(-1)
+                text = raw.strip()
                 if text:
-                    yield text, wordRange
+                    yield text, wordRange, raw
                 moved = wordRange.Move(TextUnit.Word, 1, waitTime=0)
                 if moved == 0:
                     break
@@ -1285,8 +1287,8 @@ class Control:
         )
         uniform_font_size = doc_font_size if isinstance(doc_font_size, (int, float)) else None
         words: List[Tuple[str, List[Rect]]] = []
-        for text, wordRange in self._iter_word_ranges(textPattern):
-            rects = wordRange.GetBoundingRectangles()
+        for text, wordRange, raw in self._iter_word_ranges(textPattern):
+            rects = self._trim_trailing_space(wordRange.GetBoundingRectangles(), raw)
             font_size = uniform_font_size
             if font_size is None:
                 attr = wordRange.GetAttributeValue(TextAttributeId.FontSizeAttribute)
@@ -1337,8 +1339,8 @@ class Control:
         ]
 
         results: List[Tuple[str, List[Rect], Dict[int, Any]]] = []
-        for text, wordRange in self._iter_word_ranges(textPattern):
-            rects = wordRange.GetBoundingRectangles()
+        for text, wordRange, raw in self._iter_word_ranges(textPattern):
+            rects = self._trim_trailing_space(wordRange.GetBoundingRectangles(), raw)
             attrs: Dict[int, Any] = dict(uniform_values)
             if per_word_ids:
                 batched = wordRange.GetAttributeValues(per_word_ids)
@@ -1398,6 +1400,24 @@ class Control:
         if wordRange is None:
             return False
         return wordRange.Select(waitTime=0)
+
+    @staticmethod
+    def _trim_trailing_space(rects: List[Rect], raw: str) -> List[Rect]:
+        """
+        Cut the trailing spaces off a word's box. A word range includes the spaces after the
+        word ("460 "), so its box centre fell right of the text and a click there hit the gap
+        (round-4 R4-3). A line break has no width on screen, so it is not counted.
+        """
+        # ponytail: width shared per character, exact for monospace; in a proportional font
+        # a space is narrower, so the box ends slightly early (its centre stays on the word).
+        # Measuring a sub-range instead costs two COM calls per word.
+        body = raw.rstrip("\r\n")
+        kept = len(body.rstrip())
+        if len(rects) != 1 or kept in (0, len(body)):
+            return rects
+        rect = rects[0]
+        right = rect.left + round(rect.width() * kept / len(body))
+        return [Rect(left=rect.left, top=rect.top, right=right, bottom=rect.bottom)]
 
     @staticmethod
     def _shrink_rect_to_font_size(rect: Rect, font_size_pt: float, dpi: int) -> Rect:

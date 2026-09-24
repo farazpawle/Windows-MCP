@@ -91,6 +91,12 @@ Helpers (`scripts/livetest.py`):
 | `read_settled(path)` | Reads the log once it stops changing and retries while the file is locked. The window lags behind fast input, so an early read under-counts. |
 | `center`, `on_window`, `close_window`, `mcp_client` | Window centre point, the WindowFromPoint check, clean close by own handle, in-process client. |
 
+The harness text box has no UIA TextPattern, so Snapshot lists no `word` elements for it. To
+test word elements, open a throwaway WPF window instead (PowerShell `-STA`,
+`Add-Type -AssemblyName PresentationFramework`, a `Windows.Controls.TextBox` as the content,
+kill its own PID after): its words are listed. A single click on a word label then Type "X"
+shows where the click landed without touching the clipboard.
+
 The harness text box ignores Ctrl+A (it is a multiline WinForms box), so Ctrl+A then
 Backspace deletes only the last character: compare the new tail, or use a fresh window per case.
 

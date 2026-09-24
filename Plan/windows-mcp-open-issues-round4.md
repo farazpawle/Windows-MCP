@@ -1,6 +1,6 @@
 ---
 Title: Windows-MCP open issues backlog - round 4 (2026-09-24)
-Description: Findings of the round-4 real-work scenario test (all 21 tools driven through the connected server after the round-3 backlog, timed per call from Claude Code's MCP log), turned into a task file. Part A Bugs - 1 High (multi-line Type sends one key every 0.04 s: 622 characters took 26 s), 5 Medium (App launch names an older window; Snapshot word boxes include trailing spaces so word labels miss; WaitFor text_exists misses text inside documents; dialogs drawn inside an app's window are not noted; caret start/end work per line), 9 Low. Part B 7 improvements (Process list speed and output size, Snapshot word noise, fixed costs, reply boilerplate, list order, resize hint). Part C 2 new abilities (whole-field caret, FindText per window). Part D 31 guide, tool-description and test-skill corrections. Evidence is in docs/testing/windows-mcp-tool-test-report.md (Round 4). Status 2026-09-24: R4-1 fixed (622 multi-line characters in 0.87 s) and R4-2 fixed (launch names the new window and its handle), with D.4/D.5/D.20; next in the user's fix order is Part D.
+Description: Findings of the round-4 real-work scenario test (all 21 tools driven through the connected server after the round-3 backlog, timed per call from Claude Code's MCP log), turned into a task file. Part A Bugs - 1 High (multi-line Type sends one key every 0.04 s: 622 characters took 26 s), 5 Medium (App launch names an older window; Snapshot word boxes include trailing spaces so word labels miss; WaitFor text_exists misses text inside documents; dialogs drawn inside an app's window are not noted; caret start/end work per line), 9 Low. Part B 7 improvements (Process list speed and output size, Snapshot word noise, fixed costs, reply boilerplate, list order, resize hint). Part C 2 new abilities (whole-field caret, FindText per window). Part D 31 guide, tool-description and test-skill corrections. Evidence is in docs/testing/windows-mcp-tool-test-report.md (Round 4). Status 2026-09-24: R4-1 fixed (622 multi-line characters in 0.87 s) R4-2 fixed (launch names the new window and its handle) and R4-3 fixed (word boxes end at the word), with D.4/D.5/D.12/D.20; the user chose bugs before the remaining Part D.
 Total Tasks: 95
 ---
 # Windows-MCP open issues - round 4
@@ -27,11 +27,12 @@ Evidence for every item: `docs/testing/windows-mcp-tool-test-report.md`, section
   - **Verify:** Live - with a Notepad window open, App `launch name=Notepad` names the new window's title and handle.
   - Result 2026-09-24: live PASS - with a Notepad window open, the reply was "Untitled - Notepad launched (handle 592836)." (the new window) in 2.72 s. Added: when no new window appears but an old window of the app comes to the front (Notepad opening a tab there), the reply names it as possibly reused. Replies now carry the handle. Found: Notepad restores the user's earlier tabs, so a test must never close its window (live-test skill updated).
 
-- [ ] R4-3 **Medium - Snapshot word elements include trailing spaces.** Notepad's word boxes span the spaces after each word ("460" centre 337 vs drawn 317); a double-click on `label=` of "460" selected the gap.
-  - [ ] a. [User] Choose (design choice): trim word boxes to their text, or leave word elements out (see R4-I3).
-  - [ ] b. Unit: a word range with trailing spaces yields a centre on its text.
-  - [ ] c. Apply the chosen change in the tree service.
+- [x] R4-3 **Medium - Snapshot word elements include trailing spaces.** Notepad's word boxes span the spaces after each word ("460" centre 337 vs drawn 317); a double-click on `label=` of "460" selected the gap.
+  - [x] a. [User] Choose (design choice): trim word boxes to their text, or leave word elements out (see R4-I3). User chose trim (2026-09-24).
+  - [x] b. Unit: a word range with trailing spaces yields a centre on its text.
+  - [x] c. Apply the chosen change in the tree service.
   - **Verify:** Live - Click `label=` on a mid-line word in Notepad with `clicks=2` selects exactly that word (Ctrl+C, Clipboard get).
+  - Result 2026-09-24: fixed in `uia/controls.py` (`_trim_trailing_space`, used by word boxes and word attributes): the box is cut by the share of trailing spaces, no extra COM calls. Live on a throwaway WPF TextBox (the harness WinForms box lists no words; Notepad was avoided because it restores the user's tabs): "North    460      units", the "460" centre moved from 317 (the word's right edge) to 296; Click `label=` then Type "X" gave "North    4X60      units". Verified with a single click + typed X instead of Ctrl+C, so the clipboard was never touched.
 
 - [ ] R4-4 **Medium - WaitFor `text_exists` misses text inside a text box or document.** "North leads the week" (in the Notepad document value) timed out; "leads" matched.
   - [ ] a. Unit: `text_exists` matches a phrase inside an element's value (ValuePattern / TextPattern text).
@@ -116,7 +117,7 @@ Evidence for every item: `docs/testing/windows-mcp-tool-test-report.md`, section
   - **Verify:** Live - `list details=true limit=5` stays under 2,000 characters.
 
 - [ ] R4-I3 **Snapshot word elements.** A 20-line Notepad text is 134 `word` elements; the document already holds the text as its value.
-  - [ ] a. [User] Decide together with R4-3a.
+  - [x] a. [User] Decide together with R4-3a. Decided: keep word elements, trimmed (R4-3); only the size concern is left.
   - [ ] b. Implement the choice.
   - **Verify:** Live - the same Notepad Snapshot lists under 40 elements, or word centres are exact.
 
@@ -168,7 +169,7 @@ Guide = `Skills/windows-mcp/`. Rebuild the Claude Desktop ZIP (round-3 D.2) afte
 - [ ] D.9 `references/observe.md`: "on timeout it is an error that names the window actually active." - not for `text_exists` (until R4-4).
 - [ ] D.10 `references/observe.md`: "`text_exists` searches the active window, or the windows matching `window_name`, including plain labels" - missing: it matches one element's name, not a phrase inside a text box or document; use `screen_text` or a single word.
 - [ ] D.11 `references/observe.md`: "`region` keeps only elements inside the rectangle and reads only windows visible in it" - add: the Opened Windows list also shows only those windows.
-- [ ] D.12 `references/observe.md` Snapshot: missing - documents list one element per word, with boxes that include the spaces after the word; do not click a word label's centre (use FindText or `loc`).
+- [x] D.12 (done with R4-3: boxes now cover the word; observe.md says so) `references/observe.md` Snapshot: missing - documents list one element per word, with boxes that include the spaces after the word; do not click a word label's centre (use FindText or `loc`).
 - [ ] D.13 `references/observe.md` FindText: missing - a full-screen search can join text of neighbouring windows into one line; give a `region`.
 - [ ] D.14 `references/observe.md`: "On one screen, full captures use the same method as `region` captures (header "Screenshot Backend: dxcam")" - once, after the PC sat idle, it was pillow: check the Backend line and capture again when a pop-up is expected.
 - [ ] D.15 `references/system-tools.md`: "they follow the output under an `Errors and messages:` heading, with any warning, verbose and debug lines" - a `Write-Warning` line came back inline in the output; only the error was under the heading.
@@ -180,7 +181,7 @@ Guide = `Skills/windows-mcp/`. Rebuild the Claude Desktop ZIP (round-3 D.2) afte
 - [ ] D.21 `references/apps-windows.md` `list`: missing - lines are not in front-to-back order; a few apps' maximized windows show their outer frame (-8,-8).
 - [ ] D.22 `references/input.md`: "Every input reply ... ends with `Note: a new window appeared: ...` when a window opened since the previous input action" - missing: a dialog drawn inside the app's own window (Notepad's "save changes?") is not reported; take a Screenshot after closing or saving.
 - [ ] D.23 `references/known-gaps.md`: "Each entry names its backlog item (Plan/windows-mcp-open-issues-round3.md)" - point to this file.
-- [ ] D.24 `references/known-gaps.md`: add R4-3 to R4-6 (R4-1, R4-2 fixed) with their workarounds; remove each when fixed.
+- [ ] D.24 `references/known-gaps.md`: add R4-4 to R4-6 (R4-1 to R4-3 fixed) with their workarounds; remove each when fixed.
 - [ ] D.25 `SKILL.md` "Which tool for which job": add rows "Write a document or report -> FileSystem `write` (not typing)" and "Check text inside a document -> Ctrl+A, Ctrl+C then Clipboard `get`, or WaitFor `screen_text` (not `text_exists`)".
 - [ ] D.26 Snapshot tool description (`tools/`): "Captures complete desktop state including: system language" (no language line is returned) and "Always call this first" (the guide says Screenshot first) - reword.
 - [ ] D.27 WaitFor tool description (`tools/`): say `text_exists` matches element names (until R4-4).
