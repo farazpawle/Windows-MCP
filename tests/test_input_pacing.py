@@ -40,3 +40,39 @@ def test_modifier_click_releases_keys_within_100ms_of_mouse_up(clicks):
     assert last_up > last_click
     held_after_mouse_up = sum(w for _, w in events[last_click:last_up])
     assert held_after_mouse_up <= 0.1
+
+
+@pytest.mark.parametrize(
+    "action",
+    [
+        lambda d: d.click((10, 20)),
+        lambda d: d.move((10, 20)),
+        lambda d: d.scroll((10, 20)),
+        lambda d: d.multi_select(True, [(10, 20), (30, 40)]),
+        lambda d: d.multi_edit([(10, 20, "hi")]),
+    ],
+    ids=["click", "move", "scroll", "multi_select", "multi_edit"],
+)
+def test_no_input_waits_more_than_100ms(action):
+    # Round-3 R3-I1: a fixed 0.5 s settle made every click/hover/scroll cost ~0.5 s.
+    waits = []
+
+    def rec(default):
+        return lambda *a, waitTime=default, **k: waits.append(waitTime)
+
+    d = Desktop.__new__(Desktop)
+    d._require_on_screen = lambda points: None
+    d._finish_clear = lambda: None
+    with (
+        patch.object(uia, "Click", rec(0.5)),
+        patch.object(uia, "MoveTo", rec(0.5)),
+        patch.object(uia, "WheelDown", rec(0.5)),
+        patch.object(uia, "PressKey", rec(0.5)),
+        patch.object(uia, "ReleaseKey", rec(0.5)),
+        patch.object(uia, "SendKeys", rec(0.5)),
+        patch.object(uia, "GetDoubleClickTime", return_value=500),
+        patch.object(service, "sleep", waits.append),
+    ):
+        action(d)
+
+    assert waits and max(waits) <= 0.1

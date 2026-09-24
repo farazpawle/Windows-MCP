@@ -1065,6 +1065,10 @@ class Desktop:
             targets += " is" if len(bad) == 1 else " are"
         raise ValueError(f"{targets} outside every display; no input was sent. Displays: {screens}")
 
+    # Pause after a click, hover or wheel so the app can react before the reply.
+    # Was 0.5 s (round-3 R3-I1); callers needing longer use WaitFor.
+    _SETTLE = 0.1
+
     def is_on_screen(self, x: int, y: int) -> bool:
         """True when the point lies on some display (the same test input tools apply)."""
         try:
@@ -1090,7 +1094,7 @@ class Desktop:
             return
         with _keys_held(list(modifiers)):
             self._click_button(x, y, button, clicks)
-        sleep(0.5)  # let the app react; outside the block so modifiers lift at mouse-up
+        sleep(self._SETTLE)  # let the app react; outside the block so modifiers lift at mouse-up
 
     def _click_button(self, x: int, y: int, button: str, clicks: int) -> None:
         press = {"left": uia.Click, "right": uia.RightClick, "middle": uia.MiddleClick}[button]
@@ -1122,13 +1126,13 @@ class Desktop:
         if loc is not None:
             x, y = loc
             self._require_on_screen([(x, y)])
-            uia.Click(x, y)
+            uia.Click(x, y, waitTime=self._SETTLE)
         if caret_position == "start":
             uia.SendKeys("{Home}", waitTime=0.05)
         elif caret_position == "end":
             uia.SendKeys("{End}", waitTime=0.05)
         if clear is True or (isinstance(clear, str) and clear.lower() == "true"):
-            sleep(0.5)
+            sleep(self._SETTLE)
             uia.SendKeys("{Ctrl}a", waitTime=0.05)
             uia.SendKeys("{Back}", waitTime=0.05)
             self._finish_clear()
@@ -1204,9 +1208,9 @@ class Desktop:
             case "vertical":
                 match direction:
                     case "up":
-                        uia.WheelUp(wheel_times)
+                        uia.WheelUp(wheel_times, waitTime=self._SETTLE)
                     case "down":
-                        uia.WheelDown(wheel_times)
+                        uia.WheelDown(wheel_times, waitTime=self._SETTLE)
                     case _:
                         return 'Invalid direction. Use "up" or "down".'
             case "horizontal":
@@ -1302,7 +1306,7 @@ class Desktop:
     def move(self, loc: tuple[int, int]):
         x, y = loc
         self._require_on_screen([(x, y)])
-        uia.MoveTo(x, y, moveSpeed=10)
+        uia.MoveTo(x, y, moveSpeed=10, waitTime=self._SETTLE)
 
     _left_held = False  # set by mouse_button("down"), cleared by any release
 
@@ -1389,8 +1393,7 @@ class Desktop:
             uia.PressKey(uia.Keys.VK_CONTROL, waitTime=0.05)
         for loc in locs:
             x, y = loc
-            uia.Click(x, y, waitTime=0.2)
-            sleep(0.5)
+            uia.Click(x, y, waitTime=self._SETTLE)
         uia.ReleaseKey(uia.Keys.VK_CONTROL, waitTime=0.05)
 
     def multi_edit(self, locs: list[tuple[int, int, str]]):

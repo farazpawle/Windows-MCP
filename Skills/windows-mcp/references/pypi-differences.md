@@ -70,6 +70,8 @@ Process · Clipboard · Notification · Scrape
   Shift+wheel, which native apps treat as vertical** (it scrolled down instead of right).
 - Move has no `modifiers` or `mouse_button`, and refuses a Move with no `loc`.
 - **A held mouse button stays held, so the next Click becomes a drag.**
+- Click, Move, Scroll and MultiSelect each pause 0.5 s (Click ~0.6 s, Scroll ~1.1 s,
+  MultiEdit ~2.3 s per field).
 - Shortcut knows no computer-use names except `Return` and `BackSpace`: use `pagedown`, `win`,
   `ctrl+=`. No `repeat`, `hold` or `release_all`.
 - **A misspelled Shortcut key presses Ctrl, fails and leaves Ctrl held down**: release the

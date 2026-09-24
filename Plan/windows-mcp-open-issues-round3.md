@@ -1,6 +1,6 @@
 ---
 Title: Windows-MCP open issues backlog - round 3 (2026-09-24)
-Description: Findings of the round-3 real-work scenario test (all 21 tools driven through the connected server at the PC, plus a per-tool timing pass), turned into a task file. Part A Bugs - 2 High (windows that cannot be maximized are missing from the window list; a full-screen capture misses some front windows such as Avast's alert), 2 Medium (false "covered"/"screen changed" refusals; screen_changed misses small changes), 5 Low. Part B Improvements (fixed 0.5 s pauses and other latency, encoded PowerShell command lines, App Paths lookup, OCR column gaps, process command lines, window positions in App list). Part C one new ability (pop-up detection, needs the user's design approval). Part D restructures the tool guide into a short main file plus references (next session), then the user installs it in Claude Desktop once it is verified. Details and evidence are in docs/testing/windows-mcp-tool-test-report.md (Round 3). Status 2026-09-24: all of Part A fixed and proved (live where the item asks) and the guide split (D.1) done; Parts B and C open, D.2 waits for the user.
+Description: Findings of the round-3 real-work scenario test (all 21 tools driven through the connected server at the PC, plus a per-tool timing pass), turned into a task file. Part A Bugs - 2 High (windows that cannot be maximized are missing from the window list; a full-screen capture misses some front windows such as Avast's alert), 2 Medium (false "covered"/"screen changed" refusals; screen_changed misses small changes), 5 Low. Part B Improvements (fixed 0.5 s pauses and other latency, encoded PowerShell command lines, App Paths lookup, OCR column gaps, process command lines, window positions in App list). Part C one new ability (pop-up detection, needs the user's design approval). Part D restructures the tool guide into a short main file plus references (next session), then the user installs it in Claude Desktop once it is verified. Details and evidence are in docs/testing/windows-mcp-tool-test-report.md (Round 3). Status 2026-09-24: all of Part A fixed and proved (live where the item asks) and the guide split (D.1) done; Parts B and C open (R3-I1 done), D.2 waits for the user.
 Total Tasks: 56
 ---
 # Windows-MCP open issues - round 3
@@ -68,10 +68,11 @@ Evidence for every item: `docs/testing/windows-mcp-tool-test-report.md`, section
 
 # Part B - Improvements
 
-- [ ] R3-I1 **Fixed pauses.** Click 0.56 s and Move hover 0.52 s each carry a fixed 0.5 s wait; Scroll 1.1 s; MultiSelect ~0.8 s a click; MultiEdit ~2.3 s a field.
-  - [ ] a. [User] Approve the approach (design choice): shorter fixed settle (e.g. 0.1 s) or no settle with WaitFor `screen_idle` recommended in the guide.
-  - [ ] b. Apply it to Click, Move, Scroll, MultiSelect, MultiEdit.
+- [x] R3-I1 **Fixed pauses.** Click 0.56 s and Move hover 0.52 s each carry a fixed 0.5 s wait; Scroll 1.1 s; MultiSelect ~0.8 s a click; MultiEdit ~2.3 s a field.
+  - [x] a. [User] Approve the approach (design choice): shorter fixed settle (e.g. 0.1 s) or no settle with WaitFor `screen_idle` recommended in the guide.
+  - [x] b. Apply it to Click, Move, Scroll, MultiSelect, MultiEdit.
   - **Verify:** Timing pass - each under 0.3 s; harness still logs every click and key.
+  - Result (2026-09-24): user chose a 0.1 s settle; `Desktop._SETTLE` replaces every 0.5 s wait in click, move, wheel, multi_select and type's click/clear (drag unchanged). `test_no_input_waits_more_than_100ms`. Live (two rounds, harness text box): Click 0.16 s, Move 0.11 s, Scroll 0.28 s, MultiSelect 0.36 s for 2 clicks, MultiEdit 0.68/1.18 s a field; 9/9 clicks, 2/2 wheels logged, text exact. MultiEdit misses 0.3 s: the rest is the short-text SendKeys path (R3-I2).
 
 - [ ] R3-I2 **Short Type slower than long** (10 chars 1.11 s, 60 chars 0.70 s).
   - [ ] a. Unit: plain text under 20 characters goes through the Unicode path.
