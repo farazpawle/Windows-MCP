@@ -37,12 +37,46 @@ def test_short_plain_text_is_typed_as_unicode(text):
     keys.assert_not_called()
 
 
-def test_text_with_line_breaks_still_uses_sendkeys():
-    typed, keys = MagicMock(), MagicMock()
-    with patch.object(uia, "SendUnicodeText", typed), patch.object(uia, "SendKeys", keys):
-        Desktop.__new__(Desktop).type(None, "a\nb")
-    typed.assert_not_called()
-    keys.assert_called_once()
+def _typed_sequence(text):
+    """Type *text* and return the calls in order: ("text", run) or ("key", keys)."""
+    calls = []
+    with (
+        patch.object(uia, "SendUnicodeText", lambda t, *a, **k: calls.append(("text", t))),
+        patch.object(uia, "SendKeys", lambda keys, *a, **k: calls.append(("key", keys))),
+    ):
+        Desktop.__new__(Desktop).type(None, text)
+    return calls
+
+
+def test_multi_line_text_goes_as_unicode_runs_with_enter_between():
+    # Round-4 R4-1: per-key SendKeys at 0.04 s a key took 26 s for 622 characters.
+    assert _typed_sequence("one\ntwo\tthree\n") == [
+        ("text", "one"),
+        ("key", "{Enter}"),
+        ("text", "two"),
+        ("key", "{Tab}"),
+        ("text", "three"),
+        ("key", "{Enter}"),
+    ]
+
+
+def test_braces_are_typed_literally_as_unicode():
+    assert _typed_sequence("{x}\n{Enter}") == [
+        ("text", "{x}"),
+        ("key", "{Enter}"),
+        ("text", "{Enter}"),
+    ]
+
+
+def test_crlf_is_one_line_break():
+    assert _typed_sequence("a\r\nb\r\n\r\nc") == [
+        ("text", "a"),
+        ("key", "{Enter}"),
+        ("text", "b"),
+        ("key", "{Enter}"),
+        ("key", "{Enter}"),
+        ("text", "c"),
+    ]
 
 
 @pytest.fixture

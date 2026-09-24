@@ -1,6 +1,6 @@
 ---
 Title: Windows-MCP open issues backlog - round 4 (2026-09-24)
-Description: Findings of the round-4 real-work scenario test (all 21 tools driven through the connected server after the round-3 backlog, timed per call from Claude Code's MCP log), turned into a task file. Part A Bugs - 1 High (multi-line Type sends one key every 0.04 s: 622 characters took 26 s), 5 Medium (App launch names an older window; Snapshot word boxes include trailing spaces so word labels miss; WaitFor text_exists misses text inside documents; dialogs drawn inside an app's window are not noted; caret start/end work per line), 9 Low. Part B 7 improvements (Process list speed and output size, Snapshot word noise, fixed costs, reply boilerplate, list order, resize hint). Part C 2 new abilities (whole-field caret, FindText per window). Part D 31 guide, tool-description and test-skill corrections. Evidence is in docs/testing/windows-mcp-tool-test-report.md (Round 4). Status 2026-09-24: open, nothing fixed yet (test-only session); the user's fix order is R4-1, R4-2, then Part D.
+Description: Findings of the round-4 real-work scenario test (all 21 tools driven through the connected server after the round-3 backlog, timed per call from Claude Code's MCP log), turned into a task file. Part A Bugs - 1 High (multi-line Type sends one key every 0.04 s: 622 characters took 26 s), 5 Medium (App launch names an older window; Snapshot word boxes include trailing spaces so word labels miss; WaitFor text_exists misses text inside documents; dialogs drawn inside an app's window are not noted; caret start/end work per line), 9 Low. Part B 7 improvements (Process list speed and output size, Snapshot word noise, fixed costs, reply boilerplate, list order, resize hint). Part C 2 new abilities (whole-field caret, FindText per window). Part D 31 guide, tool-description and test-skill corrections. Evidence is in docs/testing/windows-mcp-tool-test-report.md (Round 4). Status 2026-09-24: R4-1 fixed (622 multi-line characters in 0.87 s), with D.4/D.5; next in the user's fix order are R4-2, then Part D.
 Total Tasks: 95
 ---
 # Windows-MCP open issues - round 4
@@ -11,12 +11,13 @@ Evidence for every item: `docs/testing/windows-mcp-tool-test-report.md`, section
 
 # Part A - Bugs
 
-- [ ] R4-1 **High - multi-line Type is typed one key at a time.** Text with `\n`, `\t`, `{` or `}` goes through `uia.SendKeys(..., interval=0.04)` (`desktop/service.py` ~1153-1160): 177 characters 7.5 s, 622 characters 26.2 s; single-line text 26-35 ms.
-  - [ ] a. Unit: a multi-line text is sent as Unicode runs with an Enter key between lines, not through `SendKeys`.
-  - [ ] b. Unit: a text containing `{` / `}` is typed literally through the Unicode path.
-  - [ ] c. Split the text on `\n` / `\t`, send each run with `SendUnicodeText` and press Enter / Tab between runs.
-  - [ ] d. Keep `\r\n` as one line break.
+- [x] R4-1 **High - multi-line Type is typed one key at a time.** Text with `\n`, `\t`, `{` or `}` goes through `uia.SendKeys(..., interval=0.04)` (`desktop/service.py` ~1153-1160): 177 characters 7.5 s, 622 characters 26.2 s; single-line text 26-35 ms.
+  - [x] a. Unit: a multi-line text is sent as Unicode runs with an Enter key between lines, not through `SendKeys`.
+  - [x] b. Unit: a text containing `{` / `}` is typed literally through the Unicode path.
+  - [x] c. Split the text on `\n` / `\t`, send each run with `SendUnicodeText` and press Enter / Tab between runs.
+  - [x] d. Keep `\r\n` as one line break.
   - **Verify:** Live - Type of the 622-character report into the harness text box takes under 1 s and `<log>.text` matches exactly (line breaks, a tab and braces included).
+  - Result 2026-09-24: 622 characters (9 lines, 9 tabs, braces) in 0.87 s end to end, text matched exactly; `tests/test_type_direct.py` 3 new tests; harness text box now `AcceptsTab`. The reply's read-back said 575 characters (typed before the box settled) - that is R4-7.
 
 - [ ] R4-2 **Medium - App `launch` names an older window.** `_wait_for_launched_window` (`desktop/service.py` ~815-839) takes the first visible window whose title contains the name: `launch name=Notepad` replied "\*report.txt - Notepad launched." while the new window was "Untitled - Notepad".
   - [ ] a. Unit: a window that existed before the launch is not accepted when a new one appears.
@@ -158,8 +159,8 @@ Guide = `Skills/windows-mcp/`. Rebuild the Claude Desktop ZIP (round-3 D.2) afte
 - [ ] D.1 `references/web.md`: "To open a page, start `msedge.exe <url>` (full path: known-gaps.md). It opens a new tab" - outdated: bare `msedge.exe` works (App Paths, R3-I5), known-gaps has no Edge entry, and a throwaway `--user-data-dir` opens its own window. Rewrite.
 - [ ] D.2 `references/web.md`: missing - a throwaway Edge profile signs itself into the Windows Microsoft account and shows a "now syncing" notice over the page; `use_dom` then returns the notice text (twice). Click "Got it" first.
 - [ ] D.3 `references/input.md`: "`caret_position`: `start` or `end`." - unclear: start/end of the current line (Home/End).
-- [ ] D.4 `references/input.md`: "Text is sent as keystrokes and never touches the clipboard (2,000 characters arrived intact)." - missing: multi-line text costs ~0.04 s a character (622 characters 26 s) until R4-1; write long documents with FileSystem.
-- [ ] D.5 `SKILL.md`: "Type without `loc` well under 0.1 s for short text" - add "single-line" and the multi-line cost.
+- [x] D.4 (done with R4-1: the cost is gone; input.md now says line breaks/tabs are key presses and 622 characters take under 1 s) `references/input.md`: "Text is sent as keystrokes and never touches the clipboard (2,000 characters arrived intact)." - missing: multi-line text costs ~0.04 s a character (622 characters 26 s) until R4-1; write long documents with FileSystem.
+- [x] D.5 (done with R4-1: SKILL.md gives the multi-line time) `SKILL.md`: "Type without `loc` well under 0.1 s for short text" - add "single-line" and the multi-line cost.
 - [ ] D.6 `SKILL.md`: "Move ~0.1 s, Click ~0.15 s, Scroll ~0.3 s" - missing: double click ~0.5 s, Click `element=` ~0.3 s, Move drag ~1.3 s.
 - [ ] D.7 `SKILL.md`: "Under 0.1 s: ... Snapshot of a region" - measured 0.18-0.32 s.
 - [ ] D.8 `SKILL.md` "Process list ~0.6 s (~1.7 s sorted by CPU)" and `references/system-tools.md` "which takes ~1.7 s; memory and name sorts take ~0.6 s" - measured 0.85-1.06 s and 2.3-2.8 s with 622 processes; grows with the process count; the CPU list starts with System Idle Process.
@@ -178,7 +179,7 @@ Guide = `Skills/windows-mcp/`. Rebuild the Claude Desktop ZIP (round-3 D.2) afte
 - [ ] D.21 `references/apps-windows.md` `list`: missing - lines are not in front-to-back order; a few apps' maximized windows show their outer frame (-8,-8).
 - [ ] D.22 `references/input.md`: "Every input reply ... ends with `Note: a new window appeared: ...` when a window opened since the previous input action" - missing: a dialog drawn inside the app's own window (Notepad's "save changes?") is not reported; take a Screenshot after closing or saving.
 - [ ] D.23 `references/known-gaps.md`: "Each entry names its backlog item (Plan/windows-mcp-open-issues-round3.md)" - point to this file.
-- [ ] D.24 `references/known-gaps.md`: add R4-1 to R4-6 with their workarounds; remove each when fixed.
+- [ ] D.24 `references/known-gaps.md`: add R4-2 to R4-6 (R4-1 fixed) with their workarounds; remove each when fixed.
 - [ ] D.25 `SKILL.md` "Which tool for which job": add rows "Write a document or report -> FileSystem `write` (not typing)" and "Check text inside a document -> Ctrl+A, Ctrl+C then Clipboard `get`, or WaitFor `screen_text` (not `text_exists`)".
 - [ ] D.26 Snapshot tool description (`tools/`): "Captures complete desktop state including: system language" (no language line is returned) and "Always call this first" (the guide says Screenshot first) - reword.
 - [ ] D.27 WaitFor tool description (`tools/`): say `text_exists` matches element names (until R4-4).

@@ -1146,18 +1146,18 @@ class Desktop:
             uia.SendKeys("{Ctrl}a", waitTime=0.05)
             uia.SendKeys("{Back}", waitTime=0.05)
             self._finish_clear()
-        # Plain text goes as chunked Unicode events: per-key SendKeys drops keys on
-        # slow VMs ("hello tttt…") and was slower for short text (round-3 R3-I2).
-        # The clipboard is never used (round-2 2.14). Line breaks, tabs and braces
-        # still go through SendKeys so {Enter}, {Tab}, … keep working.
-        has_control_chars = any(c in text for c in ("\n", "\t", "{", "}"))
-        if not has_control_chars:
-            uia.SendUnicodeText(text)
-        else:
-            escaped_text = _escape_text_for_sendkeys(text)
-            # Bump interval from 0.02 → 0.04. Keeps short-text speed acceptable
-            # while reducing key-loss on slower systems.
-            uia.SendKeys(escaped_text, interval=0.04, waitTime=0.05)
+        # Text goes as chunked Unicode events: per-key SendKeys drops keys on slow
+        # VMs ("hello tttt…") and cost 0.04 s a key, 26 s for 622 characters
+        # (round-3 R3-I2, round-4 R4-1). The clipboard is never used (round-2 2.14).
+        # Only line breaks and tabs are real key presses, since apps act on the
+        # Enter/Tab keys (new line, next cell) rather than on the characters.
+        for part in re.split(r"([\n\t])", text.replace("\r\n", "\n").replace("\r", "")):
+            if part == "\n":
+                uia.SendKeys("{Enter}", waitTime=0)
+            elif part == "\t":
+                uia.SendKeys("{Tab}", waitTime=0)
+            elif part:
+                uia.SendUnicodeText(part)
         if press_enter is True or (isinstance(press_enter, str) and press_enter.lower() == "true"):
             uia.SendKeys("{Enter}", waitTime=0.05)
 

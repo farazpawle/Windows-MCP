@@ -68,6 +68,8 @@ if ($FixedDialog) {
 if ($TextBox) {
     $box = New-Object Windows.Forms.TextBox
     $box.Multiline = $true
+    # Like a real editor: Tab types a tab instead of moving the focus on.
+    $box.AcceptsTab = $true
     $box.Dock = "Fill"
     if ($ScrollBars) { $box.ScrollBars = "Vertical" }
     $textPath = "$Log.text"

@@ -48,7 +48,9 @@ Coordinates · What the replies report · Shrunk screenshots
   then Backspace, which goes up a folder.
 - `caret_position`: `start` or `end`. `press_enter=true` sends Enter (see golden rule 1).
 - Accents, CJK and emoji are typed correctly. Text is sent as keystrokes and never touches
-  the clipboard (2,000 characters arrived intact).
+  the clipboard (2,000 characters arrived intact). Line breaks and tabs are real Enter and
+  Tab key presses (in a form, Tab moves to the next field); braces are typed as-is. A
+  622-character multi-line text takes under 1 s.
 
 ## MultiEdit
 

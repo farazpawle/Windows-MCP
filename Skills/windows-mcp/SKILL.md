@@ -85,7 +85,8 @@ System tools have no focus problems: prefer them over the UI when both can do th
 - FindText ~0.6 s for a region, ~1.6 s for the full screen.
 - Move ~0.1 s, Click ~0.15 s, Scroll ~0.3 s, MultiSelect ~0.2 s per click (a 0.1 s pause
   after each action; a slow app may need WaitFor `screen_idle` before a Screenshot).
-- Type without `loc` well under 0.1 s for short text; MultiEdit ~0.45 s per field;
+- Type without `loc` well under 0.1 s for short text, under 1 s for 600 characters with
+  line breaks; MultiEdit ~0.45 s per field;
   Process list ~0.6 s (~1.7 s sorted by CPU).
 
 ## References
