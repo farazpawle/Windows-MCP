@@ -34,7 +34,7 @@ The version lives in `pyproject.toml`, `uv.lock`, `manifest.json` and `server.js
 
 On this PC Avast breaks TLS to PyPI (`invalid peer certificate: BadSignature`, even with `--native-tls`), so refresh the lock after a dependency edit with `uv lock --offline` (works when every package is already cached). While a windows-mcp server from this `.venv` is running, `uv run` cannot reinstall the project (`windows-mcp.exe` is locked) after `pyproject.toml` changes; use `uv run --no-sync ...`.
 
-**Package manager**: UV (not pip). **Python**: 3.14+ (`requires-python = ">=3.14"`; `.python-version` pins 3.14.7, which older uv releases cannot download — use `uv sync --python 3.14 --extra dev`, since pytest/ruff live in the `dev` extra). **Build backend**: Hatchling.
+**Package manager**: UV (not pip). **Python**: 3.14+ (`requires-python = ">=3.14"`; `.python-version` is `3.14`, any patch release: a pinned 3.14.7 could not be downloaded by this PC's uv and made every `uv run` warn "incompatible environment"; use `uv sync --extra dev`, since pytest/ruff live in the `dev` extra). **Build backend**: Hatchling.
 
 ## Architecture
 
