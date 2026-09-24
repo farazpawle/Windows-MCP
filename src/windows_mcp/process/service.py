@@ -1,6 +1,10 @@
 import os
+import subprocess
 import time
+from datetime import datetime
 from typing import Literal
+
+from windows_mcp.infrastructure.action_log import redact
 
 
 __all__ = ["list_processes", "kill_process"]
@@ -15,6 +19,7 @@ def list_processes(
     name: str | None = None,
     sort_by: Literal["memory", "cpu", "name"] = "memory",
     limit: int = 20,
+    details: bool = False,
 ) -> str:
     import psutil
     from tabulate import tabulate
@@ -32,6 +37,8 @@ def list_processes(
             pass
         time.sleep(0.5)
         attrs.append("cpu_percent")
+    if details:
+        attrs += ["create_time", "cmdline"]
     # psutil counts per core (100% = one core); show a share of the whole machine
     # like Task Manager, or idle reads ~1900% on a 20-thread PC.
     cores = psutil.cpu_count() or 1
@@ -49,6 +56,8 @@ def list_processes(
                     # (~96%), so it looked like a runaway process an agent might kill.
                     "cpu": None if is_self else (info.get("cpu_percent") or 0) / cores,
                     "mem_mb": round(mem_mb, 1),
+                    "started": info.get("create_time"),
+                    "cmdline": info.get("cmdline"),
                 }
             )
         except psutil.NoSuchProcess, psutil.AccessDenied:
@@ -72,6 +81,16 @@ def list_processes(
         for row, p in zip(rows, procs):
             row.insert(2, "-" if p["cpu"] is None else f"{p['cpu']:.1f}%")
         headers.insert(2, "CPU%")
+    if details:
+        # Which program is behind a process (round-3 R3-I10): a hidden powershell.exe's
+        # command line named the script. Secrets are hidden as in the action log.
+        for row, p in zip(rows, procs):
+            started = p["started"]
+            row.append(
+                datetime.fromtimestamp(started).strftime("%Y-%m-%d %H:%M:%S") if started else "-"
+            )
+            row.append(redact(subprocess.list2cmdline(p["cmdline"])) if p["cmdline"] else "-")
+        headers += ["Started", "Command line"]
     table = tabulate(rows, headers=headers, tablefmt="simple")
     return f"Processes ({len(procs)} shown):\n{table}"
 

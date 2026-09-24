@@ -13,7 +13,7 @@ from windows_mcp.tools._output import cap_text, raise_error_replies
 def register(mcp, *, get_desktop, get_analytics):
     @mcp.tool(
         name="Process",
-        description='List and kill running processes. Keywords: task manager, running tasks, kill, terminate, stop process, PID, CPU, memory usage. Use mode="list" to list running processes with filtering and sorting options. Use mode="kill" to terminate processes by PID or by name (one of the two, not both).',
+        description='List and kill running processes. Keywords: task manager, running tasks, kill, terminate, stop process, PID, CPU, memory usage. Use mode="list" to list running processes with filtering and sorting options; details=true adds the start time and command line of each process (secrets hidden), to tell which program is behind e.g. a hidden powershell.exe. Use mode="kill" to terminate processes by PID or by name (one of the two, not both).',
         annotations=ToolAnnotations(
             title="Process",
             readOnlyHint=False,
@@ -31,6 +31,7 @@ def register(mcp, *, get_desktop, get_analytics):
         sort_by: Literal["memory", "cpu", "name"] = "memory",
         limit: int = 20,
         force: bool | str = False,
+        details: bool | str = False,
         ctx: Context = None,
     ) -> str:
         try:
@@ -38,7 +39,10 @@ def register(mcp, *, get_desktop, get_analytics):
                 # 0 listed nothing and a negative number listed everything (list slicing).
                 if limit < 1:
                     raise ValueError(f"limit must be at least 1 (got {limit})")
-                return cap_text(process.list_processes(name=name, sort_by=sort_by, limit=limit))
+                details = as_bool(details, "details")
+                return cap_text(
+                    process.list_processes(name=name, sort_by=sort_by, limit=limit, details=details)
+                )
             elif mode == "kill":
                 force = as_bool(force, "force")
                 return process.kill_process(name=name, pid=pid, force=force)

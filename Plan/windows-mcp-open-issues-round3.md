@@ -130,10 +130,11 @@ Evidence for every item: `docs/testing/windows-mcp-tool-test-report.md`, section
   - **Verify:** Stdio handshake test still green.
   - Result (2026-09-24): re-measured on today's screen, full 1.53-1.74 s, 400x200 region 0.58-0.63 s (PowerShell start is the same ~0.21 s with the stdin runner and the old encoded way, so the change from 1.24 s is screen content). FindText and WaitFor descriptions, the OCR module docstring and the guide now say ~1.6 s / ~0.6 s. Suite green including the stdio handshake.
 
-- [ ] R3-I10 **Process list cannot tell which program is behind a process.** Tracing the Avast alert needed a separate PowerShell `Win32_Process` query: the only clue was a hidden `powershell.exe` whose command line named another app's tray script.
-  - [ ] a. Unit: `list` with a new `details=true` shows each process's command line (secrets hidden via `action_log.redact`) and start time.
-  - [ ] b. Add the option to Process `list`.
+- [x] R3-I10 **Process list cannot tell which program is behind a process.** Tracing the Avast alert needed a separate PowerShell `Win32_Process` query: the only clue was a hidden `powershell.exe` whose command line named another app's tray script.
+  - [x] a. Unit: `list` with a new `details=true` shows each process's command line (secrets hidden via `action_log.redact`) and start time.
+  - [x] b. Add the option to Process `list`.
   - **Verify:** Live - `list name=pwsh details=true` shows the command line of a known test process.
+  - Result (2026-09-24): `details=true` adds Started (local time) and Command line (`subprocess.list2cmdline`, then `redact`; `-` when access is denied); a plain list reads no command lines. Tests in `test_process_self_cpu.py`. Live: a hidden `pwsh -NoProfile -Command "Start-Sleep 30 # wmcp-r3i10 -Token fakesecret123"` was listed with its start time and command line, the token shown as [hidden]; stderr empty; the test process was killed after. Note: `redact` also eats a closing quote right after a hidden value (cosmetic).
 
 - [ ] R3-I11 **App `list` gives no window position.** Clicking the Avast alert safely needed its rectangle from a separate script; `list` shows handle, PID, state and title only.
   - [ ] a. Unit: each `list` line includes the window's position and size in caller coordinates.

@@ -1,6 +1,7 @@
 """Round-2 3.23: the server must not show itself as a runaway CPU process."""
 
 import os
+from datetime import datetime
 from types import SimpleNamespace
 
 import psutil
@@ -71,6 +72,47 @@ def test_other_sorts_do_not_sample_cpu(monkeypatch, sort_by):
 
     assert asked and all("cpu_percent" not in a for a in asked)
     assert "CPU%" not in reply and "busy.exe" in reply
+
+
+def test_details_show_start_time_and_command_line_with_secrets_hidden(monkeypatch):
+    # Round-3 R3-I10: tracing the Avast alert needed a separate Win32_Process query to see
+    # which script a hidden powershell.exe was running.
+    asked = []
+    started = datetime(2026, 9, 24, 10, 5, 7).timestamp()
+    tray = _fake(4242, "powershell.exe", 0.0)
+    tray.info |= {
+        "cmdline": ["powershell.exe", "-File", "C:\\Apps\\tray script.ps1", "-Token", "hunter22"],
+        "create_time": started,
+    }
+    hidden = _fake(4, "System", 0.0)
+    hidden.info |= {"cmdline": None, "create_time": None}  # access denied
+
+    def fake_iter(attrs):
+        asked.append(tuple(attrs))
+        return [tray, hidden]
+
+    monkeypatch.setattr(psutil, "process_iter", fake_iter)
+    reply = list_processes(details=True)
+
+    assert "cmdline" in asked[-1] and "create_time" in asked[-1]
+    row = next(line for line in reply.splitlines() if line.lstrip().startswith("4242"))
+    assert "2026-09-24 10:05:07" in row
+    assert 'powershell.exe -File "C:\\Apps\\tray script.ps1" -Token' in row
+    assert "hunter22" not in reply
+    system = next(line for line in reply.splitlines() if line.lstrip().startswith("4 "))
+    assert system.rstrip().endswith("-")
+
+
+def test_plain_list_reads_no_command_lines(monkeypatch):
+    asked = []
+
+    def fake_iter(attrs):
+        asked.append(tuple(attrs))
+        return [_fake(4242, "busy.exe", 0.0)]
+
+    monkeypatch.setattr(psutil, "process_iter", fake_iter)
+    reply = list_processes()
+    assert all("cmdline" not in a for a in asked) and "Command line" not in reply
 
 
 def test_cpu_is_a_share_of_the_whole_machine(monkeypatch):

@@ -61,7 +61,9 @@ These have no focus problems and are the most reliable way to act on the PC.
 
 - `list`: `name` is a plain substring filter ("pwsh" → only pwsh.exe); `sort_by` memory | cpu
   | name; `limit` 1 or more. The CPU% column (a share of the whole machine) appears only with
-  `sort_by="cpu"`, which takes ~1.7 s; memory and name sorts take ~0.6 s.
+  `sort_by="cpu"`, which takes ~1.7 s; memory and name sorts take ~0.6 s. `details=true` adds
+  Started and Command line (secrets shown as [hidden]; `-` when Windows denies it): use it to
+  see which program is behind a process, e.g. a hidden powershell.exe running a tray script.
 - `kill`: prefer `pid`; give `pid` **or** `name`, not both. By `name` it is an exact match
   (`.exe` optional) and ends every process with that name. `force` is available. Replies
   "Terminated: exe (PID)".
