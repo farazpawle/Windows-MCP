@@ -16,17 +16,17 @@ def test_app_launch_names_the_matched_start_menu_app(monkeypatch: pytest.MonkeyP
     monkeypatch.setattr(desktop, "get_apps_from_start_menu", lambda: {"visual studio code": app_id})
     monkeypatch.setattr(desktop, "_check_app_exists", lambda _: True)
 
-    searched: list[str] = []
+    searched: list[tuple[int, str]] = []
 
-    def window_control(**kwargs):
-        searched.append(kwargs.get("RegexName", ""))
-        return MagicMock(Exists=MagicMock(return_value=True), Name="Visual Studio Code")
+    def wait(pid: int, name: str) -> str:
+        searched.append((pid, name))
+        return "Visual Studio Code"
 
-    with patch("windows_mcp.desktop.service.uia.WindowControl", side_effect=window_control):
-        reply = desktop.app("launch", name="code")
+    monkeypatch.setattr(desktop, "_wait_for_launched_window", wait)
+    reply = desktop.app("launch", name="code")
 
     assert reply == "Visual Studio Code launched."
-    assert searched == ["(?i).*visual\\ studio\\ code.*"]
+    assert searched == [(0, "visual studio code")]
 
 
 def _box(left: int, top: int, right: int, bottom: int):

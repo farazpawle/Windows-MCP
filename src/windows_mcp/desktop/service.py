@@ -791,24 +791,11 @@ class Desktop:
                 # "visual studio code"); the window title contains that, not the typed text.
                 name = response
 
-                # Smart wait using UIA Exists (avoids manual Python loops)
-                window = None
-                if pid > 0:
-                    control = uia.WindowControl(ProcessId=pid)
-                    if control.Exists(maxSearchSeconds=10):
-                        window = control
-
-                if window is None:
-                    # Fallback: Regex search for the window title
-                    safe_name = re.escape(name)
-                    control = uia.WindowControl(RegexName=f"(?i).*{safe_name}.*")
-                    if control.Exists(maxSearchSeconds=10):
-                        window = control
-
                 # The window's own title: the Start Menu name is lower-cased, and
                 # str.title() re-capitalised names wrongly ("Wmcp Harness").
-                if window is not None:
-                    return f"{window.Name or name} launched."
+                title = self._wait_for_launched_window(pid, name)
+                if title:
+                    return f"{title} launched."
                 return f"Launching {name} sent, but window not detected yet."
             case "resize":
                 response, status = self.resize_app(name=name, size=size, loc=loc, handle=handle)
@@ -817,6 +804,34 @@ class Desktop:
         if status != 0:
             raise ValueError(response)
         return response
+
+    _LAUNCH_WAIT = 10.0  # seconds to look for a launched app's window
+
+    def _wait_for_launched_window(self, pid: int, name: str) -> str | None:
+        """Title of a visible, titled window from *pid* or with *name* in its title.
+
+        Polls win32 window titles instead of a UIA tree walk, which asked every top-level
+        window and failed after ~15 s with a UIA timeout when one was slow (round-3 R3-10).
+        """
+        needle = name.casefold()
+        deadline = perf_counter() + self._LAUNCH_WAIT
+        while True:
+            found = []
+
+            def check(handle, _):
+                if win32gui.IsWindowVisible(handle) and (title := win32gui.GetWindowText(handle)):
+                    if needle in title.casefold() or (
+                        pid and win32process.GetWindowThreadProcessId(handle)[1] == pid
+                    ):
+                        found.append(title)
+                return True
+
+            win32gui.EnumWindows(check, None)
+            if found:
+                return found[0]
+            if perf_counter() >= deadline:
+                return None
+            sleep(0.2)
 
     def _check_app_exists(self, app_id: str) -> bool:
         """Check if an app with the given AppID exists in shell:AppsFolder."""

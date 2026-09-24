@@ -16,6 +16,3 @@ Each entry names its backlog item (Plan/windows-mcp-open-issues-round3.md); the 
 - **Pop-ups are not announced** (R3-N1). A dialog or alert that opens during a task is found
   only by looking: after an unexpected result, check Snapshot's "Focused Window" or App `list`.
 - **Snapshot may print empty `window ""` lines** (R3-I8): ignore them.
-- **App `launch` can fail with `(-2146233083, ...)` although the app opened** (R3-10). The
-  search for the new window timed out after ~15 s. Check App `list` before launching again,
-  or you get a second copy.
