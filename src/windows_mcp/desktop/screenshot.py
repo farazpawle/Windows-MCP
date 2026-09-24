@@ -152,10 +152,20 @@ class _DxcamBackend(_ScreenshotBackend):
     @classmethod
     def _resolve_region(
         cls,
-        capture_rect: uia.Rect,
+        capture_rect: uia.Rect | None,
     ) -> tuple[int, int, tuple[int, int, int, int] | None] | None:
-        """Return ``(device_idx, output_idx, region)`` when one DXGI output contains the rect."""
-        for output in cls._iter_outputs():
+        """Return ``(device_idx, output_idx, region)`` when one DXGI output contains the rect.
+
+        ``None`` (a full capture) resolves only on a single display: GDI misses some
+        front windows (e.g. an antivirus alert), so dxcam should take it when it can.
+        """
+        outputs = cls._iter_outputs()
+        if capture_rect is None:
+            if len(outputs) != 1:
+                # ponytail: several displays keep pillow; stitch per-output grabs if needed
+                return None
+            return outputs[0].device_idx, outputs[0].output_idx, None
+        for output in outputs:
             output_rect = output.rect
             if (
                 output_rect.left <= capture_rect.left
@@ -180,8 +190,6 @@ class _DxcamBackend(_ScreenshotBackend):
     def is_available(self, capture_rect: uia.Rect | None) -> bool:
         if dxcam is None:
             return False
-        if capture_rect is None:
-            return False
         return self._resolve_region(capture_rect) is not None
 
     def _get_camera(self, device_idx: int, output_idx: int) -> object:
@@ -200,7 +208,8 @@ class _DxcamBackend(_ScreenshotBackend):
         resolved = self._resolve_region(capture_rect)
         if resolved is None:
             raise ValueError(
-                "DXGI capture supports only regions fully contained within one display"
+                "DXGI capture supports only regions fully contained within one display, "
+                "or a full capture of a single display"
             )
         device_idx, output_idx, region = resolved
         camera = self._get_camera(device_idx, output_idx)

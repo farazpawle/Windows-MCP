@@ -129,11 +129,30 @@ class TestDxcamBackend:
         backend = _DxcamBackend()
         assert backend.is_available(MONITOR_0) is False
 
-    def test_is_available_false_when_capture_rect_is_none(self, monkeypatch):
+    def test_full_capture_not_available_with_several_displays(self, monkeypatch):
         monkeypatch.setattr(screenshot, "dxcam", MagicMock())
         monkeypatch.setattr(_DxcamBackend, "_iter_outputs", staticmethod(lambda: DXGI_OUTPUTS))
         backend = _DxcamBackend()
         assert backend.is_available(None) is False
+
+    def test_full_capture_available_with_one_display(self, monkeypatch):
+        # R3-2: GDI (pillow) misses some front windows, e.g. an antivirus alert.
+        monkeypatch.setattr(screenshot, "dxcam", MagicMock())
+        monkeypatch.setattr(_DxcamBackend, "_iter_outputs", staticmethod(lambda: DXGI_OUTPUTS[:1]))
+        backend = _DxcamBackend()
+        assert backend.is_available(None) is True
+
+    def test_full_capture_grabs_the_whole_single_display(self, monkeypatch):
+        fake_camera = MagicMock()
+        fake_dxcam = MagicMock()
+        fake_dxcam.create.return_value = fake_camera
+        monkeypatch.setattr(screenshot, "dxcam", fake_dxcam)
+        monkeypatch.setattr(_DxcamBackend, "_iter_outputs", staticmethod(lambda: DXGI_OUTPUTS[:1]))
+
+        with patch.object(Image, "fromarray", return_value=Image.new("RGB", (4, 4))):
+            _DxcamBackend().capture(None)
+
+        fake_camera.grab.assert_called_once_with(region=None, copy=True, new_frame_only=False)
 
     def test_is_available_false_for_cross_output_rect(self, monkeypatch):
         monkeypatch.setattr(screenshot, "dxcam", MagicMock())
@@ -432,8 +451,9 @@ class TestCapture:
         with pytest.raises(ValueError, match="nonexistent"):
             capture(None, backend="nonexistent")
 
-    def test_auto_skips_dxcam_when_capture_rect_is_none(self, monkeypatch):
+    def test_auto_skips_dxcam_for_full_capture_of_several_displays(self, monkeypatch):
         monkeypatch.setattr(screenshot, "dxcam", MagicMock())
+        monkeypatch.setattr(_DxcamBackend, "_iter_outputs", staticmethod(lambda: DXGI_OUTPUTS))
         monkeypatch.setattr(screenshot, "mss", None)
         fake_img = Image.new("RGB", (1920, 1080), "white")
         monkeypatch.setattr(
@@ -441,7 +461,7 @@ class TestCapture:
         )
 
         image, backend_name = capture(None, backend="auto")
-        # dxcam is_available returns False for None rect, mss is None → pillow
+        # dxcam takes a full capture only on one display, mss is None → pillow
         assert backend_name == "pillow"
 
     def test_auto_falls_back_when_all_unavailable(self, monkeypatch):

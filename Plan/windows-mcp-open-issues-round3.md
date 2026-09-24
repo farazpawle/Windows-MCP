@@ -16,11 +16,12 @@ Evidence for every item: `docs/testing/windows-mcp-tool-test-report.md`, section
   - **Verify:** Live - a WinForms FixedDialog form is listed by App `list`, closed by `close name=...`, and Click `element=... window=...` reaches it.
   - Result (2026-09-24): rule is WindowPattern present and (foreground, or titled and not WS_EX_TOOLWINDOW); `tests/test_get_windows_filter.py`. Live: old and new lists identical on the working desktop (no helpers added); a `fixed_dialog=True` harness window was listed, Click `element="button:Alpha" window=...` logged `click Alpha`, `close name=...` closed it.
 
-- [ ] R3-2 **High - a full-screen capture can miss a window that is in front.** `DxcamBackend.is_available` (`desktop/screenshot.py`) returns False without a region, so full captures use GDI (pillow), which missed Avast's alert.
-  - [ ] a. Unit: `auto` picks dxcam for a full capture of one display when dxcam is available.
-  - [ ] b. Let dxcam take a full-display capture (region None) on single-display setups, falling back to pillow as now.
-  - [ ] c. For several displays, capture each display with dxcam and stitch, or keep pillow and say so in the reply.
+- [x] R3-2 **High - a full-screen capture can miss a window that is in front.** `DxcamBackend.is_available` (`desktop/screenshot.py`) returns False without a region, so full captures use GDI (pillow), which missed Avast's alert.
+  - [x] a. Unit: `auto` picks dxcam for a full capture of one display when dxcam is available.
+  - [x] b. Let dxcam take a full-display capture (region None) on single-display setups, falling back to pillow as now.
+  - [x] c. For several displays, capture each display with dxcam and stitch, or keep pillow and say so in the reply.
   - **Verify:** Live - a layered/DirectComposition test window (or an Avast alert) is in the full Screenshot image.
+  - Result (2026-09-24): `_resolve_region(None)` resolves to the only output; several displays keep pillow (the reply's "Screenshot Backend" line already says which, and the guide warns). Live: full capture now reports dxcam, 1920x1080, ~4 ms vs pillow ~30 ms. A WinForms Opacity 0.97 (layered) window was in both images, so it does not reproduce the Avast miss; the Avast alert itself was shown by dxcam in round 3. Not re-proved against a real Avast alert.
 
 - [ ] R3-3 **Medium - false refusals from the "still at its spot" check.** `element_still_at` (`tree/utils.py`) walks up from `ControlFromPoint`; in an embedded web page it gets the page pane, and over Explorer's Address Bar it gets a path button drawn on top.
   - [ ] a. Unit: an element whose point resolves to a sibling drawn over it, in the same window, is accepted.

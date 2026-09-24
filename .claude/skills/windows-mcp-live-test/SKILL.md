@@ -98,7 +98,9 @@ matching element lines with a regex, or it finds nothing.
 Read-only calls (Snapshot, WaitFor, DisplayInventory, FindText) need no `points`. For pixel
 checks (WaitFor `screen_changed` / `screen_idle`, FindText), open a plain test window first and
 give a `region` inside its client area: anything else on screen (the Claude Code panel's
-spinner, a clock) changes pixels and spoils the result. Give Snapshot a
+spinner, a clock) changes pixels and spoils the result. A see-through WinForms window
+(`Opacity` < 1) shows in pillow captures too, so it cannot stand in for the Avast alert pillow
+missed (round-3 R3-2); a full capture on one screen uses dxcam now. Give Snapshot a
 `region` around the test window so it does not read other apps. Snapshot, WaitFor and App
 always skip VS Code-family windows; never set `WINDOWS_MCP_READ_VSCODE`, because one read
 freezes VS Code until restart.
