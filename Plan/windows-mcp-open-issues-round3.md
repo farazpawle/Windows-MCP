@@ -1,7 +1,7 @@
 ---
 Title: Windows-MCP open issues backlog - round 3 (2026-09-24)
-Description: Findings of the round-3 real-work scenario test (all 21 tools driven through the connected server at the PC, plus a per-tool timing pass), turned into a task file. Part A Bugs - 2 High (windows that cannot be maximized are missing from the window list; a full-screen capture misses some front windows such as Avast's alert), 2 Medium (false "covered"/"screen changed" refusals; screen_changed misses small changes), 5 Low. Part B Improvements (fixed 0.5 s pauses and other latency, encoded PowerShell command lines, App Paths lookup, OCR column gaps). Part C one new ability (pop-up detection, needs the user's design approval). Details and evidence are in docs/testing/windows-mcp-tool-test-report.md (Round 3). Not fixed yet: the user makes the fix plan in a later session.
-Total Tasks: 38
+Description: Findings of the round-3 real-work scenario test (all 21 tools driven through the connected server at the PC, plus a per-tool timing pass), turned into a task file. Part A Bugs - 2 High (windows that cannot be maximized are missing from the window list; a full-screen capture misses some front windows such as Avast's alert), 2 Medium (false "covered"/"screen changed" refusals; screen_changed misses small changes), 5 Low. Part B Improvements (fixed 0.5 s pauses and other latency, encoded PowerShell command lines, App Paths lookup, OCR column gaps, process command lines, window positions in App list). Part C one new ability (pop-up detection, needs the user's design approval). Details and evidence are in docs/testing/windows-mcp-tool-test-report.md (Round 3). Not fixed yet: the user makes the fix plan in a later session.
+Total Tasks: 42
 ---
 # Windows-MCP open issues - round 3
 
@@ -100,6 +100,16 @@ Evidence for every item: `docs/testing/windows-mcp-tool-test-report.md`, section
 - [ ] R3-I9 **FindText description says ~2.5 s full screen; measured 1.24 s.**
   - [ ] a. Update the FindText and WaitFor descriptions.
   - **Verify:** Stdio handshake test still green.
+
+- [ ] R3-I10 **Process list cannot tell which program is behind a process.** Tracing the Avast alert needed a separate PowerShell `Win32_Process` query: the only clue was a hidden `powershell.exe` whose command line named another app's tray script.
+  - [ ] a. Unit: `list` with a new `details=true` shows each process's command line (secrets hidden via `action_log.redact`) and start time.
+  - [ ] b. Add the option to Process `list`.
+  - **Verify:** Live - `list name=pwsh details=true` shows the command line of a known test process.
+
+- [ ] R3-I11 **App `list` gives no window position.** Clicking the Avast alert safely needed its rectangle from a separate script; `list` shows handle, PID, state and title only.
+  - [ ] a. Unit: each `list` line includes the window's position and size in caller coordinates.
+  - [ ] b. Add it to `format_list`.
+  - **Verify:** Live - the listed rectangle of a test window matches `GetWindowRect`.
 
 # Part C - New tools / abilities
 
