@@ -12,6 +12,7 @@ from pydantic import AliasChoices, Field
 from windows_mcp.infrastructure import with_analytics
 from fastmcp import Context
 from windows_mcp.tools._args import as_bool
+from windows_mcp.tools._new_windows import note_new_windows
 from windows_mcp.tools._screen_wait import SCREEN_CONDITIONS, screen_check
 from windows_mcp.tools.find_text import screen_rect
 from windows_mcp.tools._coords import to_model, to_screen
@@ -438,6 +439,7 @@ def register(
         ),
     )
     @with_analytics(get_analytics(), "Click-Tool")
+    @note_new_windows
     def click_tool(
         loc: list[int] | str | None = None,
         label: int | None = None,
@@ -495,6 +497,7 @@ def register(
         ),
     )
     @with_analytics(get_analytics(), "Type-Tool")
+    @note_new_windows
     def type_tool(
         text: str,
         loc: list[int] | str | None = None,
@@ -544,6 +547,7 @@ def register(
         ),
     )
     @with_analytics(get_analytics(), "Scroll-Tool")
+    @note_new_windows
     def scroll_tool(
         loc: list[int] | str | None = None,
         label: int | None = None,
@@ -609,6 +613,7 @@ def register(
         ),
     )
     @with_analytics(get_analytics(), "Move-Tool")
+    @note_new_windows
     def move_tool(
         loc: list[int] | str | None = None,
         label: int | None = None,
@@ -703,6 +708,7 @@ def register(
         ),
     )
     @with_analytics(get_analytics(), "Shortcut-Tool")
+    @note_new_windows
     def shortcut_tool(
         shortcut: str | None = None,
         repeat: int = 1,

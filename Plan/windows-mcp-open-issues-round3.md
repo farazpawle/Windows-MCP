@@ -144,10 +144,11 @@ Evidence for every item: `docs/testing/windows-mcp-tool-test-report.md`, section
 
 # Part C - New tools / abilities
 
-- [ ] R3-N1 **Pop-up detection.** Both surprises this round (Notepad's question, Avast's alert) were found by accident.
-  - [ ] a. [User] Approve the shape (design choice): WaitFor `condition="new_window"`, or a line in every input reply when the foreground window changed to one the call did not target.
-  - [ ] b. Implement the chosen shape.
+- [x] R3-N1 **Pop-up detection.** Both surprises this round (Notepad's question, Avast's alert) were found by accident.
+  - [x] a. [User] Approve the shape (design choice): WaitFor `condition="new_window"`, or a line in every input reply when the foreground window changed to one the call did not target. User (2026-09-24): the automatic note in input replies.
+  - [x] b. Implement the chosen shape.
   - **Verify:** Live - opening a dialog during a WaitFor/after a Click is reported.
+  - Result (2026-09-24): `tools/_new_windows.py`, `@note_new_windows` inside `@with_analytics` on Click, Type, Scroll, Move, Shortcut, MultiSelect and MultiEdit. After each call it lists visible, titled, uncloaked, non-tool top-level windows (EnumWindows, ~1.3 ms) and names those not seen after the previous input call, so a pop-up that came up after a reply is named on the next one; each once. Tests in `test_new_windows_note.py`; `conftest.py` fixes the list for all other tests. Live: a window opened between two Clicks was named on the second reply with its handle, PID and program, and not again on the third; clicks still ~0.17 s. Limit: a window hidden and re-shown under the same handle is not "new".
 
 # Part D - Tool guide restructure (user decision 2026-09-24: do it next session)
 

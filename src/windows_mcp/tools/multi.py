@@ -6,6 +6,7 @@ from mcp.types import ToolAnnotations
 from windows_mcp.infrastructure import with_analytics
 from fastmcp import Context
 from windows_mcp.tools._args import as_bool
+from windows_mcp.tools._new_windows import note_new_windows
 from windows_mcp.tools._coords import to_model, to_screen
 from windows_mcp.tools.input import release_held_button
 
@@ -30,6 +31,7 @@ def register(mcp, *, get_desktop, get_analytics):
         ),
     )
     @with_analytics(get_analytics(), "Multi-Select-Tool")
+    @note_new_windows
     def multi_select_tool(
         locs: list[list[int]] | str | None = None,
         labels: list[int] | str | None = None,
@@ -70,6 +72,7 @@ def register(mcp, *, get_desktop, get_analytics):
         ),
     )
     @with_analytics(get_analytics(), "Multi-Edit-Tool")
+    @note_new_windows
     def multi_edit_tool(
         locs: list[list] | str | None = None,
         labels: list[list] | str | None = None,

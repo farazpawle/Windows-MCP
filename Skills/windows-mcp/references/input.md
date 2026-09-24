@@ -114,6 +114,11 @@ Coordinates · What the replies report · Shrunk screenshots
   could not be read.
 - VS Code-family and frozen windows are named but never read (a horizontal Scroll over them
   sends a plain sideways wheel).
+- Every input reply (Click, Type, Scroll, Move, Shortcut, MultiSelect, MultiEdit) ends with
+  `Note: a new window appeared: "<title>" (handle=…, pid=… program)` when a window opened
+  since the previous input action, including a pop-up that came up after that reply. Read
+  it before the next step: a question or alert may be waiting and take the next keys. Each
+  window is named once; one opened on purpose (a Save dialog) is named too.
 - This is evidence, not a guarantee: still verify important results.
 
 ## Shrunk screenshots
