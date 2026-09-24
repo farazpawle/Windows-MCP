@@ -18,14 +18,15 @@ def test_app_launch_names_the_matched_start_menu_app(monkeypatch: pytest.MonkeyP
 
     searched: list[tuple[int, str]] = []
 
-    def wait(pid: int, name: str) -> str:
+    def wait(pid: int, name: str, existing: set[int]) -> tuple[str, int]:
         searched.append((pid, name))
-        return "Visual Studio Code"
+        return "Visual Studio Code", 7
 
     monkeypatch.setattr(desktop, "_wait_for_launched_window", wait)
+    monkeypatch.setattr(desktop, "_top_level_handles", lambda: set())
     reply = desktop.app("launch", name="code")
 
-    assert reply == "Visual Studio Code launched."
+    assert reply == "Visual Studio Code launched (handle 7)."
     assert searched == [(0, "visual studio code")]
 
 

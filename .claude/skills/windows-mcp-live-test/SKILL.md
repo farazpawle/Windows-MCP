@@ -122,6 +122,12 @@ For UI other than the log window (a real Notepad, Explorer, a browser tab): star
 record its PID, target it with `guarded_call` using its own hwnd, and kill only that PID (a Win11
 Notepad PID can be a stub that exits; find the real one before killing).
 
+**Windows 11 Notepad is never a throwaway window.** Even with no Notepad running, the first
+one started restores the user's earlier tabs (unsaved notes, saved files). On 2026-09-24 a
+clean-up WM_CLOSE on that window raised "save changes to Untitled.txt?" over the user's own
+notes. Close only the tab the test opened (switch to it, Ctrl+W), never the window, and never
+kill Notepad. If a save prompt does appear, choose Cancel: nothing of the user's is changed.
+
 ## 3. Run it
 
 ```bash

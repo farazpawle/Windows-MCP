@@ -787,6 +787,9 @@ class Desktop:
                 window, note = self.pick_window(name, handle)
                 return window_control.move_to_display(window, self.get_displays(), display) + note
             case "launch":
+                # Windows open before the launch are never the launched one: a title match
+                # named an older "*report.txt - Notepad" (round-4 R4-2).
+                existing = self._top_level_handles()
                 response, status, pid = self.launch_app(name)
                 if status != 0:
                     # Raised, not returned: a returned message reached the client as a
@@ -798,9 +801,19 @@ class Desktop:
 
                 # The window's own title: the Start Menu name is lower-cased, and
                 # str.title() re-capitalised names wrongly ("Wmcp Harness").
-                title = self._wait_for_launched_window(pid, name)
-                if title:
-                    return f"{title} launched."
+                found = self._wait_for_launched_window(pid, name, existing)
+                if found:
+                    title, handle = found
+                    return f"{title} launched (handle {handle})."
+                # Store Notepad can open a tab in its running window instead of a new one.
+                front = win32gui.GetForegroundWindow()
+                front_title = win32gui.GetWindowText(front) if front in existing else ""
+                if name.casefold() in front_title.casefold():
+                    return (
+                        f"Launching {name} sent; no new window appeared, but the open window "
+                        f'"{front_title}" (handle {front}) came to the front (it may have opened '
+                        "there)."
+                    )
                 return f"Launching {name} sent, but window not detected yet."
             case "resize":
                 response, status = self.resize_app(name=name, size=size, loc=loc, handle=handle)
@@ -812,11 +825,20 @@ class Desktop:
 
     _LAUNCH_WAIT = 10.0  # seconds to look for a launched app's window
 
-    def _wait_for_launched_window(self, pid: int, name: str) -> str | None:
-        """Title of a visible, titled window from *pid* or with *name* in its title.
+    @staticmethod
+    def _top_level_handles() -> set[int]:
+        handles: set[int] = set()
+        win32gui.EnumWindows(lambda handle, _: handles.add(handle) or True, None)
+        return handles
 
-        Polls win32 window titles instead of a UIA tree walk, which asked every top-level
-        window and failed after ~15 s with a UIA timeout when one was slow (round-3 R3-10).
+    def _wait_for_launched_window(
+        self, pid: int, name: str, existing: set[int]
+    ) -> tuple[str, int] | None:
+        """Title and handle of a new visible, titled window from *pid* or with *name* in its title.
+
+        Handles in *existing* (open before the launch) are skipped. Polls win32 window
+        titles instead of a UIA tree walk, which asked every top-level window and failed
+        after ~15 s with a UIA timeout when one was slow (round-3 R3-10).
         """
         needle = name.casefold()
         deadline = perf_counter() + self._LAUNCH_WAIT
@@ -824,11 +846,13 @@ class Desktop:
             found = []
 
             def check(handle, _):
+                if handle in existing:
+                    return True
                 if win32gui.IsWindowVisible(handle) and (title := win32gui.GetWindowText(handle)):
                     if needle in title.casefold() or (
                         pid and win32process.GetWindowThreadProcessId(handle)[1] == pid
                     ):
-                        found.append(title)
+                        found.append((title, handle))
                 return True
 
             win32gui.EnumWindows(check, None)

@@ -16,7 +16,11 @@
 
 - By Start Menu name, fuzzy ("calc" opens Calculator). An unknown name replies
   "... not found in start menu."; an empty name is refused.
-- The reply names the window found, with its real title ("Calculator launched.").
+- The reply names the new window with its real title and handle ("Calculator launched
+  (handle 123456)."). Windows open before the launch are never named. If no new window
+  appears but an open one of that app comes to the front, the reply says so (Notepad can
+  open a tab in its running window); otherwise it says the window was not detected yet
+  (after ~10 s).
 - Returns no PID: use `launch_executable` when you will need to kill it.
 - Store apps such as Notepad may open a new tab in an already-running window instead of a new
   process.

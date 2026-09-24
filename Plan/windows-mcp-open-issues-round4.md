@@ -1,6 +1,6 @@
 ---
 Title: Windows-MCP open issues backlog - round 4 (2026-09-24)
-Description: Findings of the round-4 real-work scenario test (all 21 tools driven through the connected server after the round-3 backlog, timed per call from Claude Code's MCP log), turned into a task file. Part A Bugs - 1 High (multi-line Type sends one key every 0.04 s: 622 characters took 26 s), 5 Medium (App launch names an older window; Snapshot word boxes include trailing spaces so word labels miss; WaitFor text_exists misses text inside documents; dialogs drawn inside an app's window are not noted; caret start/end work per line), 9 Low. Part B 7 improvements (Process list speed and output size, Snapshot word noise, fixed costs, reply boilerplate, list order, resize hint). Part C 2 new abilities (whole-field caret, FindText per window). Part D 31 guide, tool-description and test-skill corrections. Evidence is in docs/testing/windows-mcp-tool-test-report.md (Round 4). Status 2026-09-24: R4-1 fixed (622 multi-line characters in 0.87 s), with D.4/D.5; next in the user's fix order are R4-2, then Part D.
+Description: Findings of the round-4 real-work scenario test (all 21 tools driven through the connected server after the round-3 backlog, timed per call from Claude Code's MCP log), turned into a task file. Part A Bugs - 1 High (multi-line Type sends one key every 0.04 s: 622 characters took 26 s), 5 Medium (App launch names an older window; Snapshot word boxes include trailing spaces so word labels miss; WaitFor text_exists misses text inside documents; dialogs drawn inside an app's window are not noted; caret start/end work per line), 9 Low. Part B 7 improvements (Process list speed and output size, Snapshot word noise, fixed costs, reply boilerplate, list order, resize hint). Part C 2 new abilities (whole-field caret, FindText per window). Part D 31 guide, tool-description and test-skill corrections. Evidence is in docs/testing/windows-mcp-tool-test-report.md (Round 4). Status 2026-09-24: R4-1 fixed (622 multi-line characters in 0.87 s) and R4-2 fixed (launch names the new window and its handle), with D.4/D.5/D.20; next in the user's fix order is Part D.
 Total Tasks: 95
 ---
 # Windows-MCP open issues - round 4
@@ -19,12 +19,13 @@ Evidence for every item: `docs/testing/windows-mcp-tool-test-report.md`, section
   - **Verify:** Live - Type of the 622-character report into the harness text box takes under 1 s and `<log>.text` matches exactly (line breaks, a tab and braces included).
   - Result 2026-09-24: 622 characters (9 lines, 9 tabs, braces) in 0.87 s end to end, text matched exactly; `tests/test_type_direct.py` 3 new tests; harness text box now `AcceptsTab`. The reply's read-back said 575 characters (typed before the box settled) - that is R4-7.
 
-- [ ] R4-2 **Medium - App `launch` names an older window.** `_wait_for_launched_window` (`desktop/service.py` ~815-839) takes the first visible window whose title contains the name: `launch name=Notepad` replied "\*report.txt - Notepad launched." while the new window was "Untitled - Notepad".
-  - [ ] a. Unit: a window that existed before the launch is not accepted when a new one appears.
-  - [ ] b. Record the visible window handles before launching.
-  - [ ] c. Accept only handles not in that set (keep the PID match for `launch_executable`).
-  - [ ] d. Reply "launched, window not detected yet" when only old windows match.
+- [x] R4-2 **Medium - App `launch` names an older window.** `_wait_for_launched_window` (`desktop/service.py` ~815-839) takes the first visible window whose title contains the name: `launch name=Notepad` replied "\*report.txt - Notepad launched." while the new window was "Untitled - Notepad".
+  - [x] a. Unit: a window that existed before the launch is not accepted when a new one appears.
+  - [x] b. Record the visible window handles before launching.
+  - [x] c. Accept only handles not in that set (keep the PID match for `launch_executable`).
+  - [x] d. Reply "launched, window not detected yet" when only old windows match.
   - **Verify:** Live - with a Notepad window open, App `launch name=Notepad` names the new window's title and handle.
+  - Result 2026-09-24: live PASS - with a Notepad window open, the reply was "Untitled - Notepad launched (handle 592836)." (the new window) in 2.72 s. Added: when no new window appears but an old window of the app comes to the front (Notepad opening a tab there), the reply names it as possibly reused. Replies now carry the handle. Found: Notepad restores the user's earlier tabs, so a test must never close its window (live-test skill updated).
 
 - [ ] R4-3 **Medium - Snapshot word elements include trailing spaces.** Notepad's word boxes span the spaces after each word ("460" centre 337 vs drawn 317); a double-click on `label=` of "460" selected the gap.
   - [ ] a. [User] Choose (design choice): trim word boxes to their text, or leave word elements out (see R4-I3).
@@ -175,11 +176,11 @@ Guide = `Skills/windows-mcp/`. Rebuild the Claude Desktop ZIP (round-3 D.2) afte
 - [ ] D.17 `references/system-tools.md`: "`move` also renames and creates target folders." - `copy` creates target folders too.
 - [ ] D.18 `references/system-tools.md`: "`list` shows ExpandString values already expanded" - `get` does too, and neither names the type; read the raw value with PowerShell.
 - [ ] D.19 `references/system-tools.md` FileSystem `info`: "size, dates, counts" - "Contents" counts the top level only, while Size includes subfolders.
-- [ ] D.20 `references/apps-windows.md`: "The reply names the window found, with its real title ("Calculator launched.")." - it can name an older window whose title contains the name (R4-2); check App `list` for the new handle.
+- [x] D.20 (done with R4-2: the guide now says the reply names the new window and handle) `references/apps-windows.md`: "The reply names the window found, with its real title ("Calculator launched.")." - it can name an older window whose title contains the name (R4-2); check App `list` for the new handle.
 - [ ] D.21 `references/apps-windows.md` `list`: missing - lines are not in front-to-back order; a few apps' maximized windows show their outer frame (-8,-8).
 - [ ] D.22 `references/input.md`: "Every input reply ... ends with `Note: a new window appeared: ...` when a window opened since the previous input action" - missing: a dialog drawn inside the app's own window (Notepad's "save changes?") is not reported; take a Screenshot after closing or saving.
 - [ ] D.23 `references/known-gaps.md`: "Each entry names its backlog item (Plan/windows-mcp-open-issues-round3.md)" - point to this file.
-- [ ] D.24 `references/known-gaps.md`: add R4-2 to R4-6 (R4-1 fixed) with their workarounds; remove each when fixed.
+- [ ] D.24 `references/known-gaps.md`: add R4-3 to R4-6 (R4-1, R4-2 fixed) with their workarounds; remove each when fixed.
 - [ ] D.25 `SKILL.md` "Which tool for which job": add rows "Write a document or report -> FileSystem `write` (not typing)" and "Check text inside a document -> Ctrl+A, Ctrl+C then Clipboard `get`, or WaitFor `screen_text` (not `text_exists`)".
 - [ ] D.26 Snapshot tool description (`tools/`): "Captures complete desktop state including: system language" (no language line is returned) and "Always call this first" (the guide says Screenshot first) - reword.
 - [ ] D.27 WaitFor tool description (`tools/`): say `text_exists` matches element names (until R4-4).
