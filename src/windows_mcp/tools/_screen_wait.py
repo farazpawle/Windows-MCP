@@ -19,9 +19,12 @@ SCREEN_CONDITIONS = {"screen_text", "screen_changed", "screen_idle"}
 
 # A pixel counts as changed when its grey level moves more than this (of 255), so
 # fades and compression noise do not; the change counts when at least MIN_CHANGED_PIXELS
-# do, so a blinking caret (~40 px) does not while a 16x16 icon (256 px) does.
+# do, so a blinking caret (~40 px) does not while a 16x16 icon (256 px) does. A small
+# region lowers the floor to 1% of its pixels (not under FLOOR_PIXELS): a clock digit in
+# an 80x30 region changes ~40 px (R3-4).
 CHANGE_LEVEL = 24
 MIN_CHANGED_PIXELS = 100
+FLOOR_PIXELS = 20
 
 
 def capture(rect: uia.Rect) -> Image.Image:
@@ -35,7 +38,9 @@ def changed_box(before: Image.Image, after: Image.Image) -> tuple[int, int, int,
         return (0, 0, *before.size)
     diff = ImageChops.difference(before.convert("L"), after.convert("L"))
     mask = diff.point(lambda v: 255 if v > CHANGE_LEVEL else 0)
-    if mask.histogram()[255] < MIN_CHANGED_PIXELS:
+    width, height = before.size
+    needed = max(FLOOR_PIXELS, min(MIN_CHANGED_PIXELS, width * height // 100))
+    if mask.histogram()[255] < needed:
         return None
     return mask.getbbox()
 

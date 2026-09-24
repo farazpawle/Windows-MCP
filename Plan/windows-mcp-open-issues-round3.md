@@ -30,10 +30,11 @@ Evidence for every item: `docs/testing/windows-mcp-tool-test-report.md`, section
   - **Verify:** Live - Click `element=` on a button in a WebView2/CEF test page and Type `label=` on Explorer's Address Bar both act.
   - Result (2026-09-24): (b) changed on live evidence. Accepting a sibling drawn over the centre let Type act, but the click hit the path button and the text went to the folder view. Now: a container of the element in its own window counts (`element_still_at`, `_around`); a part drawn over the centre makes `spot_on_element` try 24 points inside the element's box and act on the first that is the element (Explorer's edit answers only in its last ~6%). Refusals name the covering window or say it moved (`covering_window`). Live: Edge `--app` page, Click `element="button:Press me"` changed the page title (second try; Chromium exposes elements lazily); Explorer Type `label=` "Address Bar" typed at (961,264) and the edit read back the text. Not re-proved on Avast's own alert (not reproducible on demand); Edge may answer with the button itself, so the container rule is proved by unit test only.
 
-- [ ] R3-4 **Medium - WaitFor `screen_changed` misses small real changes.** `MIN_CHANGED_PIXELS = 100` (`tools/_screen_wait.py`) is fixed; a clock digit in an 80x30 region stayed below it.
-  - [ ] a. Unit: a 40-pixel change in an 80x30 region counts; a 40-pixel change on a full screen does not.
-  - [ ] b. Scale the floor with the region area (e.g. the smaller of 100 and 1% of the pixels, minimum ~20).
+- [x] R3-4 **Medium - WaitFor `screen_changed` misses small real changes.** `MIN_CHANGED_PIXELS = 100` (`tools/_screen_wait.py`) is fixed; a clock digit in an 80x30 region stayed below it.
+  - [x] a. Unit: a 40-pixel change in an 80x30 region counts; a 40-pixel change on a full screen does not.
+  - [x] b. Scale the floor with the region area (e.g. the smaller of 100 and 1% of the pixels, minimum ~20).
   - **Verify:** Live - `screen_changed` on the taskbar clock returns at the next minute.
+  - Result (2026-09-24): floor = max(20, min(100, 1% of the region's pixels)). Live: WaitFor `screen_changed` on an 80x30 region of the taskbar clock returned at 11:03:01 (started 11:03:00) with a 6x7 px change box, under the old 100-pixel floor.
 
 - [ ] R3-5 **Low - identical duplicates can't be picked** (Explorer menu "Copy as path" twice).
   - [ ] a. Unit: two same-name, same-type matches where one is covered or off-screen pick the visible one.

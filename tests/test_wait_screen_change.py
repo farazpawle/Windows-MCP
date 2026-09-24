@@ -41,6 +41,17 @@ def test_an_icon_sized_change_gives_its_box():
     assert _screen_wait.changed_box(BLANK, _frame((100, 40, 119, 59))) == (100, 40, 120, 60)
 
 
+def test_a_digit_sized_change_counts_in_a_small_region():
+    # R3-4: a clock digit in an 80x30 region changes ~40 px, under the full-screen floor.
+    small = _frame(size=(80, 30))
+    assert _screen_wait.changed_box(small, _frame((10, 5, 13, 14), size=(80, 30))) is not None
+
+
+def test_the_same_change_on_a_full_screen_is_ignored():
+    full = _frame(size=(1920, 1080))
+    assert _screen_wait.changed_box(full, _frame((10, 5, 13, 14), size=(1920, 1080))) is None
+
+
 def test_a_size_change_counts_as_all_changed():
     assert _screen_wait.changed_box(BLANK, _frame(size=(10, 10))) == (0, 0, 400, 300)
 
