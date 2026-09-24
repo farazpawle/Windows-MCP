@@ -79,7 +79,8 @@ Evidence for every item: `docs/testing/windows-mcp-tool-test-report.md`, section
   - [x] b. Send all plain text through `SendUnicodeText`; keep SendKeys only for `\n`, `\t`, `{`, `}`.
   - **Verify:** Timing pass - Type 10 chars under 0.3 s; harness text exact.
   - Result (2026-09-24): `_LONG_TEXT_THRESHOLD` removed; `test_short_plain_text_is_typed_as_unicode`, and the section-6 test that pinned SendKeys (and would have typed for real) now mocks `SendUnicodeText`. Live: Type 10 chars 0.02-0.04 s; "abcdefghij", "a+b^c%~(x)" and "héllo 🌍 ok" each arrived exact.
-  - [ ] Follow-up (new finding): MultiEdit is still ~0.95 s a field with typing now instant. Not measured where; suspect the clear's UIA focus read (`_finish_clear`). Profile one field before changing anything.
+  - [x] Follow-up (new finding): MultiEdit is still ~0.95 s a field with typing now instant. Not measured where; suspect the clear's UIA focus read (`_finish_clear`). Profile one field before changing anything.
+  - Result (2026-09-24): profiled live: `_finish_clear` took 0.51 s only when Ctrl+A left text, all of it `ValuePattern.SetValue`'s default 0.5 s wait. Now `waitTime=0.05`; `test_clear_fallback_does_not_wait_half_a_second`. Live: 0.44-0.49 s a field (was 0.94), text exact; the rest is click 0.15 s, settle 0.1 s, Ctrl+A/Back ~0.17 s.
 
 - [ ] R3-I3 **Process list 1.6 s.**
   - [ ] a. Unit: `sort_by="memory"` makes no CPU sampling call.

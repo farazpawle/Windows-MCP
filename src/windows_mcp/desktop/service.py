@@ -1176,7 +1176,7 @@ class Desktop:
             focused = uia.GetFocusedControl()
             pattern = focused.GetPattern(uia.PatternId.ValuePattern) if focused else None
             if pattern is not None and not pattern.IsReadOnly and pattern.Value:
-                pattern.SetValue("")
+                pattern.SetValue("", waitTime=0.05)  # default waits 0.5 s
         except Exception as e:
             logger.debug("ValuePattern clear fallback failed: %s", e)
 

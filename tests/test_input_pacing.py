@@ -76,3 +76,15 @@ def test_no_input_waits_more_than_100ms(action):
         action(d)
 
     assert waits and max(waits) <= 0.1
+
+
+def test_clear_fallback_does_not_wait_half_a_second():
+    # Live R3-I2 follow-up: SetValue's default 0.5 s wait made MultiEdit ~0.95 s a field
+    # whenever Ctrl+A left text behind.
+    pattern = MagicMock(IsReadOnly=False, Value="left over")
+    focused = MagicMock()
+    focused.GetPattern.return_value = pattern
+    with patch.object(uia, "GetFocusedControl", return_value=focused):
+        Desktop.__new__(Desktop)._finish_clear()
+    pattern.SetValue.assert_called_once()
+    assert pattern.SetValue.call_args.kwargs.get("waitTime", 0.5) <= 0.1

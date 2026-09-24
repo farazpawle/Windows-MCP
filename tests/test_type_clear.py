@@ -33,7 +33,8 @@ def _type_with_focused(desktop, pattern):
 def test_leftover_text_is_cleared_through_value_pattern(desktop):
     pattern = MagicMock(IsReadOnly=False, Value="XYZHelloWorlda")
     _type_with_focused(desktop, pattern)
-    pattern.SetValue.assert_called_once_with("")
+    pattern.SetValue.assert_called_once()
+    assert pattern.SetValue.call_args.args == ("",)
 
 
 def test_already_empty_field_is_left_alone(desktop):
