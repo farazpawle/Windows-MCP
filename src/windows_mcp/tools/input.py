@@ -490,7 +490,7 @@ def register(
 
     @mcp.tool(
         name="Type",
-        description="Types text at specified coordinates [x, y] or passing a UI element's label/id. Set clear=True to clear existing text first, False to append. Set press_enter=True to submit after typing. Set caret_position to 'start' (beginning), 'end' (end), or 'idle' (default). Provide loc or label to click the field first; with neither, types into the element that already has keyboard focus (no click, so the caret and selection stay put).",
+        description="Types text at specified coordinates [x, y] or passing a UI element's label/id. Set clear=True to clear existing text first, False to append. Set press_enter=True to submit after typing. Set caret_position to 'start' or 'end' (start or end of the current line: Home/End) or 'idle' (default); for the start or end of a whole multi-line field, send Shortcut ctrl+home or ctrl+end first. Provide loc or label to click the field first; with neither, types into the element that already has keyboard focus (no click, so the caret and selection stay put).",
         annotations=ToolAnnotations(
             title="Type",
             readOnlyHint=False,
