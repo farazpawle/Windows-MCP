@@ -11,4 +11,3 @@ Each entry names its backlog item (Plan/windows-mcp-open-issues-round3.md); the 
   window is.
 - **Pop-ups are not announced** (R3-N1). A dialog or alert that opens during a task is found
   only by looking: after an unexpected result, check Snapshot's "Focused Window" or App `list`.
-- **Snapshot may print empty `window ""` lines** (R3-I8): ignore them.

@@ -183,11 +183,17 @@ def _render_semantic_node(
 
 
 def _prune_structural(node: SemanticNode) -> bool:
-    """Remove structural nodes that ended up with no children. Returns True = keep."""
+    """Remove structural nodes, and unnamed windows, that ended up with no children.
+
+    An unnamed empty window printed as a bare `window ""` line (round-3 R3-I8).
+    Returns True = keep.
+    """
     node.children = [c for c in node.children if _prune_structural(c)]
-    if node.element_type == "structural" and not node.children:
-        return False
-    return True
+    if node.children:
+        return True
+    return not (
+        node.element_type == "structural" or (node.element_type == "window" and not node.name)
+    )
 
 
 def _reverse_children_order(node: SemanticNode) -> None:
