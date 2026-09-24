@@ -106,7 +106,7 @@ Evidence for every item: `docs/testing/windows-mcp-tool-test-report.md`, section
   - [x] a. Unit: a bare name found only under `HKLM/HKCU\...\App Paths` resolves.
   - [x] b. Look up App Paths after PATH.
   - **Verify:** Live - `launch_executable executable="msedge.exe"` opens a tab.
-  - Result (2026-09-24): `_from_app_paths` reads the default value of `App Paths\<name>.exe` (HKCU, then HKLM), strips quotes and expands variables; `.exe` is optional. Tests in `test_app_replies.py`. Against this PC's real registry: `msedge.exe` and `msedge` resolve to Edge's install path, `notepad.exe` still resolves through PATH. Launching Edge itself was not run: the user redirected to fixing warnings first; the launch step after resolution is unchanged code.
+  - Result (2026-09-24): `_from_app_paths` reads the default value of `App Paths\<name>.exe` (HKCU, then HKLM), strips quotes and expands variables; `.exe` is optional. Tests in `test_app_replies.py`. Against this PC's real registry: `msedge.exe` and `msedge` resolve to Edge's install path, `notepad.exe` still resolves through PATH. Live (2026-09-24, after the warnings work): App `launch_executable executable="msedge.exe"` with a throwaway `--user-data-dir` returned PID 3652 at `C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe` in 0.75 s; that PID was among the 14 processes of the throwaway profile, all closed after (0 left), stderr empty.
 
 - [ ] R3-I6 **FindText phrase across table columns.**
   - [ ] a. Unit: two OCR lines on one baseline match a phrase that spans them.
