@@ -1,6 +1,5 @@
 """PowerShell command executor service"""
 
-import base64
 import ctypes
 import ctypes.wintypes
 import logging
@@ -227,6 +226,21 @@ def _prepare_env() -> dict[str, str]:
     return env
 
 
+# Fixed command line that reads the script from stdin as UTF-8 and runs it at global
+# scope. A base64 -EncodedCommand looked like malware to antivirus heuristics, and a
+# temp .ps1 with -File fails under an AllSigned policy and reports 0 for a failed last
+# command (round-3 R3-I4). A syntax error is printed without the "Exception calling
+# Create" wrapper.
+_STDIN_RUNNER = (
+    "$s = [IO.StreamReader]::new([Console]::OpenStandardInput(), "
+    "[Text.Encoding]::UTF8).ReadToEnd(); "
+    "try { $b = [scriptblock]::Create($s) } "
+    "catch { [Console]::Error.WriteLine($_.Exception.InnerException.Message); exit 1 }; . $b"
+)
+# -EncodedCommand exited 1 when the last command failed; a dot-sourced block does not.
+_STATUS_TRAILER = "\nif (-not $?) { exit 1 }"
+
+
 class PowerShellExecutor:
     """Static utility class for executing PowerShell commands."""
 
@@ -256,9 +270,8 @@ class PowerShellExecutor:
             utf8_command = (
                 "$OutputEncoding = [System.Text.Encoding]::UTF8; "
                 "[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; "
-                f"{command}"
+                f"{command}{_STATUS_TRAILER}"
             )
-            encoded = base64.b64encode(utf8_command.encode("utf-16le")).decode("ascii")
             env = _prepare_env()
             # NO_COLOR suppresses ANSI escape sequences in pwsh 7.2+ (and many other CLI tools).
             # PS5.1 has no ANSI output, so this is harmlessly ignored there.
@@ -274,11 +287,13 @@ class PowerShellExecutor:
             shell_name = os.path.basename(shell).lower().replace(".exe", "")
             if shell_name == "powershell":
                 args.extend(["-OutputFormat", "Text"])
-            args.extend(["-EncodedCommand", encoded])
+            args.extend(["-Command", _STDIN_RUNNER])
 
             result = run_with_graceful_timeout(
                 args,
-                stdin=subprocess.DEVNULL,  # Prevent child processes from inheriting the MCP pipe stdin
+                # Its own stdin pipe, closed after the script: children never inherit the
+                # MCP pipe, and a command reading stdin gets end-of-file as before.
+                input=utf8_command.encode("utf-8"),
                 capture_output=True,  # No errors='ignore' - let subprocess return bytes
                 timeout=timeout,
                 cwd=os.path.expanduser(path="~"),

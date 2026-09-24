@@ -134,6 +134,10 @@ cd "<repo root>" && timeout 180 env -u SSLKEYLOGFILE \
 - `--no-sync`: a running server from this `.venv` locks `windows-mcp.exe`.
 - Always use `timeout`, and announce the run first. A script that hangs leaves the user watching
   a silent spinner.
+- For anything slow (App launch waits up to ~15 s), write each result to a log file with a
+  timestamp and add `faulthandler.dump_traceback_later(40, exit=True, file=...)`. Several runs
+  piped through `| cut` printed nothing at all, and repeating them wasted the user's time
+  and left Calculator windows open. If a run prints nothing, find out why before running again.
 - Add `2>/dev/null` when a call is expected to fail: the server logs each tool error as a long
   boxed traceback on stderr, which buries the script's own prints (it cost a repeat run).
 
