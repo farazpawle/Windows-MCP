@@ -16,7 +16,7 @@ from windows_mcp.uia import (
     UIADeadElementError,
     from_com_error,
 )
-from typing import Optional, Any
+from typing import Optional
 import logging
 
 logger = logging.getLogger(__name__)
