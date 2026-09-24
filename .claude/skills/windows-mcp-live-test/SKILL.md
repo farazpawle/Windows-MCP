@@ -38,6 +38,12 @@ Claude Code client cannot, such as an empty string.
    Python script that moves windows and sends input): they should pick **Allow**. To confirm
    afterwards, read `C:\ProgramData\AVAST Software\Avast\log\detections.log` (open with
    FileShare ReadWrite; timestamps are **UTC**) for "show and wait for user choice".
+   Before blaming the test for a "powershell.exe ... IDP.HELU ... Command line detection"
+   alert, list every running `powershell.exe` with its command line: on 2026-09-24 it was
+   another app's hidden tray script, and three OCR runs with no exception raised nothing. An
+   unanswered alert comes back each time it is closed with X; never suggest a PowerShell-wide
+   exception, and warn that Quarantine targets Windows' own powershell.exe. Avast's "More
+   options" did not react to the tool's clicks ("See details" did), so that choice is the user's.
 3. If the test overwrites the clipboard (Clipboard set, copy shortcuts), back it up right
    before that step and restore it after, every time. Text, an image (`clipboard.service`
    `save_image` then `set_image`) and a file list (`set_files`) can be restored; other formats
