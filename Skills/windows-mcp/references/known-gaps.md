@@ -7,8 +7,6 @@ Each entry names its backlog item (Plan/windows-mcp-open-issues-round3.md); the 
   reported in front is not in the image, capture its rectangle with `region`.
 - **OCR splits a line at wide gaps** (R3-I6). FindText and WaitFor `screen_text` do not find a
   phrase across table columns ("North  460 units"): search one word ("North").
-- **`launch_executable` bare names search PATH only** (R3-I5). Edge is not on PATH here: pass
-  `C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe`.
 - **Process `list` shows no command line** (R3-I10). To see which program is behind a process:
   PowerShell `Get-CimInstance Win32_Process -Filter "Name='powershell.exe'" | select ProcessId,CommandLine`.
 - **App `list` shows no window position** (R3-I11): use Snapshot or Screenshot to see where a

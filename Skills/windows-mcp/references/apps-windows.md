@@ -2,8 +2,8 @@
 
 ## launch_executable
 
-- `executable` = full path, or a bare name found on PATH (`notepad.exe`; other bare names:
-  see known-gaps.md). `args` = argv **list**, optional `cwd`.
+- `executable` = full path, or a bare name found on PATH or in App Paths, like Win+R
+  (`notepad.exe`, `msedge.exe`; `.exe` optional). `args` = argv **list**, optional `cwd`.
   Example: `C:\Program Files\PowerShell\7\pwsh.exe` with
   `["-NoProfile","-STA","-WindowStyle","Hidden","-File","<path>"]`.
 - Returns `{pid,...}`: **save the PID** for later kills. The PID can be a stub that hands off

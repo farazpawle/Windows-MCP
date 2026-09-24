@@ -1,5 +1,6 @@
 """Round-2 3.9: App validates its inputs and its replies say what actually happened."""
 
+import winreg
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
@@ -160,6 +161,39 @@ def test_bare_executable_name_is_found_on_path(tmp_path):
 def test_bare_executable_name_missing_from_path():
     with patch("windows_mcp.tools.app.shutil.which", return_value=None):
         with pytest.raises(ValueError, match="not found on PATH"):
+            _resolve_executable("no-such-wmcp.exe")
+
+
+@pytest.mark.parametrize("name", ["tool.exe", "tool"])
+def test_bare_name_off_path_is_found_in_app_paths(tmp_path, monkeypatch, name):
+    # Round-3 R3-I5: msedge.exe is registered under App Paths, not on PATH.
+    exe = tmp_path / "tool.exe"
+    exe.write_bytes(b"")
+    monkeypatch.setenv("WMCP_TEST_DIR", str(tmp_path))
+    asked = []
+
+    def query(hive, subkey):
+        asked.append(subkey)
+        if hive == winreg.HKEY_LOCAL_MACHINE and subkey.endswith("\\tool.exe"):
+            return '"%WMCP_TEST_DIR%\\tool.exe"'  # quoted, with a variable, as installers write
+        raise FileNotFoundError
+
+    with (
+        patch("windows_mcp.tools.app.shutil.which", return_value=None),
+        patch("windows_mcp.tools.app.winreg.QueryValue", side_effect=query),
+    ):
+        assert _resolve_executable(name) == exe.resolve()
+    assert all(
+        s.startswith("SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\App Paths\\") for s in asked
+    )
+
+
+def test_bare_name_missing_everywhere_names_both_places():
+    with (
+        patch("windows_mcp.tools.app.shutil.which", return_value=None),
+        patch("windows_mcp.tools.app.winreg.QueryValue", side_effect=FileNotFoundError),
+    ):
+        with pytest.raises(ValueError, match="not found on PATH or in App Paths"):
             _resolve_executable("no-such-wmcp.exe")
 
 

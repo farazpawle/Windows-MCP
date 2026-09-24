@@ -102,10 +102,11 @@ Evidence for every item: `docs/testing/windows-mcp-tool-test-report.md`, section
   - **Verify:** Live - App `launch name=Calculator` replies success within ~5 s, measured with the file-logging diagnostic script.
   - Result (2026-09-24): the UIA search is gone. `_wait_for_launched_window` polls win32 `EnumWindows` every 0.2 s for up to `_LAUNCH_WAIT` = 10 s: a visible, titled window of the launched PID or with the app name in its title (case ignored, as the old regex). No window gives the "not detected yet" reply, never an error. `tests/test_app_launch_window_wait.py`; the section-5 test now checks the name passed to the wait. Live: "Calculator launched." in 2.3 s (was ~15 s and an error), closed after.
 
-- [ ] R3-I5 **`launch_executable` bare names miss App Paths** (msedge.exe).
-  - [ ] a. Unit: a bare name found only under `HKLM/HKCU\...\App Paths` resolves.
-  - [ ] b. Look up App Paths after PATH.
+- [x] R3-I5 **`launch_executable` bare names miss App Paths** (msedge.exe).
+  - [x] a. Unit: a bare name found only under `HKLM/HKCU\...\App Paths` resolves.
+  - [x] b. Look up App Paths after PATH.
   - **Verify:** Live - `launch_executable executable="msedge.exe"` opens a tab.
+  - Result (2026-09-24): `_from_app_paths` reads the default value of `App Paths\<name>.exe` (HKCU, then HKLM), strips quotes and expands variables; `.exe` is optional. Tests in `test_app_replies.py`. Against this PC's real registry: `msedge.exe` and `msedge` resolve to Edge's install path, `notepad.exe` still resolves through PATH. Launching Edge itself was not run: the user redirected to fixing warnings first; the launch step after resolution is unchanged code.
 
 - [ ] R3-I6 **FindText phrase across table columns.**
   - [ ] a. Unit: two OCR lines on one baseline match a phrase that spans them.

@@ -5,6 +5,7 @@ import json
 import os
 import shutil
 import subprocess
+import winreg
 from pathlib import Path
 from typing import Literal
 
@@ -50,13 +51,30 @@ def _as_args(value: list[str] | str | None) -> list[str]:
     return args
 
 
+_APP_PATHS = "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\App Paths\\"
+
+
+def _from_app_paths(name: str) -> str | None:
+    """Path registered for *name* under App Paths (what Win+R uses), user before machine."""
+    key = name if name.lower().endswith(".exe") else f"{name}.exe"
+    for hive in (winreg.HKEY_CURRENT_USER, winreg.HKEY_LOCAL_MACHINE):
+        try:
+            value = winreg.QueryValue(hive, _APP_PATHS + key)
+        except OSError:
+            continue
+        if value:
+            return os.path.expandvars(value.strip().strip('"'))
+    return None
+
+
 def _resolve_executable(executable: str) -> Path:
     # A bare name ("notepad.exe") was looked up in the server's own folder; search
-    # PATH like a shell does. Anything with a folder or drive part stays a path.
+    # PATH like a shell does, then App Paths (msedge.exe is only there, round-3 R3-I5).
+    # Anything with a folder or drive part stays a path.
     if os.path.basename(executable) == executable:
-        found = shutil.which(executable)
+        found = shutil.which(executable) or _from_app_paths(executable)
         if found is None:
-            raise ValueError(f"Executable not found on PATH: {executable}")
+            raise ValueError(f"Executable not found on PATH or in App Paths: {executable}")
         executable = found
     path = Path(executable).expanduser().resolve()
     if not path.is_file():
