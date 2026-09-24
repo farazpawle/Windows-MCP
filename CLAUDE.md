@@ -110,9 +110,9 @@ The codebase follows a layered service architecture under `src/windows_mcp/`:
 |---|---|
 | `.claude/skills/windows-mcp-tool-tester/` | Black-box test one tool through its MCP schema, with a structured report. |
 | `.claude/skills/windows-mcp-live-test/` | Prove a code change on the real desktop with a guarded test window. |
-| `Skills/Skill.md` | Field guide Claude Desktop reads before using the tools; notes where this repo ("local repo") and the PyPI release differ. |
+| `Skills/windows-mcp/` | Field guide Claude Desktop reads before using the tools: a short `SKILL.md` plus `references/` per tool group; PyPI-release differences only in `references/pypi-differences.md`, open problems in `references/known-gaps.md`. |
 
-**Mandatory:** when a task teaches something new (a tool behaviour, a testing pitfall, a workaround) or makes any of these skills wrong or incomplete, update that skill in the same task, and name the change in the reply to the user. A fix that changes what a tool does, accepts or replies must update that tool's entry in `Skills/Skill.md`. Likewise, update this file when commands, environment variables, architecture or conventions change. Keep both short: record what is non-obvious, not what the code already says. (Skills outside this repo still need the user's approval before editing.)
+**Mandatory:** when a task teaches something new (a tool behaviour, a testing pitfall, a workaround) or makes any of these skills wrong or incomplete, update that skill in the same task, and name the change in the reply to the user. A fix that changes what a tool does, accepts or replies must update that tool's entry in `Skills/windows-mcp/references/`, and remove its line from `known-gaps.md` if it had one. Likewise, update this file when commands, environment variables, architecture or conventions change. Keep both short: record what is non-obvious, not what the code already says. (Skills outside this repo still need the user's approval before editing.)
 
 ## Security Context
 

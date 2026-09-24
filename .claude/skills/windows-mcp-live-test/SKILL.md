@@ -17,7 +17,7 @@ description: >
 
 **This skill is NOT for:**
 - Black-box QA of one tool through its MCP schema (use `windows-mcp-tool-tester`)
-- Plain unit tests (`pytest`), or using the tools for a user's task (see `Skills/Skill.md`)
+- Plain unit tests (`pytest`), or using the tools for a user's task (see `Skills/windows-mcp/`)
 
 **Matches → keep reading. No match → stop.**
 
@@ -140,7 +140,7 @@ cd "<repo root>" && timeout 180 env -u SSLKEYLOGFILE \
 - Judge by what the test window logged or holds, never by the tool's reply text alone.
 - If the guard aborted, nothing was sent: re-check focus and window position, then re-run.
 - Report the result in plain words. Record any new lesson in this skill, and any behaviour
-  change in `Skills/Skill.md`, in the same task (CLAUDE.md "Skills and Keeping Them Current").
+  change in `Skills/windows-mcp/references/`, in the same task (CLAUDE.md "Skills and Keeping Them Current").
 
 ## Display-scaling tests
 
