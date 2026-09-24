@@ -36,6 +36,36 @@ def test_several_exact_matches_are_refused():
         utils.pick_element([SAVE, MENU_SAVE], "", "Save", "Notepad")
 
 
+COPY_A = ("menu item", "Copy as path", 100, 200)
+COPY_B = ("menu item", "Copy as path", 100, 900)
+
+
+def test_identical_duplicates_pick_the_one_on_top():
+    # R3-5: Explorer's context menu lists "Copy as path" twice; only one is shown.
+    shown = {COPY_B}
+    assert (
+        utils.pick_element([COPY_A, COPY_B], "", "Copy as path", "Menu", shown.__contains__)
+        == COPY_B
+    )
+
+
+def test_identical_duplicates_at_the_same_spot_are_one_target():
+    # Measured live: Explorer reports the one "Copy as path" item twice, same box.
+    twin = ("menu item", "Copy as path", 100, 200)
+    assert utils.pick_element([COPY_A, twin], "", "Copy as path", "Menu", lambda f: True) == COPY_A
+
+
+def test_identical_duplicates_both_shown_are_refused():
+    with pytest.raises(ValueError, match="2 elements"):
+        utils.pick_element([COPY_A, COPY_B], "", "Copy as path", "Menu", lambda f: True)
+
+
+def test_partial_matches_are_not_narrowed_by_visibility():
+    # "sav" matching a hidden "Save As..." and a shown "Save" must not quietly pick one.
+    with pytest.raises(ValueError, match="2 elements"):
+        utils.pick_element([SAVE_AS, SAVE], "", "sav", "Notepad", {SAVE}.__contains__)
+
+
 def test_the_type_narrows_the_choice():
     assert utils.pick_element([SAVE, MENU_SAVE], "Menu Item", "Save", "Notepad") == MENU_SAVE
 

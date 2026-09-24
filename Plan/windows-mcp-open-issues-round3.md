@@ -36,10 +36,11 @@ Evidence for every item: `docs/testing/windows-mcp-tool-test-report.md`, section
   - **Verify:** Live - `screen_changed` on the taskbar clock returns at the next minute.
   - Result (2026-09-24): floor = max(20, min(100, 1% of the region's pixels)). Live: WaitFor `screen_changed` on an 80x30 region of the taskbar clock returned at 11:03:01 (started 11:03:00) with a 6x7 px change box, under the old 100-pixel floor.
 
-- [ ] R3-5 **Low - identical duplicates can't be picked** (Explorer menu "Copy as path" twice).
-  - [ ] a. Unit: two same-name, same-type matches where one is covered or off-screen pick the visible one.
-  - [ ] b. Prefer the match on top at its centre; refuse only when both are visible.
+- [x] R3-5 **Low - identical duplicates can't be picked** (Explorer menu "Copy as path" twice).
+  - [x] a. Unit: two same-name, same-type matches where one is covered or off-screen pick the visible one.
+  - [x] b. Prefer the match on top at its centre; refuse only when both are visible.
   - **Verify:** Live - Click `element="Copy as path"` in Explorer's context menu copies the paths.
+  - Result (2026-09-24): measured live, the two "Copy as path" entries have the same box (851,538,1167,570), both on top, so "refuse when both visible" alone still refused. `pick_element` takes the one shown at its centre, or the first when all shown copies share one spot. Live: right-click on a test file, Click `element="Copy as path"` clicked it in "Pop-upHost" and the clipboard held the file's quoted path (clipboard was empty before, emptied after).
 
 - [x] R3-6 **Low - "Also matched ..." after an exact title.**
   - [x] a. Unit: an exact (case-ignored) title match gives no "Also matched" note.

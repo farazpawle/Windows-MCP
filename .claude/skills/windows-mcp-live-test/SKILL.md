@@ -102,7 +102,9 @@ page in its own process (kill it with `taskkill /T /PID`); its elements appear t
 after a first query, so retry Click `element=` once. `explorer.exe <scratch folder>` opens a
 window titled "<folder> - File Explorer" (explorer.exe is shared: close it by WM_CLOSE, never
 kill). Never Type `clear=true` into an Explorer file list: it sends Ctrl+A then Backspace,
-which navigates up a folder.
+which navigates up a folder. Explorer's right-click menu is a separate "Pop-upHost" window
+of the same explorer.exe process: before clicking in it, check the front window's PID matches
+the test Explorer window's. It leaves the clipboard changed ("Copy as path"): back it up first.
 
 Read-only calls (Snapshot, WaitFor, DisplayInventory, FindText) need no `points`. For pixel
 checks (WaitFor `screen_changed` / `screen_idle`, FindText), open a plain test window first and

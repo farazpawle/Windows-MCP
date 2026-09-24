@@ -276,17 +276,28 @@ def _listed(found: list[tuple[str, str, int, int]]) -> str:
 
 
 def pick_element(
-    found: list[tuple[str, str, int, int]], role: str, name: str, window: str
+    found: list[tuple[str, str, int, int]],
+    role: str,
+    name: str,
+    window: str,
+    on_top: Callable[[tuple[str, str, int, int]], bool] | None = None,
 ) -> tuple[str, str, int, int]:
     """The one element meant, from those whose name contains *name*; else ValueError.
 
     An exact name (case ignored) wins; failing that, a single partial match. Never
-    guesses between two.
+    guesses between two. Identical duplicates (same type and name) are told apart by
+    *on_top*: the one shown at its centre is taken, or several shown at the same spot (R3-5).
     """
     kind = role.casefold()
     typed = [f for f in found if f[0].casefold() == kind] if kind else found
     exact = [f for f in typed if f[1].casefold() == name.casefold()]
     matches = exact or typed
+    identical = len({(f[0].casefold(), f[1].casefold()) for f in matches}) == 1
+    if len(matches) > 1 and identical and on_top is not None:
+        shown = [f for f in matches if on_top(f)]
+        # One spot is one target: Explorer reports its "Copy as path" item twice, same box.
+        if shown and len({f[2:] for f in shown}) == 1:
+            return shown[0]
     if len(matches) == 1:
         return matches[0]
     what = f'{role or "element"} named "{name}"'
@@ -339,7 +350,11 @@ def find_element(handle: int, window: str, element: str) -> tuple[str, str, int,
     except Exception as e:
         logger.debug("Element search failed in window %s", handle, exc_info=True)
         raise ValueError(f'Could not search "{window}" for elements: {e}') from None
-    picked = pick_element(found, role, name, window)
+
+    def on_top(f: tuple[str, str, int, int]) -> bool:
+        return element_still_at(f[1], f[0], f[2], f[3], rect=boxes[f], window=window)
+
+    picked = pick_element(found, role, name, window, on_top)
     kind, found_name, x, y = picked
     # Same spot check as label clicks (B.9): another window or a pop-up may sit on top.
     spot = spot_on_element(found_name, kind, x, y, rect=boxes[picked], window=window)
