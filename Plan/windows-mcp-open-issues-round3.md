@@ -1,7 +1,7 @@
 ---
 Title: Windows-MCP open issues backlog - round 3 (2026-09-24)
-Description: Findings of the round-3 real-work scenario test (all 21 tools driven through the connected server at the PC, plus a per-tool timing pass), turned into a task file. Part A Bugs - 2 High (windows that cannot be maximized are missing from the window list; a full-screen capture misses some front windows such as Avast's alert), 2 Medium (false "covered"/"screen changed" refusals; screen_changed misses small changes), 5 Low. Part B Improvements (fixed 0.5 s pauses and other latency, encoded PowerShell command lines, App Paths lookup, OCR column gaps, process command lines, window positions in App list). Part C one new ability (pop-up detection, needs the user's design approval). Details and evidence are in docs/testing/windows-mcp-tool-test-report.md (Round 3). Not fixed yet: the user makes the fix plan in a later session.
-Total Tasks: 42
+Description: Findings of the round-3 real-work scenario test (all 21 tools driven through the connected server at the PC, plus a per-tool timing pass), turned into a task file. Part A Bugs - 2 High (windows that cannot be maximized are missing from the window list; a full-screen capture misses some front windows such as Avast's alert), 2 Medium (false "covered"/"screen changed" refusals; screen_changed misses small changes), 5 Low. Part B Improvements (fixed 0.5 s pauses and other latency, encoded PowerShell command lines, App Paths lookup, OCR column gaps, process command lines, window positions in App list). Part C one new ability (pop-up detection, needs the user's design approval). Part D restructures the tool guide into a short main file plus references (next session), then the user installs it in Claude Desktop once it is verified. Details and evidence are in docs/testing/windows-mcp-tool-test-report.md (Round 3). Not fixed yet: the user makes the fix plan in a later session.
+Total Tasks: 56
 ---
 # Windows-MCP open issues - round 3
 
@@ -117,6 +117,25 @@ Evidence for every item: `docs/testing/windows-mcp-tool-test-report.md`, section
   - [ ] a. [User] Approve the shape (design choice): WaitFor `condition="new_window"`, or a line in every input reply when the foreground window changed to one the call did not target.
   - [ ] b. Implement the chosen shape.
   - **Verify:** Live - opening a dialog during a WaitFor/after a Click is reported.
+
+# Part D - Tool guide restructure (user decision 2026-09-24: do it next session)
+
+- [ ] D.1 **Split the tool guide into a short main file plus references.** Today it is one file of 127 lines / 34,000 characters, 18 lines over 600 characters (longest 2,074), mixing how-to, PyPI differences (65 mentions) and dated test evidence (32 dates). The user already moved it from `Skills/Skill.md` to `Skills/windows-mcp/Skill.md` (uncommitted at the end of the 2026-09-24 session).
+  - [ ] a. Commit the user's move to `Skills/windows-mcp/` on its own (`git mv` history kept).
+  - [ ] b. Rename the main file to `SKILL.md` (the skill-folder convention), keeping its frontmatter `name`/`description`.
+  - [ ] c. Write the main file: golden rules, which tool for which job, the UI workflow, and a one-line pointer to each reference.
+  - [ ] d. Write `references/observe.md` (Screenshot, Snapshot, FindText, WaitFor, Wait, DisplayInventory).
+  - [ ] e. Write `references/input.md` (Click, Type, MultiEdit, MultiSelect, Scroll, Move, Shortcut, coordinates, shrunk screenshots).
+  - [ ] f. Write `references/apps-windows.md` (App modes).
+  - [ ] g. Write `references/system-tools.md` (PowerShell, FileSystem, Registry, Process, Clipboard, Notification).
+  - [ ] h. Write `references/web.md` (Scrape).
+  - [ ] i. Write `references/pypi-differences.md` holding every "PyPI" note, taken out of the pages above.
+  - [ ] j. Write `references/known-gaps.md` holding the round-3 warnings (R3-1, R3-2, R3-3, ...) with workarounds; each fix removes its entry.
+  - [ ] k. Drop test dates and evidence from the guide (the test report keeps them); keep only facts an agent acts on.
+  - [ ] l. Check nothing was lost: every fact in the old file maps to one line in the new files (a side-by-side checklist).
+  - [ ] m. Update links to the old path in `CLAUDE.md`, `.claude/skills/windows-mcp-live-test/SKILL.md` and this file.
+  - **Verify:** the checklist in (l) has no unmapped fact; the main file is short enough to read in one pass (target under 150 lines, no line over 300 characters); a fresh agent given only the main file finds the right reference for five sample tasks.
+- [ ] D.2 **[User] Install the finished guide in Claude Desktop's skill folder** - only after D.1 is verified and the guide is judged 100% correct (user's condition, 2026-09-24). Needs the user: it is their Claude Desktop setup. The agent prepares the folder and says exactly what to copy where.
 
 # Implementation verification
 
