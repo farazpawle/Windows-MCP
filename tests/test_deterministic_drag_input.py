@@ -74,8 +74,8 @@ def test_move_tool_annotations_cover_drag_side_effects() -> None:
 
     annotations = mcp.tool_options["Move"]["annotations"]
 
-    assert annotations.destructiveHint is True
-    assert annotations.idempotentHint is False
+    assert annotations.destructive_hint is True
+    assert annotations.idempotent_hint is False
 
 
 def test_move_tool_accepts_explicit_drag_start_list() -> None:

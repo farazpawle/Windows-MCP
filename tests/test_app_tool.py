@@ -107,8 +107,8 @@ def test_launch_executable_preserves_argv_and_uses_no_shell(
     ]
 
     annotations = mcp.tool_options["App"]["annotations"]
-    assert annotations.destructiveHint is True
-    assert annotations.idempotentHint is False
+    assert annotations.destructive_hint is True
+    assert annotations.idempotent_hint is False
 
 
 def test_launch_executable_accepts_json_string_args(
