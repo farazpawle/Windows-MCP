@@ -37,7 +37,8 @@ Claude Code client cannot, such as an empty string.
 2. Warn that an **Avast "allow/block" pop-up** may pause the script (Behavior Shield flags a
    Python script that moves windows and sends input): they should pick **Allow**. To confirm
    afterwards, read `C:\ProgramData\AVAST Software\Avast\log\detections.log` (open with
-   FileShare ReadWrite; timestamps are **UTC**) for "show and wait for user choice".
+   FileShare `ReadWrite, Delete`: plain `ReadWrite` fails with "being used by another process";
+   timestamps are **UTC**) for "show and wait for user choice".
    Before blaming the test for a "powershell.exe ... IDP.HELU ... Command line detection"
    alert, list every running `powershell.exe` with its command line: on 2026-09-24 it was
    another app's hidden tray script, and three OCR runs with no exception raised nothing. An
@@ -108,7 +109,9 @@ label chosen by regex: twice a wrong match sent text to the wrong control.
 
 Real apps: Edge with `--app=<file URL> --user-data-dir=<scratchpad>` gives a throwaway web
 page in its own process (kill it with `taskkill /T /PID`); its elements appear to UIA only
-after a first query, so retry Click `element=` once. `explorer.exe <scratch folder>` opens a
+after a first query, so retry Click `element=` once. The throwaway profile signs itself into
+the Windows Microsoft account and shows a "now syncing" notice over the page (Scrape
+`use_dom` then returns the notice's text): click its "Got it" first. `explorer.exe <scratch folder>` opens a
 window titled "<folder> - File Explorer" (explorer.exe is shared: close it by WM_CLOSE, never
 kill). Never Type `clear=true` into an Explorer file list: it sends Ctrl+A then Backspace,
 which navigates up a folder. Explorer's right-click menu is a separate "Pop-upHost" window

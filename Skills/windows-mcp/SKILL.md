@@ -64,6 +64,8 @@ says "No active window found".
 | Commands, files, registry, processes | PowerShell, FileSystem, Registry, Process | system-tools.md |
 | Clipboard, toast notifications | Clipboard, Notification | system-tools.md |
 | Read a web page | Scrape | web.md |
+| Write a document or report | FileSystem `write` (not typing it) | system-tools.md |
+| Check text inside a document | WaitFor `text_exists` (or Ctrl+A, Ctrl+C, Clipboard `get`, after backing up the clipboard) | observe.md |
 
 System tools have no focus problems: prefer them over the UI when both can do the job.
 
@@ -80,14 +82,15 @@ System tools have no focus problems: prefer them over the UI when both can do th
 ## Typical cost per call
 
 - Under 0.1 s: DisplayInventory, Clipboard, FileSystem, App list/switch, Screenshot,
-  Snapshot of a region, Shortcut.
-- ~0.2 s WaitFor; ~0.3 s PowerShell and Registry (a new PowerShell each call).
+  Shortcut.
+- ~0.2-0.3 s Snapshot of a region; ~0.2 s WaitFor; ~0.3 s PowerShell and Registry (a new PowerShell each call).
 - FindText ~0.6 s for a region, ~1.6 s for the full screen.
 - Move ~0.1 s, Click ~0.15 s, Scroll ~0.5 s, MultiSelect ~0.2 s per click (a 0.1 s pause
   after each action; a slow app may need WaitFor `screen_idle` before a Screenshot).
+  Double click ~0.5 s, Click `element=` ~0.3 s, Move drag ~1.3 s.
 - Type without `loc` ~0.1 s for short text, under 1 s for 600 characters with
   line breaks; MultiEdit ~0.45 s per field;
-  Process list ~0.6 s (~1.7 s sorted by CPU).
+  Process list ~0.9-1.1 s (~2.3-2.8 s sorted by CPU) with ~620 processes.
 
 ## References
 

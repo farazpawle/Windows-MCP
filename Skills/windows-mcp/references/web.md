@@ -11,8 +11,13 @@
 
 - Reads the **active tab of the focused browser** (Edge works). Snapshot `use_dom=true` lists
   the page's links and fields with labels Click accepts.
-- To open a page, start `msedge.exe <url>` (full path: known-gaps.md). It opens a new tab:
-  this PC's browser lock blocks new *windows*, not tabs. Then App switch to it.
+- To open a page, App `launch_executable` with `msedge.exe` (the bare name works) and the URL
+  as `args`. In the running Edge it opens a new tab: this PC's browser lock blocks new
+  *windows*, not tabs. Then App switch to it. A throwaway profile
+  (`--user-data-dir=<empty folder>`) opens its own window instead.
+- A throwaway profile signs itself into the Windows Microsoft account and shows a "now
+  syncing" notice over the page; `use_dom` then returns the notice's text. Click its
+  "Got it" first.
 - Close only your own tab afterwards (Ctrl+W while it is active).
 - The first or last line says top / middle / bottom, or "Whole page visible".
 

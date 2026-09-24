@@ -45,8 +45,8 @@ and actionable recommendations.
   whole desktop, so keep `WINDOWS_MCP_READ_VSCODE` off and prefer a `region` around the test window.
 - **Check for frozen apps** before Snapshot/WaitFor/App calls; a "Not Responding" window can stall
   them. If a call stalls, find it with `IsHungAppWindow` via PowerShell and ask the user.
-- **Back up the clipboard before every test that overwrites it** (Clipboard set, Type of 20+
-  characters, copy shortcuts) — not once per session. Non-text contents cannot be restored: ask
+- **Back up the clipboard before every test that overwrites it** (Clipboard set, copy
+  shortcuts; Type never uses the clipboard) — not once per session. Non-text contents cannot be restored: ask
   before overwriting them.
 - **Empty strings**: some clients cannot send `""`. Test empty inputs through a FastMCP script
   client instead (see the `windows-mcp-live-test` skill), not by skipping them.
@@ -191,8 +191,10 @@ environment before executing any test cases:
 2. **Label availability check**: Call Snapshot on the test target window and verify whether the
    element you intend to use with `label` parameter is actually listed in the Interactive Elements.
    Common pitfalls:
-   - Modern Windows 11 Notepad's text editing area is **not** exposed as an interactive element
-     in the UI tree — use `loc` coordinates instead.
+   - Windows 11 Notepad's text area is listed as `document "Text editor"` with a label, and
+     each visible word as a `word` element. Notepad restores the user's earlier tabs when it
+     starts: never close a Notepad window you did not open, and close your own tab with
+     Ctrl+W (answer a save question for it with "Don't save", for any other with Cancel).
    - Some complex controls (e.g., rich text editors, canvas-based UIs) may not enumerate child
      elements.
    If a planned `label`-based test has no valid label target, adapt the test to use `loc`, or
@@ -230,7 +232,12 @@ Run each test case sequentially. For each test:
 4. **Record end time** — immediately after the tool returns, call PowerShell again with the same command. Save as `$t_end`.
 5. **Compute elapsed time** — `elapsed_ms = $t_end - $t_start`. Note: this includes MCP
    overhead from the timestamp calls themselves (~3-5s each). Use for relative comparison
-   between test cases only. **When testing the PowerShell tool itself**, timing is
+   between test cases only. **Better, in Claude Code:** its MCP log gives each call's time
+   to the millisecond, with no overhead: the newest
+   `%LOCALAPPDATA%\claude-cli-nodejs\Cache\<project folder>\mcp-logs-windows-mcp\*.jsonl`
+   has a `"Tool 'X' completed successfully in N ms"` line per call (after a
+   `"Calling MCP tool: X"` line). Calls to the same tool made in parallel cannot be told
+   apart there, so make timed calls one at a time. **When testing the PowerShell tool itself**, timing is
    self-referential — record times as `N/A (self-referential)` and rely on the PowerShell
    tool's own `timeout` behavior and status codes for performance assessment instead.
 6. **Capture the response** — store the full return value and measure `response_size`:
@@ -491,7 +498,8 @@ To avoid polluting the system or interfering with user state:
 Hints per tool. Always read the actual schema to discover additional scenarios beyond these.
 
 ### App
-- Modes: launch, resize, switch. Test each mode.
+- Modes: launch, launch_executable, resize, switch, minimize, maximize, restore, close, list,
+  move. Test each mode.
 - Launch: test with known apps (notepad, calc), unknown app names
 - Resize: test with valid window_loc/window_size, without an active app
 - Switch: test switching to a running app, to a non-existent app

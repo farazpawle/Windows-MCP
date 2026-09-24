@@ -12,8 +12,9 @@
 - It captures pending approval prompts too.
 - `width_reference_line` / `height_reference_line` draw a grid; either one alone works.
 - On one screen, full captures use the same method as `region` captures (header
-  "Screenshot Backend: dxcam"), which shows pop-ups such as Avast's alert. Several screens:
-  see known-gaps.md.
+  "Screenshot Backend: dxcam"), which shows pop-ups such as Avast's alert. Once, after the PC
+  sat idle ~1.5 h, a full capture used pillow: check the Backend line and capture again when
+  a pop-up is expected. Several screens: see known-gaps.md.
 - `zoom=true` with a `region` enlarges it to about 1280 px wide at full resolution, for small
   text; keep clicking with full-screen coordinates.
 
@@ -25,7 +26,8 @@
 - Before acting on a label the tool re-checks the element is still at its spot (input.md,
   "Spot check") and refuses with "take a new Snapshot" if the screen changed.
 - `region` keeps only elements inside the rectangle and reads only windows visible in it (a
-  taskbar-strip Snapshot took 0.3 s instead of 22 s).
+  taskbar-strip Snapshot took 0.3 s instead of 22 s); the Opened Windows list then shows
+  only those windows too. A region Snapshot takes ~0.2-0.3 s.
 - Elements of background windows that another window covers are left out: their click would
   hit the covering window.
 - At most 500 elements (`WINDOWS_MCP_MAX_TREE_ELEMENTS`); the truncation message says so. The
@@ -51,6 +53,8 @@
 - It reads visible pixels only: tiny, stylised or low-contrast text can be missed. A phrase
   may run across table columns on one row ("North 460 units"). A short number alone in a
   column can be missed in some fonts (Consolas "460"): then search a longer neighbour.
+- A full-screen search can join text of windows side by side into one line (".venv North
+  460 units": a side bar plus Notepad). Give the window's rectangle as `region`.
 
 ## WaitFor
 

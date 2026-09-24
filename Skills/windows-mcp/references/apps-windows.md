@@ -60,7 +60,9 @@
 - `close`: like the X button, never a kill; **name or handle required**. Replies "Closed X."
   or says it is still open (e.g. asking to save).
 - `list`: one line per window: `handle=... pid=... program State at (left,top) size WxH "title"`,
-  the visible window in screen pixels (the units `resize` takes).
+  the visible window in screen pixels (the units `resize` takes). Lines are not in
+  front-to-back order and the front window is not marked. A few apps' maximized windows show
+  their outer frame, at (-8,-8) and 16 px larger (known-gaps.md).
 - `move` with `display=N` (numbering as in DisplayInventory): keeps the offset but moves the
   window up/left to stay inside the work area (taskbar excluded), shrinks it to fit, and
   re-maximizes a maximized window; a minimized one is refused. Works across screens with
