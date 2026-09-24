@@ -196,13 +196,48 @@ def test_type_reports_the_field_afterwards(monkeypatch):
     assert reply.endswith('The field (edit "Search") now reads "hi".')
 
 
+def _readings(monkeypatch, name, values, *args):
+    """Make input_tools.<name> return *values* in turn, then keep the last one."""
+    values = list(values)
+    monkeypatch.setattr(input_tools, "_SETTLE_GAP", 0.001)
+    monkeypatch.setattr(
+        input_tools, name, lambda *a: values.pop(0) if len(values) > 1 else values[0]
+    )
+
+
 def test_scroll_reports_before_and_after(monkeypatch):
-    positions = iter([('list "Files"', 30.0), ('list "Files"', 45.0)])
-    monkeypatch.setattr(input_tools, "scroll_position", lambda x, y, axis: next(positions))
+    _readings(monkeypatch, "scroll_position", [('list "Files"', 30.0), ('list "Files"', 45.0)])
     desktop = MagicMock()
     desktop.scroll.return_value = None
     reply = _tool("Scroll", desktop)(loc=[5, 6])
     assert reply.endswith('list "Files" is now at 45% (was 30%).')
+
+
+def test_scroll_reports_the_position_once_it_settles(monkeypatch):
+    # Round-4 R4-7: "now at 87.3%" while the next call found "was 100%".
+    doc = 'document "Text editor"'
+    _readings(monkeypatch, "scroll_position", [(doc, 62.0), (doc, 87.3), (doc, 96.0), (doc, 100.0)])
+    desktop = MagicMock()
+    desktop.scroll.return_value = None
+    reply = _tool("Scroll", desktop)(loc=[5, 6])
+    assert reply.endswith(f"{doc} is now at 100% (was 62%).")
+
+
+def test_type_reports_the_field_once_it_settles(monkeypatch):
+    # Round-4 R4-7: "(213 characters)" while Notepad went on to hold 215.
+    _readings(
+        monkeypatch, "focused_value", [" 213 characters.", " 214 characters.", " 215 characters."]
+    )
+    reply = _tool("Type", MagicMock())(text="hi", loc=[5, 6])
+    assert reply.endswith(" 215 characters.")
+
+
+def test_a_reading_that_never_settles_stops_at_the_cap(monkeypatch):
+    count = iter(range(10**6))
+    monkeypatch.setattr(input_tools, "_SETTLE_GAP", 0.01)
+    started = input_tools.time.monotonic()
+    assert input_tools._settled(lambda: next(count)) > 0
+    assert input_tools.time.monotonic() - started < input_tools._SETTLE_CAP + 0.1
 
 
 def test_scroll_says_when_the_position_is_unknown(monkeypatch):

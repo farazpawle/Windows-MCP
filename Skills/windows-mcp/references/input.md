@@ -116,6 +116,8 @@ Coordinates · What the replies report · Shrunk screenshots
   password boxes are never shown.
 - Scroll adds the scroll area's position (`list "Files" is now at 45% (was 30%)`) or says it
   could not be read.
+- Both are read once the app has caught up (two readings 0.05 s apart agree, at most 0.3 s
+  of waiting), so "now" matches what the next call finds.
 - VS Code-family and frozen windows are named but never read (a horizontal Scroll over them
   sends a plain sideways wheel).
 - Every input reply (Click, Type, Scroll, Move, Shortcut, MultiSelect, MultiEdit) ends with

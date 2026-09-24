@@ -161,6 +161,29 @@ def _scroll_position(point: list, axis: str) -> tuple[str, float] | None:
     return scroll_position(*point, axis) if _is_point(point) else None
 
 
+_SETTLE_GAP = 0.05  # seconds between two readings that must agree
+_SETTLE_CAP = 0.3  # seconds at most spent waiting for them to agree
+
+
+def _settled[T](read: Callable[[], T]) -> T:
+    """Read until two readings _SETTLE_GAP apart agree, or _SETTLE_CAP has passed.
+
+    The app is still working through the input when the tool returns: Type read
+    "213 characters" of 215 and Scroll "87.3%" of 100% (round-4 R4-7).
+    """
+    # ponytail: an app that has not started on the input yet reads the same twice and
+    # is reported as it was; no case of that has been seen.
+    deadline = time.monotonic() + _SETTLE_CAP
+    last = read()
+    while time.monotonic() < deadline:
+        time.sleep(_SETTLE_GAP)
+        current = read()
+        if current == last:
+            break
+        last = current
+    return last
+
+
 def _scroll_change(before: tuple[str, float] | None, after: tuple[str, float] | None) -> str:
     """' list "Files" is now at 45% (was 30%).' for a Scroll reply (round-2 B.10)."""
     if after is None:
@@ -532,7 +555,7 @@ def register(
         typed = _typed_text(text)
         done = " Cleared the existing text first." if clear else ""
         done += " Pressed Enter." if press_enter else ""
-        done += focused_value()
+        done += _settled(focused_value)
         if loc is None:
             return f"Typed {typed} into the focused element{_focus_suffix(focus)}{done}"
         x, y = to_model(desktop, loc)
@@ -585,9 +608,10 @@ def register(
         if response:
             return f"{response}{released}"
         where = " at ({},{})".format(*to_model(desktop, loc)) if loc else " at the mouse position"
+        after = _settled(lambda: _scroll_position(point, axis))
         return (
             f"Scrolled {axis} {direction} by {wheel_times} wheel times"
-            f"{where}{_held_suffix(modifiers)}.{_scroll_change(before, _scroll_position(point, axis))}"
+            f"{where}{_held_suffix(modifiers)}.{_scroll_change(before, after)}"
             f"{released}"
         )
 
