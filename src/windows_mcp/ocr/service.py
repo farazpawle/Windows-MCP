@@ -7,6 +7,7 @@ PowerShell 5.1 (pwsh 7 cannot load WinRT types) reads a temporary PNG. A full
 """
 
 import json
+import math
 import os
 import tempfile
 
@@ -20,8 +21,8 @@ from windows_mcp.powershell.utils import ps_quote
 _ENLARGE = 3
 _MAX_IMAGE_SIDE = 10_000  # OcrEngine.MaxImageDimension on Windows 11
 
-# Prints the recognised lines as JSON: [{"words": [{"t", "x", "y", "w", "h"}, ...]}, ...],
-# word boxes in pixels of the image.
+# Prints JSON {"angle": TextAngle, "lines": [{"words": [{"t", "x", "y", "w", "h"}, ...]}, ...]},
+# word boxes in pixels of the image as turned by TextAngle (see _turn_back).
 _SCRIPT = r"""
 $ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName System.Runtime.WindowsRuntime
@@ -49,7 +50,7 @@ $lines = @(foreach ($line in $result.Lines) {
     @{ words = @($line.Words | ForEach-Object { $r = $_.BoundingRect
         @{ t = $_.Text; x = [int]$r.X; y = [int]$r.Y; w = [int]$r.Width; h = [int]$r.Height } }) }
 })
-ConvertTo-Json -Compress -Depth 5 -InputObject $lines
+ConvertTo-Json -Compress -Depth 6 -InputObject @{ angle = $result.TextAngle; lines = $lines }
 """
 
 
@@ -66,22 +67,65 @@ def read_lines(image: Image.Image) -> list[dict]:
         os.unlink(path)
     if code != 0:
         raise RuntimeError(f"Windows text recognition failed: {output.strip()[:300]}")
-    data = json.loads(output) if output.strip() else []
-    return data if isinstance(data, list) else [data]
+    data = json.loads(output) if output.strip() else {}
+    lines = data.get("lines") or []
+    lines = lines if isinstance(lines, list) else [lines]
+    if data.get("angle"):
+        _turn_back(lines, data["angle"], *image.size)
+    return lines
+
+
+def _turn_back(lines: list[dict], angle: float, width: int, height: int) -> None:
+    """Move word boxes from OCR's tilted frame back to the image, in place.
+
+    The engine guesses a text angle (1.5 degrees for level text drawn in columns,
+    measured 2026-09-24) and returns boxes in the image turned by it, so one row's words
+    drifted 18 px apart vertically and click points were off (round-3 R3-I6). Each box
+    centre is turned by *angle* about the image centre; the box size is kept.
+    """
+    turn = math.radians(angle)
+    cos, sin = math.cos(turn), math.sin(turn)
+    ox, oy = width / 2, height / 2
+    for line in lines:
+        for word in line.get("words") or []:
+            dx, dy = word["x"] + word["w"] / 2 - ox, word["y"] + word["h"] / 2 - oy
+            word["x"] = round(dx * cos - dy * sin + ox - word["w"] / 2)
+            word["y"] = round(dx * sin + dy * cos + oy - word["h"] / 2)
+
+
+def _rows(lines: list[dict]) -> list[dict]:
+    """Join OCR lines that sit on one row, words left to right.
+
+    The engine splits a row at wide gaps, so each table column came back as its own
+    line and "North 460 units" was never found (round-3 R3-I6). Lines count as one row
+    when their vertical centres are less than half the smaller line height apart.
+    """
+
+    def centre(line: dict) -> float:
+        return sum(w["y"] + w["h"] / 2 for w in line["words"]) / len(line["words"])
+
+    rows: list[tuple[float, float, list[dict]]] = []
+    for line in sorted((line for line in lines if line.get("words")), key=centre):
+        cy, height = centre(line), max(w["h"] for w in line["words"])
+        if rows and abs(cy - rows[-1][0]) < min(height, rows[-1][1]) / 2:
+            rows[-1][2].extend(line["words"])
+        else:
+            rows.append((cy, height, list(line["words"])))
+    return [{"words": sorted(words, key=lambda w: w["x"])} for _, _, words in rows]
 
 
 def find_phrase(
     lines: list[dict], phrase: str, left: int, top: int, scale: float = 1.0
 ) -> list[tuple[str, int, int]]:
-    """(line text, centre x, centre y) of each place *phrase* appears, case ignored.
+    """(row text, centre x, centre y) of each place *phrase* appears, case ignored.
 
-    The phrase must appear in order within one line, and may start or end inside a
-    word. Word boxes are divided by *scale* (the enlargement) and offset by
+    The phrase must appear in order within one row (see `_rows`), and may start or end
+    inside a word. Word boxes are divided by *scale* (the enlargement) and offset by
     (left, top) into screen pixels.
     """
     wanted = " ".join(phrase.split()).lower()
     matches = []
-    for line in lines:
+    for line in _rows(lines):
         text, spans = "", []
         for word in line.get("words") or []:
             text += " " if text else ""

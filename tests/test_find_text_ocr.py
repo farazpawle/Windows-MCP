@@ -49,6 +49,21 @@ def test_extra_spaces_in_the_phrase_are_ignored():
     assert len(ocr.find_phrase(LINES, "  sign   out ", 0, 0)) == 1
 
 
+def test_a_phrase_spans_table_columns_on_one_row():
+    # Round-3 R3-I6: OCR splits a row at wide gaps, listing each column as its own line
+    # (and not always left to right); "North 460 units" spans three of them.
+    row = [
+        {"words": [_word("units", 400, 101)]},
+        {"words": [_word("North", 0, 100)]},
+        {"words": [_word("460", 200, 99)]},
+        {"words": [_word("South", 0, 130)]},  # the next row stays separate
+    ]
+    matches = ocr.find_phrase(row, "north 460 units", 0, 0)
+    # "North" starts at 0, "units" ends at 440: centre 220; rows 99..111: centre 105.
+    assert matches == [("North 460 units", 220, 105)]
+    assert ocr.find_phrase(row, "units south", 0, 0) == []
+
+
 # --- find_on_screen (enlarges before reading) ------------------------------------------
 
 
@@ -75,7 +90,7 @@ def test_the_capture_is_enlarged_and_positions_scaled_back(monkeypatch, width, f
 
 
 def test_read_lines_runs_windows_powershell_and_parses_json(monkeypatch):
-    run = MagicMock(return_value=(json.dumps(LINES), 0))
+    run = MagicMock(return_value=(json.dumps({"angle": 0, "lines": LINES}), 0))
     monkeypatch.setattr(ocr.PowerShellExecutor, "execute_command", run)
     assert ocr.read_lines(Image.new("RGB", (10, 10))) == LINES
     # pwsh 7 cannot load WinRT types; only Windows PowerShell 5.1 can.
@@ -83,10 +98,30 @@ def test_read_lines_runs_windows_powershell_and_parses_json(monkeypatch):
 
 
 def test_read_lines_wraps_a_single_line(monkeypatch):
-    monkeypatch.setattr(
-        ocr.PowerShellExecutor, "execute_command", lambda *a, **k: (json.dumps(LINES[0]), 0)
-    )
+    out = json.dumps({"angle": None, "lines": LINES[0]})
+    monkeypatch.setattr(ocr.PowerShellExecutor, "execute_command", lambda *a, **k: (out, 0))
     assert ocr.read_lines(Image.new("RGB", (10, 10))) == LINES[:1]
+
+
+def test_word_boxes_are_turned_back_by_the_text_angle(monkeypatch):
+    # Round-3 R3-I6, real Windows OCR output (2026-09-24) for words drawn level at a
+    # 3x-enlarged 2700x480 image: it reported TextAngle 1.5 and boxes in the tilted
+    # frame, so one row's words sat 18 px apart vertically and clicks drifted.
+    lines = [
+        {"words": [{"t": "North", "x": 62, "y": 106, "w": 212, "h": 72}]},
+        {"words": [{"t": "460", "x": 1137, "y": 80, "w": 148, "h": 70}]},
+        {"words": [{"t": "units", "x": 2161, "y": 53, "w": 185, "h": 70}]},
+    ]
+    out = json.dumps({"angle": 1.5, "lines": lines})
+    monkeypatch.setattr(ocr.PowerShellExecutor, "execute_command", lambda *a, **k: (out, 0))
+    words = [line["words"][0] for line in ocr.read_lines(Image.new("RGB", (2700, 480)))]
+    centres = [(w["x"] + w["w"] / 2, w["y"] + w["h"] / 2) for w in words]
+    # Drawn centres (3x): x 171, 1216.5, 2256; y 111 for all three. 3 px here is 1 on screen.
+    assert all(abs(x - drawn) < 3 for (x, _), drawn in zip(centres, (171, 1216.5, 2256)))
+    assert all(abs(y - 111) < 3 for _, y in centres)
+    assert ocr.find_phrase(
+        ocr.read_lines(Image.new("RGB", (2700, 480))), "North 460 units", 0, 0, 3
+    )
 
 
 def test_read_lines_with_no_text(monkeypatch):

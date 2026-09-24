@@ -46,7 +46,8 @@
 - Not found is a normal reply, not an error.
 - ~1.2 s for the full screen, ~0.4 s for a small region.
 - It reads visible pixels only: tiny, stylised or low-contrast text can be missed. A phrase
-  across table columns: see known-gaps.md.
+  may run across table columns on one row ("North 460 units"). A short number alone in a
+  column can be missed in some fonts (Consolas "460"): then search a longer neighbour.
 
 ## WaitFor
 

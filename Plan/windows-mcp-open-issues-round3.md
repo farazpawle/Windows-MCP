@@ -108,10 +108,11 @@ Evidence for every item: `docs/testing/windows-mcp-tool-test-report.md`, section
   - **Verify:** Live - `launch_executable executable="msedge.exe"` opens a tab.
   - Result (2026-09-24): `_from_app_paths` reads the default value of `App Paths\<name>.exe` (HKCU, then HKLM), strips quotes and expands variables; `.exe` is optional. Tests in `test_app_replies.py`. Against this PC's real registry: `msedge.exe` and `msedge` resolve to Edge's install path, `notepad.exe` still resolves through PATH. Live (2026-09-24, after the warnings work): App `launch_executable executable="msedge.exe"` with a throwaway `--user-data-dir` returned PID 3652 at `C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe` in 0.75 s; that PID was among the 14 processes of the throwaway profile, all closed after (0 left), stderr empty.
 
-- [ ] R3-I6 **FindText phrase across table columns.**
-  - [ ] a. Unit: two OCR lines on one baseline match a phrase that spans them.
-  - [ ] b. Join lines whose boxes share a baseline before matching.
+- [x] R3-I6 **FindText phrase across table columns.**
+  - [x] a. Unit: two OCR lines on one baseline match a phrase that spans them.
+  - [x] b. Join lines whose boxes share a baseline before matching.
   - **Verify:** Live - "North 460 units" found in a column-aligned Notepad text.
+  - Result (2026-09-24): `_rows` joins OCR lines whose vertical centres are within half a line height, words left to right. Found on the way: Windows OCR returned `TextAngle` 1.5 for level text drawn in columns and gave word boxes in that tilted frame (one row's words 18 px apart, click points off), so the script now prints the angle and `_turn_back` turns each box centre back about the image centre. Tests use the real engine numbers. Real OCR on a drawn table (Arial 30): rows "North 460 units" / "South 215 units", match centre x 402 = drawn 402; "units South" not found. Consolas 22: the engine misses the lone "460" (reading gap, noted in the guide). Live: harness text box with columns typed, FindText "North 460 units" found once at (286,240) on the first row, "units South" not found, stderr empty.
 
 - [ ] R3-I7 **Right-click menu appears ~1 s after Click returns.**
   - [ ] a. Say in the Click description and guide to WaitFor before reading a menu (no code change), or wait for a menu after a right click.
