@@ -179,6 +179,16 @@ class TestNotification:
         assert result.startswith("Error")
         assert "boom" in result
 
+    @pytest.mark.parametrize(
+        ("message", "shown"),
+        [("Sent to outbox.", "outbox. If"), ("Done!", "Done! If"), ("M", "M. If")],
+    )
+    def test_reply_ends_the_message_with_one_stop(self, message, shown):
+        # R3-7: a message ending in "." gave "outbox.." in the reply.
+        with patch(EXECUTE_COMMAND_PATH, return_value=("", 0)):
+            result = send_notification("T", message, "Made.Up.App")
+        assert shown in result and ".." not in result
+
 
 def _capture(**kwargs):
     desktop = MagicMock()

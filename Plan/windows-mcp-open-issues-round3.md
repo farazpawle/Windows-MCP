@@ -47,10 +47,11 @@ Evidence for every item: `docs/testing/windows-mcp-tool-test-report.md`, section
   - **Verify:** Unit only.
   - Result (2026-09-24): `_find_windows_by_name` returns only whole-title matches when there are any, so the exact window is picked even if listed after a partial one, and the note names only same-titled windows (still useful). `test_exact_title_wins_without_a_note`.
 
-- [ ] R3-7 **Low - Notification reply doubles a full stop.**
-  - [ ] a. Unit: a message ending in "." gives one full stop in the reply.
-  - [ ] b. Strip a trailing "." before adding the reply's own.
+- [x] R3-7 **Low - Notification reply doubles a full stop.**
+  - [x] a. Unit: a message ending in "." gives one full stop in the reply.
+  - [x] b. Strip a trailing "." before adding the reply's own.
   - **Verify:** Unit only.
+  - Result (2026-09-24): the reply adds its "." only when the message does not already end in ".", "!" or "?" (keeps "Wait..." intact, unlike stripping). `test_reply_ends_the_message_with_one_stop`.
 
 - [ ] R3-8 **Low - FileSystem `info` on a folder shows the entry size (4 KB), not the contents.**
   - [ ] a. Unit: a folder with 407 bytes of files reports 407 bytes (or is labelled "entry size").

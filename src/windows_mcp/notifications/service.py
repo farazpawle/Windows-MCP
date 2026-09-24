@@ -87,7 +87,8 @@ def send_notification(title: str, message: str, app_id: str) -> str:
     if status != 0:
         return f"Error sending notification: {response[:300]}"
     # Focus / Do Not Disturb has no supported API to read, so say so rather than imply delivery.
+    stop = "" if message.rstrip().endswith((".", "!", "?")) else "."
     return (
-        f'Notification sent: "{title}" - {message}. If Do Not Disturb (Focus) is on, '
+        f'Notification sent: "{title}" - {message.rstrip()}{stop} If Do Not Disturb (Focus) is on, '
         "Windows puts it straight into the notification centre without a pop-up."
     )
