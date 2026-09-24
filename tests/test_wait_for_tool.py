@@ -171,6 +171,38 @@ def test_wait_for_text_respects_window_name() -> None:
     assert desktop.find_text_calls[0] == ("saved", [9])
 
 
+@pytest.mark.parametrize("window_name", [None, "notepad"])
+def test_wait_for_text_finds_a_phrase_inside_a_document(window_name: str | None) -> None:
+    # Round-4 R4-4: with window_name, the document matched by its value but only its
+    # name ("Text editor") was compared, so "North leads the week" timed out.
+    document = _element("Text editor")
+    document.metadata["value"] = "Report\nNorth leads the week with 460 units"
+    desktop = FakeDesktop([_state(elements=[document])])
+    tools = _register_tools(desktop)
+
+    result = asyncio.run(
+        tools["WaitFor"](
+            condition="text_exists",
+            text="North leads the week",
+            window_name=window_name,
+            timeout=1,
+            interval=0.001,
+        )
+    )
+
+    assert "text 'North leads the week' appeared" in result
+
+
+def test_wait_for_text_timeout_names_the_active_window() -> None:
+    desktop = FakeDesktop([_state(active_window_name="Untitled - Notepad")])
+    tools = _register_tools(desktop)
+
+    with pytest.raises(TimeoutError, match="active window was 'Untitled - Notepad'"):
+        asyncio.run(
+            tools["WaitFor"](condition="text_exists", text="gone", timeout=0.01, interval=0.001)
+        )
+
+
 def test_wait_for_dom_text_with_window_name_of_active_browser() -> None:
     desktop = FakeDesktop([_state(active_window_name="Docs - Edge", dom_texts=["Order placed"])])
     tools = _register_tools(desktop)

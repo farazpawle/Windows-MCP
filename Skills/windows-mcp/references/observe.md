@@ -54,12 +54,13 @@
 
 ## WaitFor
 
-- Cheaper than repeated Snapshots. Returns the time and attempts; on timeout it is an error
-  that names the window actually active.
+- Cheaper than repeated Snapshots. Returns the time and attempts; on timeout it is an error.
+  For `text_exists` and `active_window` that error names the window actually active.
 - `active_window` takes `window_name`. `text_exists`, `element_exists`, `element_enabled` and
   `focused_element` take `text`.
 - `text_exists` searches the active window, or the windows matching `window_name`, including
-  plain labels ("Saved").
+  plain labels ("Saved") and the text inside text boxes and documents: a whole phrase
+  ("North leads the week") matches, not just one word. ~0.3-0.4 s a look.
 - `screen_text` (`text`, optional `region`, no `window_name`) reads the screen by OCR on each
   look and reports where the text is: ~1.6 s a look full screen, ~0.6 s for a small region.
 - `screen_changed` waits until the screen (or `region`) differs from how it looked when

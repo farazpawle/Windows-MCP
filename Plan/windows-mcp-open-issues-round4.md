@@ -1,6 +1,6 @@
 ---
 Title: Windows-MCP open issues backlog - round 4 (2026-09-24)
-Description: Findings of the round-4 real-work scenario test (all 21 tools driven through the connected server after the round-3 backlog, timed per call from Claude Code's MCP log), turned into a task file. Part A Bugs - 1 High (multi-line Type sends one key every 0.04 s: 622 characters took 26 s), 5 Medium (App launch names an older window; Snapshot word boxes include trailing spaces so word labels miss; WaitFor text_exists misses text inside documents; dialogs drawn inside an app's window are not noted; caret start/end work per line), 9 Low. Part B 7 improvements (Process list speed and output size, Snapshot word noise, fixed costs, reply boilerplate, list order, resize hint). Part C 2 new abilities (whole-field caret, FindText per window). Part D 31 guide, tool-description and test-skill corrections. Evidence is in docs/testing/windows-mcp-tool-test-report.md (Round 4). Status 2026-09-24: R4-1 fixed (622 multi-line characters in 0.87 s) R4-2 fixed (launch names the new window and its handle) and R4-3 fixed (word boxes end at the word), with D.4/D.5/D.12/D.20; the user chose bugs before the remaining Part D.
+Description: Findings of the round-4 real-work scenario test (all 21 tools driven through the connected server after the round-3 backlog, timed per call from Claude Code's MCP log), turned into a task file. Part A Bugs - 1 High (multi-line Type sends one key every 0.04 s: 622 characters took 26 s), 5 Medium (App launch names an older window; Snapshot word boxes include trailing spaces so word labels miss; WaitFor text_exists misses text inside documents; dialogs drawn inside an app's window are not noted; caret start/end work per line), 9 Low. Part B 7 improvements (Process list speed and output size, Snapshot word noise, fixed costs, reply boilerplate, list order, resize hint). Part C 2 new abilities (whole-field caret, FindText per window). Part D 31 guide, tool-description and test-skill corrections. Evidence is in docs/testing/windows-mcp-tool-test-report.md (Round 4). Status 2026-09-24: R4-1 fixed (622 multi-line characters in 0.87 s), R4-2 fixed (launch names the new window and its handle), R4-3 fixed (word boxes end at the word) and R4-4 fixed (text_exists finds a phrase in a document), with D.4/D.5/D.9/D.10/D.12/D.20/D.27; the user chose bugs before the remaining Part D.
 Total Tasks: 95
 ---
 # Windows-MCP open issues - round 4
@@ -34,12 +34,13 @@ Evidence for every item: `docs/testing/windows-mcp-tool-test-report.md`, section
   - **Verify:** Live - Click `label=` on a mid-line word in Notepad with `clicks=2` selects exactly that word (Ctrl+C, Clipboard get).
   - Result 2026-09-24: fixed in `uia/controls.py` (`_trim_trailing_space`, used by word boxes and word attributes): the box is cut by the share of trailing spaces, no extra COM calls. Live on a throwaway WPF TextBox (the harness WinForms box lists no words; Notepad was avoided because it restores the user's tabs): "North    460      units", the "460" centre moved from 317 (the word's right edge) to 296; Click `label=` then Type "X" gave "North    4X60      units". Verified with a single click + typed X instead of Ctrl+C, so the clipboard was never touched.
 
-- [ ] R4-4 **Medium - WaitFor `text_exists` misses text inside a text box or document.** "North leads the week" (in the Notepad document value) timed out; "leads" matched.
-  - [ ] a. Unit: `text_exists` matches a phrase inside an element's value (ValuePattern / TextPattern text).
-  - [ ] b. Search element values as well as names.
-  - [ ] c. Unit: the timeout error names the active window.
-  - [ ] d. Add the active window to the `text_exists` timeout error.
+- [x] R4-4 **Medium - WaitFor `text_exists` misses text inside a text box or document.** "North leads the week" (in the Notepad document value) timed out; "leads" matched.
+  - [x] a. Unit: `text_exists` matches a phrase inside an element's value (ValuePattern / TextPattern text).
+  - [x] b. Search element values as well as names.
+  - [x] c. Unit: the timeout error names the active window.
+  - [x] d. Add the active window to the `text_exists` timeout error.
   - **Verify:** Live - `text_exists text="North leads the week"` on a Notepad holding it returns in under 0.5 s; a missing phrase's error names the window.
+  - Result 2026-09-24: root cause - with `window_name`, nodes were matched on name or value but only their names were compared again, so a phrase inside a document's value never matched (without `window_name` it already worked). Fixed in `tools/input.py`; the timeout error now ends "the active window was '...'". Live (throwaway WPF TextBox, read-only): `window_name` 0.40 s, no `window_name` 0.29 s, missing phrase error names the window. Test-window note: a WPF window whose only content is a TextBox reports the box's text as its UIA Name; wrap it in a Grid.
 
 - [ ] R4-5 **Medium - the new-window note misses dialogs drawn inside an app's window.** Notepad's "Do you want to save changes ...?" (a dialog inside the Notepad window) was not named by the next input reply; a separate WinForms message box was.
   - [ ] a. [User] Approve the shape (design choice): report a modal dialog element (UIA `IsDialog` / window-type child with `IsModal`) that appeared in the front window, in the same note.
@@ -166,8 +167,8 @@ Guide = `Skills/windows-mcp/`. Rebuild the Claude Desktop ZIP (round-3 D.2) afte
 - [ ] D.6 `SKILL.md`: "Move ~0.1 s, Click ~0.15 s, Scroll ~0.3 s" - missing: double click ~0.5 s, Click `element=` ~0.3 s, Move drag ~1.3 s.
 - [ ] D.7 `SKILL.md`: "Under 0.1 s: ... Snapshot of a region" - measured 0.18-0.32 s.
 - [ ] D.8 `SKILL.md` "Process list ~0.6 s (~1.7 s sorted by CPU)" and `references/system-tools.md` "which takes ~1.7 s; memory and name sorts take ~0.6 s" - measured 0.85-1.06 s and 2.3-2.8 s with 622 processes; grows with the process count; the CPU list starts with System Idle Process.
-- [ ] D.9 `references/observe.md`: "on timeout it is an error that names the window actually active." - not for `text_exists` (until R4-4).
-- [ ] D.10 `references/observe.md`: "`text_exists` searches the active window, or the windows matching `window_name`, including plain labels" - missing: it matches one element's name, not a phrase inside a text box or document; use `screen_text` or a single word.
+- [x] D.9 (done with R4-4: observe.md says which conditions name the active window) `references/observe.md`: "on timeout it is an error that names the window actually active." - not for `text_exists` (until R4-4).
+- [x] D.10 (done with R4-4: text_exists now matches a phrase in documents; observe.md says so) `references/observe.md`: "`text_exists` searches the active window, or the windows matching `window_name`, including plain labels" - missing: it matches one element's name, not a phrase inside a text box or document; use `screen_text` or a single word.
 - [ ] D.11 `references/observe.md`: "`region` keeps only elements inside the rectangle and reads only windows visible in it" - add: the Opened Windows list also shows only those windows.
 - [x] D.12 (done with R4-3: boxes now cover the word; observe.md says so) `references/observe.md` Snapshot: missing - documents list one element per word, with boxes that include the spaces after the word; do not click a word label's centre (use FindText or `loc`).
 - [ ] D.13 `references/observe.md` FindText: missing - a full-screen search can join text of neighbouring windows into one line; give a `region`.
@@ -181,10 +182,10 @@ Guide = `Skills/windows-mcp/`. Rebuild the Claude Desktop ZIP (round-3 D.2) afte
 - [ ] D.21 `references/apps-windows.md` `list`: missing - lines are not in front-to-back order; a few apps' maximized windows show their outer frame (-8,-8).
 - [ ] D.22 `references/input.md`: "Every input reply ... ends with `Note: a new window appeared: ...` when a window opened since the previous input action" - missing: a dialog drawn inside the app's own window (Notepad's "save changes?") is not reported; take a Screenshot after closing or saving.
 - [ ] D.23 `references/known-gaps.md`: "Each entry names its backlog item (Plan/windows-mcp-open-issues-round3.md)" - point to this file.
-- [ ] D.24 `references/known-gaps.md`: add R4-4 to R4-6 (R4-1 to R4-3 fixed) with their workarounds; remove each when fixed.
-- [ ] D.25 `SKILL.md` "Which tool for which job": add rows "Write a document or report -> FileSystem `write` (not typing)" and "Check text inside a document -> Ctrl+A, Ctrl+C then Clipboard `get`, or WaitFor `screen_text` (not `text_exists`)".
+- [ ] D.24 `references/known-gaps.md`: add R4-5 and R4-6 (R4-1 to R4-4 fixed) with their workarounds; remove each when fixed.
+- [ ] D.25 `SKILL.md` "Which tool for which job": add rows "Write a document or report -> FileSystem `write` (not typing)" and "Check text inside a document -> Ctrl+A, Ctrl+C then Clipboard `get`, or WaitFor `text_exists`" (R4-4 fixed: `text_exists` finds a phrase in a document).
 - [ ] D.26 Snapshot tool description (`tools/`): "Captures complete desktop state including: system language" (no language line is returned) and "Always call this first" (the guide says Screenshot first) - reword.
-- [ ] D.27 WaitFor tool description (`tools/`): say `text_exists` matches element names (until R4-4).
+- [x] D.27 (done with R4-4: the description says text_exists matches names and text inside text boxes and documents) WaitFor tool description (`tools/`): say `text_exists` matches element names (until R4-4).
 - [ ] D.28 `.claude/skills/windows-mcp-tool-tester/SKILL.md`: "Modern Windows 11 Notepad's text editing area is **not** exposed as an interactive element" - outdated: it is `document "Text editor"` with a label, and its words are listed too.
 - [ ] D.29 `.claude/skills/windows-mcp-tool-tester/SKILL.md`: "(Clipboard set, Type of 20+ characters, copy shortcuts)" and "App - Modes: launch, resize, switch." - Type never uses the clipboard; App has ten modes.
 - [ ] D.30 `.claude/skills/windows-mcp-tool-tester/SKILL.md` Step 3 timing (PowerShell timestamps, ~3-5 s overhead): add the millisecond timings in Claude Code's MCP log (`%LOCALAPPDATA%\claude-cli-nodejs\Cache\<project>\mcp-logs-windows-mcp\*.jsonl`, "Calling MCP tool" to "Tool ... completed"; calls to the same tool in parallel cannot be paired).

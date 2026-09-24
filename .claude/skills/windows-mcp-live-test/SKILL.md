@@ -93,8 +93,9 @@ Helpers (`scripts/livetest.py`):
 
 The harness text box has no UIA TextPattern, so Snapshot lists no `word` elements for it. To
 test word elements, open a throwaway WPF window instead (PowerShell `-STA`,
-`Add-Type -AssemblyName PresentationFramework`, a `Windows.Controls.TextBox` as the content,
-kill its own PID after): its words are listed. A single click on a word label then Type "X"
+`Add-Type -AssemblyName PresentationFramework`, a `Windows.Controls.TextBox` inside a `Grid` as the
+content, kill its own PID after): its words are listed. Without the Grid the window's UIA Name is
+the box's text, not its title, so `window_name` matching fails. A single click on a word label then Type "X"
 shows where the click landed without touching the clipboard.
 
 The harness text box ignores Ctrl+A (it is a multiline WinForms box), so Ctrl+A then

@@ -300,17 +300,19 @@ def _matches_wait_condition(
     desktop: Any = None,
 ) -> tuple[bool, str]:
     if condition == "text_exists":
+        active_window = getattr(desktop_state, "active_window", None)
         if window_name is None:
             sources = _iter_text_sources(desktop_state)
         else:
-            sources = [
-                n.name for n in _iter_nodes(desktop_state) if _node_matches(n, text, window_name)
-            ]
+            # A node in the window whose name or value (a document's text) holds the
+            # phrase: comparing only the names missed text inside documents (round-4 R4-4).
+            if any(_node_matches(n, text, window_name) for n in _iter_nodes(desktop_state)):
+                return True, f"text {text!r} appeared"
             # DOM text carries no window name; it belongs to the active (browser) window.
-            active_window = getattr(desktop_state, "active_window", None)
             tree_state = getattr(desktop_state, "tree_state", None)
+            sources = []
             if active_window is not None and _text_matches(active_window.name, window_name):
-                sources += [n.text for n in getattr(tree_state, "dom_informative_nodes", [])]
+                sources = [n.text for n in getattr(tree_state, "dom_informative_nodes", [])]
         for source in sources:
             if _text_matches(source, text):
                 return True, f"text {text!r} appeared"
@@ -318,7 +320,8 @@ def _matches_wait_condition(
         if desktop is not None and desktop.find_text(text, handles):
             hint = _off_screen_hint(desktop_state, handles, desktop)
             return True, f"text {text!r} appeared{hint}"
-        return False, f"text {text!r} was absent"
+        active_name = active_window.name if active_window else ""
+        return False, f"text {text!r} was absent; the active window was {active_name!r}"
 
     if condition == "active_window":
         expected = window_name or text
@@ -760,7 +763,8 @@ def register(
             "Waits until a UI condition is satisfied, polling the Windows accessibility tree "
             "inside the tool to avoid repeated Snapshot calls. Conditions: text_exists, "
             "active_window, element_exists, element_enabled, focused_element. Provide text "
-            "and/or window_name depending on the condition. Set use_dom=True for browser DOM text. "
+            "and/or window_name depending on the condition. text_exists matches element names "
+            "and the text inside text boxes and documents. Set use_dom=True for browser DOM text. "
             "screen_text instead reads the screen's pixels (Windows OCR, ~1.6 s per full-screen look, ~0.6 s for a small region) for apps "
             "with no accessibility data, and reports where the text is. screen_changed waits "
             "for the screen to change from how it looked when WaitFor started (it misses a "
