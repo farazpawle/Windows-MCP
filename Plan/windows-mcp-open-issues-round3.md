@@ -53,10 +53,11 @@ Evidence for every item: `docs/testing/windows-mcp-tool-test-report.md`, section
   - **Verify:** Unit only.
   - Result (2026-09-24): the reply adds its "." only when the message does not already end in ".", "!" or "?" (keeps "Wait..." intact, unlike stripping). `test_reply_ends_the_message_with_one_stop`.
 
-- [ ] R3-8 **Low - FileSystem `info` on a folder shows the entry size (4 KB), not the contents.**
-  - [ ] a. Unit: a folder with 407 bytes of files reports 407 bytes (or is labelled "entry size").
-  - [ ] b. Sum the file sizes for a folder (cap the walk, say when capped).
+- [x] R3-8 **Low - FileSystem `info` on a folder shows the entry size (4 KB), not the contents.**
+  - [x] a. Unit: a folder with 407 bytes of files reports 407 bytes (or is labelled "entry size").
+  - [x] b. Sum the file sizes for a folder (cap the walk, say when capped).
   - **Verify:** Unit only.
+  - Result (2026-09-24): `_folder_size` sums every file (os.walk, links not followed, unreadable parts skipped) up to `MAX_SIZE_WALK` = 10,000 files; a "Size note" line says total or capped. Smoke: `src` 2.5 MB instantly; C:\Windows capped at 10,000 files in 1.4 s.
 
 - [ ] R3-9 **Low - Registry Binary shown two ways** (`get` hex, `list` `{1, 2, 255}`).
   - [ ] a. Unit: `list` shows a Binary value as hex like `get`.

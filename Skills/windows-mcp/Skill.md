@@ -85,7 +85,7 @@ Coordinates: use Snapshot centres. Re-snapshot after any window move, resize or 
 - `read`: `offset` is a **1-based line number**, plus `limit`. A whole-file read over 10 MB is refused; local repo reads part of a bigger file with `offset` + `limit`, while PyPI refuses it even then (use PowerShell `Get-Content -TotalCount`).
 - `copy` / `move`: refuse an existing destination unless `overwrite=true`. `move` also renames and creates target folders.
 - `delete`: refuses a non-empty dir unless `recursive=true`.
-- `list`: `pattern` filter. `search`: glob + `recursive=true`. `info`: size, dates, counts; for a folder the "Size" is the folder entry itself (4 KB), not its contents (use PowerShell `Get-ChildItem -Recurse | Measure-Object Length -Sum`).
+- `list`: `pattern` filter. `search`: glob + `recursive=true`. `info`: size, dates, counts. Local repo: a folder's "Size" is the total of every file inside (subfolders included), counted up to 10,000 files; a "Size note" line says when it stopped early (C:\Windows: 1.4 s). PyPI shows the folder entry itself (4 KB); there use PowerShell `Get-ChildItem -Recurse | Measure-Object Length -Sum`.
 
 **Registry** (PowerShell-style paths `HKCU:\...`)
 

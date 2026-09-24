@@ -21,6 +21,25 @@ from windows_mcp.filesystem.views import (
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
+# A folder's size is summed over its files; stop after this many so a huge tree stays quick.
+MAX_SIZE_WALK = 10_000
+
+
+def _folder_size(folder: Path) -> tuple[int, int, bool]:
+    """(total bytes, files counted, capped) over every file inside, subfolders included."""
+    total = counted = 0
+    # Unreadable subfolders are skipped (os.walk ignores their errors); links are not followed.
+    for root, _, files in os.walk(folder):
+        for name in files:
+            if counted >= MAX_SIZE_WALK:
+                return total, counted, True
+            try:
+                total += os.stat(os.path.join(root, name), follow_symlinks=False).st_size
+            except OSError:
+                continue
+            counted += 1
+    return total, counted, False
+
 
 def read_file(
     path: str, offset: int | None = None, limit: int | None = None, encoding: str = "utf-8"
@@ -345,6 +364,7 @@ def get_file_info(path: str) -> str:
             read_only=not os.access(target, os.W_OK),
         )
 
+        size_note = ""
         if target.is_dir():
             try:
                 items = list(target.iterdir())
@@ -352,6 +372,12 @@ def get_file_info(path: str) -> str:
                 file.contents_files = sum(1 for i in items if i.is_file())
             except PermissionError:
                 pass
+            file.size, counted, capped = _folder_size(target)
+            size_note = (
+                f"\nSize note: counted the first {counted:,} files only; the folder holds more."
+                if capped
+                else "\nSize note: the total of every file inside, subfolders included."
+            )
 
         if target.is_file():
             file.extension = target.suffix or "(none)"
@@ -359,7 +385,7 @@ def get_file_info(path: str) -> str:
         if target.is_symlink():
             file.link_target = str(os.readlink(target))
 
-        return file.to_string()
+        return file.to_string() + size_note
     except PermissionError:
         msg = f"Error: Permission denied: {target}"
         if not is_elevated():

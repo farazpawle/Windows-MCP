@@ -268,3 +268,19 @@ class TestGetFileInfo:
     def test_not_found(self, tmp_path):
         result = get_file_info(str(tmp_path / "nope"))
         assert "Error: Path not found" in result
+
+    def test_dir_size_is_the_total_of_its_files(self, tmp_path):
+        # R3-8: a folder reported its own entry size (4 KB), not what it holds.
+        (tmp_path / "a.txt").write_bytes(b"x" * 400)
+        (tmp_path / "sub").mkdir()
+        (tmp_path / "sub" / "b.txt").write_bytes(b"y" * 7)
+        result = get_file_info(str(tmp_path))
+        assert "(407 bytes)" in result
+        assert "subfolders included" in result
+
+    def test_dir_size_walk_is_capped(self, tmp_path, monkeypatch):
+        monkeypatch.setattr("windows_mcp.filesystem.service.MAX_SIZE_WALK", 2)
+        for name in "abc":
+            (tmp_path / f"{name}.txt").write_bytes(b"z")
+        result = get_file_info(str(tmp_path))
+        assert "first 2 files" in result
