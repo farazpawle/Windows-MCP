@@ -431,15 +431,21 @@ def _run_server(
     mcp = _build_mcp()
     if explicit_tools or exclude_tools:
         _apply_tool_filter(mcp, explicit_tools, exclude_tools)
+
+    def run(**kwargs: Any) -> None:
+        # FastMCP's run() on a selector loop, the one install_selfpipe_guard patches.
+        # asyncio's policy API that chose it is deprecated in 3.14 and gone in 3.16.
+        asyncio.run(mcp.run_async(**kwargs), loop_factory=asyncio.SelectorEventLoop)
+
     match transport:
         case Transport.STDIO.value:
-            mcp.run(transport=Transport.STDIO.value, show_banner=False)
+            run(transport=Transport.STDIO.value, show_banner=False)
         case Transport.SSE.value | Transport.STREAMABLE_HTTP.value:
             uvicorn_config: dict = {}
             if ssl_certfile and ssl_keyfile:
                 uvicorn_config["ssl_certfile"] = ssl_certfile
                 uvicorn_config["ssl_keyfile"] = ssl_keyfile
-            mcp.run(
+            run(
                 transport=transport,
                 host=host,
                 port=port,
@@ -617,7 +623,6 @@ def serve(
     stateless_http,
     action_log,
 ):
-    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
     install_selfpipe_guard()
     _drop_ssl_keylog_env()
     if transport == Transport.STDIO.value:

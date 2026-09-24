@@ -7,10 +7,6 @@ from windows_mcp.__main__ import main
 
 
 def _prepare_serve(monkeypatch):
-    monkeypatch.setattr(
-        cli.asyncio, "WindowsSelectorEventLoopPolicy", lambda: object(), raising=False
-    )
-    monkeypatch.setattr(cli.asyncio, "set_event_loop_policy", lambda _policy: None)
     monkeypatch.setattr(cli, "discover_config_path", lambda _path: None)
     monkeypatch.setattr(cli, "_run_server", lambda **_kwargs: None)
 

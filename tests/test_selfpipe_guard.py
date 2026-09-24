@@ -164,7 +164,6 @@ class TestRepeatedFailures:
 class TestServeWiring:
     def test_serve_installs_the_guard(self, monkeypatch):
         """The fix is worthless if the CLI stops calling it."""
-        monkeypatch.setattr(cli.asyncio, "set_event_loop_policy", lambda _policy: None)
         monkeypatch.setattr(cli, "discover_config_path", lambda _path: None)
         monkeypatch.setattr(cli, "_run_server", lambda **_kwargs: None)
         BaseSelectorEventLoop._read_from_self = STOCK_READ_FROM_SELF

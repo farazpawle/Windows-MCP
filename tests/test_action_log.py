@@ -146,10 +146,6 @@ def _serve(monkeypatch, args, env=None):
 
     import windows_mcp.__main__ as cli
 
-    monkeypatch.setattr(
-        cli.asyncio, "WindowsSelectorEventLoopPolicy", lambda: object(), raising=False
-    )
-    monkeypatch.setattr(cli.asyncio, "set_event_loop_policy", lambda _policy: None)
     monkeypatch.setattr(cli, "discover_config_path", lambda _path: None)
     monkeypatch.setattr(cli, "_run_server", lambda **_kwargs: None)
     # Callers replace action_log.configure, so nothing is really switched on.

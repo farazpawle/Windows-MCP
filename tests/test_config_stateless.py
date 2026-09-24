@@ -86,13 +86,13 @@ def test_load_stateless_http_default_when_absent(tmp_path: Path):
 
 def test_run_server_passes_stateless_http_kwarg(monkeypatch):
     """When _run_server is called for streamable-http it must forward
-    stateless_http through to FastMCP's mcp.run()."""
+    stateless_http through to FastMCP's run_async()."""
     from windows_mcp import __main__ as wm
 
     captured: dict = {}
 
     class _FakeMCP:
-        def run(self, **kwargs):
+        async def run_async(self, **kwargs):
             captured.update(kwargs)
 
     monkeypatch.setattr(wm, "_build_mcp", lambda: _FakeMCP())
@@ -114,7 +114,7 @@ def test_run_server_stateless_default_false(monkeypatch):
     captured: dict = {}
 
     class _FakeMCP:
-        def run(self, **kwargs):
+        async def run_async(self, **kwargs):
             captured.update(kwargs)
 
     monkeypatch.setattr(wm, "_build_mcp", lambda: _FakeMCP())
@@ -126,3 +126,25 @@ def test_run_server_stateless_default_false(monkeypatch):
         port=8765,
     )
     assert captured.get("stateless_http") is False
+
+
+@pytest.mark.parametrize("transport", ["stdio", "streamable-http"])
+def test_run_server_uses_a_selector_loop_without_the_deprecated_policy(monkeypatch, transport):
+    """install_selfpipe_guard patches the selector loop; asyncio's policy API, which chose
+    it before, is deprecated in 3.14 (removed in 3.16), so the loop is picked directly."""
+    import asyncio
+    import warnings
+
+    from windows_mcp import __main__ as wm
+
+    loops: list = []
+
+    class _FakeMCP:
+        async def run_async(self, **kwargs):
+            loops.append(type(asyncio.get_running_loop()))
+
+    monkeypatch.setattr(wm, "_build_mcp", lambda: _FakeMCP())
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", DeprecationWarning)
+        wm._run_server(transport=transport, host="127.0.0.1", port=8765)
+    assert loops and issubclass(loops[0], asyncio.SelectorEventLoop)
