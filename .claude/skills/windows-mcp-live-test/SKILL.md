@@ -92,8 +92,17 @@ Helpers (`scripts/livetest.py`):
 | `read_settled(path)` | Reads the log once it stops changing and retries while the file is locked. The window lags behind fast input, so an early read under-counts. |
 | `center`, `on_window`, `close_window`, `mcp_client` | Window centre point, the WindowFromPoint check, clean close by own handle, in-process client. |
 
-Snapshot's text block reaches the client JSON-escaped (`button \"Alpha\"`): undo `\"` before
-matching element lines with a regex, or it finds nothing.
+Snapshot's text block reaches the client JSON-escaped (`button \"Alpha\"`, line breaks as a
+literal `\n`): undo both before matching element lines with a regex, or it finds nothing or
+reads the whole block as one line. Save the text to a file and read it before typing into a
+label chosen by regex: twice a wrong match sent text to the wrong control.
+
+Real apps: Edge with `--app=<file URL> --user-data-dir=<scratchpad>` gives a throwaway web
+page in its own process (kill it with `taskkill /T /PID`); its elements appear to UIA only
+after a first query, so retry Click `element=` once. `explorer.exe <scratch folder>` opens a
+window titled "<folder> - File Explorer" (explorer.exe is shared: close it by WM_CLOSE, never
+kill). Never Type `clear=true` into an Explorer file list: it sends Ctrl+A then Backspace,
+which navigates up a folder.
 
 Read-only calls (Snapshot, WaitFor, DisplayInventory, FindText) need no `points`. For pixel
 checks (WaitFor `screen_changed` / `screen_idle`, FindText), open a plain test window first and

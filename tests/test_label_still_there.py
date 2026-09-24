@@ -11,21 +11,25 @@ from windows_mcp.tree import utils
 from windows_mcp.tree.views import BoundingBox, Center, TreeElementNode, TreeState
 
 
-def _control(name="", automation_id="", kind="button", parent=None):
+def _control(name="", automation_id="", kind="button", parent=None, rect=(0, 0, 0, 0)):
     return SimpleNamespace(
         Name=name,
         AutomationId=automation_id,
         LocalizedControlType=kind,
         GetParentControl=lambda: parent,
+        BoundingRectangle=SimpleNamespace(left=rect[0], top=rect[1], right=rect[2], bottom=rect[3]),
     )
 
 
 @pytest.fixture
 def screen(monkeypatch):
     """A readable window at every point; set .control to what UIA finds there."""
-    state = SimpleNamespace(control=None, window=5, hung=False, unreadable=False)
-    reads = MagicMock(side_effect=lambda x, y: state.control)
+    state = SimpleNamespace(control=None, window=5, hung=False, unreadable=False, title="Explorer")
+    reads = MagicMock(
+        side_effect=lambda x, y: state.control(x, y) if callable(state.control) else state.control
+    )
     monkeypatch.setattr(utils, "top_level_window_at", lambda x, y: state.window)
+    monkeypatch.setattr(utils.win32gui, "GetWindowText", lambda h: state.title)
     monkeypatch.setattr(utils, "is_window_hung", lambda h: state.hung)
     monkeypatch.setattr(utils, "is_unreadable_window", lambda h: state.unreadable)
     monkeypatch.setattr(utils.uia, "ControlFromPoint", reads)
@@ -97,6 +101,62 @@ def test_unreadable_uia_does_not_block(screen):
     assert utils.element_still_at("Save", "Button", 10, 10)
 
 
+# --- R3-3: something else of the same window drawn at the spot ----------------------
+
+BOX = (100, 10, 500, 40)  # the element's rectangle; centre (300, 25)
+PATH_BUTTON = _control("Documents", kind="button", rect=(110, 12, 330, 38))
+ADDRESS = _control("Address", kind="edit", rect=BOX)
+
+
+def _address_bar(x, y):
+    # Explorer's Address Bar: path buttons are drawn over the left part of the edit box.
+    return PATH_BUTTON if x < 330 else ADDRESS
+
+
+def test_part_drawn_over_the_centre_is_not_the_element(screen):
+    screen.control = _address_bar
+    assert not utils.element_still_at("Address", "Edit", 300, 25, rect=BOX, window="Explorer")
+
+
+def test_a_free_point_of_the_element_is_used_instead(screen):
+    screen.control = _address_bar
+    x, y = utils.spot_on_element("Address", "Edit", 300, 25, rect=BOX, window="Explorer")
+    assert 330 <= x < 500 and 10 <= y < 40
+
+
+def test_centre_is_kept_when_it_is_the_element(screen):
+    screen.control = ADDRESS
+    assert utils.spot_on_element("Address", "Edit", 300, 25, rect=BOX, window="Explorer") == (
+        300,
+        25,
+    )
+
+
+def test_container_around_it_in_the_same_window_counts(screen):
+    # An embedded web page answers with its page pane, not the button.
+    screen.control = _control("", kind="pane", rect=(0, 0, 800, 600))
+    assert utils.element_still_at("More options", "Button", 300, 25, rect=BOX, window="Explorer")
+
+
+def test_container_of_another_window_is_refused(screen):
+    screen.title = "Notepad"
+    screen.control = _control("", kind="pane", rect=(0, 0, 800, 600))
+    assert utils.spot_on_element("Address", "Edit", 300, 25, rect=BOX, window="Explorer") is None
+
+
+def test_other_element_in_the_same_rectangle_is_refused(screen):
+    # A list scrolled by one row: a different row fills exactly the old row's box.
+    screen.control = _control("Row 4", kind="list item", rect=BOX)
+    assert utils.spot_on_element("Row 3", "List item", 300, 25, rect=BOX, window="E") is None
+
+
+def test_covering_window_names_the_other_window(screen):
+    screen.title = "Avast"
+    assert utils.covering_window(150, 25, "Explorer") == "Avast"
+    screen.title = "Explorer"
+    assert utils.covering_window(150, 25, "Explorer") == ""
+
+
 # --- the label lookup uses it ------------------------------------------------------
 
 
@@ -117,13 +177,21 @@ def _desktop():
 
 
 def test_stale_label_is_refused(monkeypatch):
-    monkeypatch.setattr(service, "element_still_at", lambda *a: False)
+    monkeypatch.setattr(service, "spot_on_element", lambda *a, **k: None)
+    monkeypatch.setattr(service, "covering_window", lambda *a: "")
     with pytest.raises(ValueError, match=r"label 0 .*Save.* no longer .*new Snapshot"):
         _desktop().get_coordinates_from_labels([0])
 
 
-def test_label_still_there_resolves(monkeypatch):
+def test_covered_label_names_the_covering_window(monkeypatch):
+    monkeypatch.setattr(service, "spot_on_element", lambda *a, **k: None)
+    monkeypatch.setattr(service, "covering_window", lambda *a: "Avast")
+    with pytest.raises(ValueError, match=r'label 0 .*Save.* covered by "Avast".*"Harness"'):
+        _desktop().get_coordinates_from_labels([0])
+
+
+def test_label_resolves_to_the_free_spot(monkeypatch):
     seen = []
-    monkeypatch.setattr(service, "element_still_at", lambda *a: seen.append(a) or True)
-    assert _desktop().get_coordinates_from_labels([0]) == [(10, 10)]
-    assert seen == [("Save", "Button", 10, 10)]
+    monkeypatch.setattr(service, "spot_on_element", lambda *a, **k: seen.append((a, k)) or (15, 5))
+    assert _desktop().get_coordinates_from_labels([0]) == [(15, 5)]
+    assert seen == [(("Save", "Button", 10, 10), {"rect": (0, 0, 20, 20), "window": "Harness"})]

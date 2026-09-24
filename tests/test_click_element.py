@@ -68,7 +68,7 @@ def _element(name, kind="button", rect=(0, 0, 20, 40), offscreen=False):
 @pytest.fixture
 def window(monkeypatch):
     """A readable window whose name search returns .elements; the spot check passes."""
-    state = SimpleNamespace(elements=[], readable=True, still_at=True, searched=[])
+    state = SimpleNamespace(elements=[], readable=True, still_at=True, cover="", searched=[])
 
     def find_all(scope, condition):
         return SimpleNamespace(Length=len(state.elements), GetElement=lambda i: state.elements[i])
@@ -85,7 +85,10 @@ def window(monkeypatch):
         utils.uia.core._AutomationClient, "instance", lambda: SimpleNamespace(IUIAutomation=ia)
     )
     monkeypatch.setattr(utils, "_readable_window", lambda h: state.readable)
-    monkeypatch.setattr(utils, "element_still_at", lambda *a: state.still_at)
+    monkeypatch.setattr(
+        utils, "spot_on_element", lambda n, k, x, y, **kw: (x, y) if state.still_at else None
+    )
+    monkeypatch.setattr(utils, "covering_window", lambda *a: state.cover)
     return state
 
 
@@ -116,11 +119,26 @@ def test_unreadable_window_is_refused_unread(window):
     assert window.searched == []
 
 
-def test_a_covered_element_is_refused(window):
+def test_a_covered_element_is_refused_naming_the_cover(window):
     window.elements = [_element("Save")]
     window.still_at = False
-    with pytest.raises(ValueError, match="covered"):
+    window.cover = "Avast"
+    with pytest.raises(ValueError, match='covered by "Avast"; bring "Notepad" to the front'):
         utils.find_element(1, "Notepad", "Save")
+
+
+def test_something_else_at_the_spot_in_the_same_window_is_not_called_covered(window):
+    window.elements = [_element("Save")]
+    window.still_at = False
+    with pytest.raises(ValueError, match="something else of .*Notepad") as e:
+        utils.find_element(1, "Notepad", "Save")
+    assert "covered" not in str(e.value)
+
+
+def test_a_free_spot_replaces_a_covered_centre(window, monkeypatch):
+    window.elements = [_element("Address", "edit", rect=(100, 10, 500, 40))]
+    monkeypatch.setattr(utils, "spot_on_element", lambda *a, **k: (460, 25))
+    assert utils.find_element(1, "Explorer", "edit:Address") == ("edit", "Address", 460, 25)
 
 
 def test_empty_name_is_refused(window):

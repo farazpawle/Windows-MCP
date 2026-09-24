@@ -23,11 +23,12 @@ Evidence for every item: `docs/testing/windows-mcp-tool-test-report.md`, section
   - **Verify:** Live - a layered/DirectComposition test window (or an Avast alert) is in the full Screenshot image.
   - Result (2026-09-24): `_resolve_region(None)` resolves to the only output; several displays keep pillow (the reply's "Screenshot Backend" line already says which, and the guide warns). Live: full capture now reports dxcam, 1920x1080, ~4 ms vs pillow ~30 ms. A WinForms Opacity 0.97 (layered) window was in both images, so it does not reproduce the Avast miss; the Avast alert itself was shown by dxcam in round 3. Not re-proved against a real Avast alert.
 
-- [ ] R3-3 **Medium - false refusals from the "still at its spot" check.** `element_still_at` (`tree/utils.py`) walks up from `ControlFromPoint`; in an embedded web page it gets the page pane, and over Explorer's Address Bar it gets a path button drawn on top.
-  - [ ] a. Unit: an element whose point resolves to a sibling drawn over it, in the same window, is accepted.
-  - [ ] b. Accept when the top-level window at the point is the element's own window and `ControlFromPoint` returns an ancestor or a sibling inside the element's rectangle.
-  - [ ] c. Word the refusal by cause: "another window covers it" vs "the element moved".
+- [x] R3-3 **Medium - false refusals from the "still at its spot" check.** `element_still_at` (`tree/utils.py`) walks up from `ControlFromPoint`; in an embedded web page it gets the page pane, and over Explorer's Address Bar it gets a path button drawn on top.
+  - [x] a. Unit: an element whose point resolves to a sibling drawn over it, in the same window, is accepted.
+  - [x] b. Accept when the top-level window at the point is the element's own window and `ControlFromPoint` returns an ancestor or a sibling inside the element's rectangle.
+  - [x] c. Word the refusal by cause: "another window covers it" vs "the element moved".
   - **Verify:** Live - Click `element=` on a button in a WebView2/CEF test page and Type `label=` on Explorer's Address Bar both act.
+  - Result (2026-09-24): (b) changed on live evidence. Accepting a sibling drawn over the centre let Type act, but the click hit the path button and the text went to the folder view. Now: a container of the element in its own window counts (`element_still_at`, `_around`); a part drawn over the centre makes `spot_on_element` try 24 points inside the element's box and act on the first that is the element (Explorer's edit answers only in its last ~6%). Refusals name the covering window or say it moved (`covering_window`). Live: Edge `--app` page, Click `element="button:Press me"` changed the page title (second try; Chromium exposes elements lazily); Explorer Type `label=` "Address Bar" typed at (961,264) and the edit read back the text. Not re-proved on Avast's own alert (not reproducible on demand); Edge may answer with the button itself, so the container rule is proved by unit test only.
 
 - [ ] R3-4 **Medium - WaitFor `screen_changed` misses small real changes.** `MIN_CHANGED_PIXELS = 100` (`tools/_screen_wait.py`) is fixed; a clock digit in an 80x30 region stayed below it.
   - [ ] a. Unit: a 40-pixel change in an 80x30 region counts; a 40-pixel change on a full screen does not.

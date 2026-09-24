@@ -5,7 +5,8 @@ from windows_mcp.desktop.utils import (
 from windows_mcp.powershell.utils import ps_quote
 from windows_mcp.powershell import PowerShellExecutor
 from windows_mcp.tree.utils import (
-    element_still_at,
+    covering_window,
+    spot_on_element,
     is_fully_covered,
     is_unreadable_window,
     top_level_window_at,
@@ -1006,13 +1007,27 @@ class Desktop:
                 else:
                     raise IndexError(f"Label {label} out of range")
             x, y = element_node.center.x, element_node.center.y
-            if not element_still_at(element_node.name, element_node.control_type, x, y):
+            box = element_node.bounding_box
+            window = element_node.window_name
+            spot = spot_on_element(
+                element_node.name,
+                element_node.control_type,
+                x,
+                y,
+                rect=(box.left, box.top, box.right, box.bottom),
+                window=window,
+            )
+            if spot is None:
+                what = f'label {label} ({element_node.control_type.lower()} "{element_node.name}")'
+                if cover := covering_window(x, y, window):
+                    raise ValueError(
+                        f'{what} is covered by "{cover}"; bring "{window}" to the front.'
+                    )
                 raise ValueError(
-                    f"label {label} ({element_node.control_type.lower()} "
-                    f'"{element_node.name}") is no longer at its spot; the screen changed '
-                    "since Snapshot. Take a new Snapshot."
+                    f"{what} is no longer at its spot; the screen changed since Snapshot. "
+                    "Take a new Snapshot."
                 )
-            results.append((x, y))
+            results.append(spot)
         return results
 
     def _require_on_screen(self, points: list[tuple[int, int]]) -> None:

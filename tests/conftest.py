@@ -19,7 +19,9 @@ def _nothing_covers_fake_windows(monkeypatch):
     monkeypatch.setattr("windows_mcp.desktop.service.is_fully_covered", lambda *a, **k: False)
     monkeypatch.setattr("windows_mcp.desktop.service.top_level_window_at", lambda x, y: 0)
     # Labels of made-up trees are "still there" (B.9); test_label_still_there covers the check.
-    monkeypatch.setattr("windows_mcp.desktop.service.element_still_at", lambda *a, **k: True)
+    monkeypatch.setattr(
+        "windows_mcp.desktop.service.spot_on_element", lambda n, t, x, y, **k: (x, y)
+    )
     # B.10 reply reads: nothing is known about made-up points (test_verified_replies covers them).
     monkeypatch.setattr("windows_mcp.tools.input.describe_point", lambda *a, **k: "")
     monkeypatch.setattr("windows_mcp.tools.input.focused_value", lambda *a, **k: "")

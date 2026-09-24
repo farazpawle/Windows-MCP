@@ -76,12 +76,41 @@ def top_level_window_at(x: int, y: int) -> int:
     return win32gui.GetAncestor(hwnd, win32con.GA_ROOT) if hwnd else 0
 
 
-def element_still_at(name: str, control_type: str, x: int, y: int, max_depth: int = 10) -> bool:
+def covering_window(x: int, y: int, window: str) -> str:
+    """Title of the window at (x, y) when it is not *window*, else "" (for refusal replies)."""
+    handle = top_level_window_at(x, y)
+    title = win32gui.GetWindowText(handle).strip() if handle else ""
+    return "" if title == window.strip() else title or "another window"
+
+
+def _around(hit, rect: tuple[int, int, int, int]) -> bool:
+    """True when the hit control's box encloses *rect* and is larger (a container of it).
+
+    Not the same box: that is another element in its place (a list scrolled by one row).
+    Not a smaller box inside it: that part is drawn over the element and takes the input.
+    """
+    box = (hit.left, hit.top, hit.right, hit.bottom)
+    encloses = box[0] <= rect[0] and box[1] <= rect[1] and box[2] >= rect[2] and box[3] >= rect[3]
+    return encloses and box != rect
+
+
+def element_still_at(
+    name: str,
+    control_type: str,
+    x: int,
+    y: int,
+    rect: tuple[int, int, int, int] | None = None,
+    window: str | None = None,
+    max_depth: int = 10,
+) -> bool:
     """True when the element under (x, y), or one of its parents, still is the listed one.
 
     Guards label actions (round-2 B.9): a label is a remembered position, so after the
     screen changes it would act on whatever moved there. The listed name may be the
     element's Name, its AutomationId (unnamed fields) or its type (unnamed scroll areas).
+
+    With the element's *rect* and *window* title, a container of it in that same window
+    also counts (R3-3): an embedded web page answers with its page pane, not the button.
     """
     handle = top_level_window_at(x, y)
     # Snapshot never lists elements in these, and reading a hung or VS Code window stalls it.
@@ -93,7 +122,7 @@ def element_still_at(name: str, control_type: str, x: int, y: int, max_depth: in
     wanted = "" if wanted == "''" else wanted
     kind = control_type.strip().lower()
     try:
-        control = uia.ControlFromPoint(x, y)
+        hit = control = uia.ControlFromPoint(x, y)
         for _ in range(max_depth):
             if control is None:
                 break
@@ -102,11 +131,47 @@ def element_still_at(name: str, control_type: str, x: int, y: int, max_depth: in
             if (wanted and wanted in seen) or (not wanted and own_type == kind):
                 return True
             control = control.GetParentControl()
+        # ponytail: a stale label whose spot now shows a container of the same window
+        # passes too; the name check above still catches a different element in its place.
+        if rect and window is not None and hit is not None and not covering_window(x, y, window):
+            return _around(hit.BoundingRectangle, rect)
     except Exception:
         # ponytail: an unreadable element acts as before B.9 rather than blocking the action.
         logger.debug("Could not re-check the element at (%s, %s)", x, y, exc_info=True)
         return True
     return False
+
+
+# Where to try when the centre is taken: across the middle first, right side first.
+# Explorer's Address Bar (900 px window) is its own edit only in the last ~6% of its width;
+# path buttons and their group cover the rest (measured 2026-09-24).
+_SPOT_FRACTIONS = [
+    (fx, fy) for fy in (0.5, 0.25, 0.75) for fx in (0.95, 0.9, 0.75, 0.6, 0.4, 0.25, 0.1, 0.05)
+]
+
+
+def spot_on_element(
+    name: str,
+    control_type: str,
+    x: int,
+    y: int,
+    rect: tuple[int, int, int, int],
+    window: str,
+) -> tuple[int, int] | None:
+    """A point where input reaches the listed element: its centre if free, else another.
+
+    R3-3: a part drawn over the centre (a path button on Explorer's Address Bar) would
+    take the click itself, so try other points inside the element's box.
+    """
+    if element_still_at(name, control_type, x, y, rect=rect, window=window):
+        return x, y
+    left, top, right, bottom = rect
+    # ponytail: 24 fixed sample points; a free sliver between them is missed.
+    for fx, fy in _SPOT_FRACTIONS:
+        px, py = left + int((right - left) * fx), top + int((bottom - top) * fy)
+        if element_still_at(name, control_type, px, py, rect=rect, window=window):
+            return px, py
+    return None
 
 
 # Round-2 B.10: what Click, Type and Scroll replies report. Each read is guarded like
@@ -250,7 +315,7 @@ def find_element(handle: int, window: str, element: str) -> tuple[str, str, int,
         uia.PropertyConditionFlags.PropertyConditionFlags_IgnoreCase
         | uia.PropertyConditionFlags.PropertyConditionFlags_MatchSubstring
     )
-    found = []
+    found, boxes = [], {}
     try:
         condition = ia.CreatePropertyConditionEx(uia.PropertyId.NameProperty, name, flags)
         # ponytail: one native FindAll over the whole window; a very short name in a huge
@@ -263,24 +328,31 @@ def find_element(handle: int, window: str, element: str) -> tuple[str, str, int,
             rect = el.CurrentBoundingRectangle
             if el.CurrentIsOffscreen or rect.right <= rect.left or rect.bottom <= rect.top:
                 continue
-            found.append(
-                (
-                    el.CurrentLocalizedControlType,
-                    el.CurrentName,
-                    (rect.left + rect.right) // 2,
-                    (rect.top + rect.bottom) // 2,
-                )
+            item = (
+                el.CurrentLocalizedControlType,
+                el.CurrentName,
+                (rect.left + rect.right) // 2,
+                (rect.top + rect.bottom) // 2,
             )
+            found.append(item)
+            boxes[item] = (rect.left, rect.top, rect.right, rect.bottom)
     except Exception as e:
         logger.debug("Element search failed in window %s", handle, exc_info=True)
         raise ValueError(f'Could not search "{window}" for elements: {e}') from None
-    kind, found_name, x, y = pick_element(found, role, name, window)
+    picked = pick_element(found, role, name, window)
+    kind, found_name, x, y = picked
     # Same spot check as label clicks (B.9): another window or a pop-up may sit on top.
-    if not element_still_at(found_name, kind, x, y):
+    spot = spot_on_element(found_name, kind, x, y, rect=boxes[picked], window=window)
+    if spot is None:
+        what = f'{kind} "{_clean(found_name)}"'
+        if cover := covering_window(x, y, window):
+            raise ValueError(
+                f'{what} is covered by "{_clean(cover)}"; bring "{window}" to the front.'
+            )
         raise ValueError(
-            f'{kind} "{_clean(found_name)}" is covered at its spot; bring "{window}" to the front.'
+            f'{what}: something else of "{window}" is drawn over it everywhere tried; click by loc.'
         )
-    return kind, found_name, x, y
+    return kind, found_name, *spot
 
 
 def z_order_rank() -> dict[int, int]:
