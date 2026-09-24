@@ -4,6 +4,7 @@ import os
 from types import SimpleNamespace
 
 import psutil
+import pytest
 
 from windows_mcp.process.service import list_processes
 
@@ -52,6 +53,24 @@ def test_cpu_is_sampled_over_a_fresh_short_window(monkeypatch):
     assert events[0] == ("iter", ("cpu_percent",))
     assert events[1] == ("sleep", 0.5)
     assert events[2][0] == "iter" and "cpu_percent" in events[2][1]
+
+
+@pytest.mark.parametrize("sort_by", ["memory", "name"])
+def test_other_sorts_do_not_sample_cpu(monkeypatch, sort_by):
+    # Round-3 R3-I3: the 0.5 s CPU sample made every list take ~1.6 s.
+    asked = []
+
+    def fake_iter(attrs):
+        asked.append(tuple(attrs))
+        return [_fake(4242, "busy.exe", 12.0)]
+
+    monkeypatch.setattr(psutil, "process_iter", fake_iter)
+    monkeypatch.setattr("windows_mcp.process.service.time.sleep", lambda s: pytest.fail("slept"))
+
+    reply = list_processes(sort_by=sort_by)
+
+    assert asked and all("cpu_percent" not in a for a in asked)
+    assert "CPU%" not in reply and "busy.exe" in reply
 
 
 def test_cpu_is_a_share_of_the_whole_machine(monkeypatch):

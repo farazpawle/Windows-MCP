@@ -112,6 +112,7 @@ Process · Clipboard · Notification · Scrape
   then kill by PID.
 - `limit=0` says "No processes found".
 - CPU% may be summed across cores (System Idle over 1000%): read it with care.
+- Every `list` shows CPU% and takes ~1.6 s.
 - `kill` with both `pid` and `name` silently uses the pid.
 
 ## Clipboard

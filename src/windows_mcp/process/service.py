@@ -20,17 +20,23 @@ def list_processes(
     from tabulate import tabulate
 
     own_pid = os.getpid()
-    # cpu_percent compares with the previous reading of the same (cached) process:
-    # the first ever is 0, later ones average over the gap since the last list.
-    # Prime every process, then read over a fresh half second.
-    for _ in psutil.process_iter(["cpu_percent"]):
-        pass
-    time.sleep(0.5)
+    # The CPU sample costs a 0.5 s wait, so only a CPU sort pays for it (round-3 R3-I3);
+    # other sorts leave the column out rather than show made-up zeros.
+    with_cpu = sort_by == "cpu"
+    attrs = ["pid", "name", "memory_info"]
+    if with_cpu:
+        # cpu_percent compares with the previous reading of the same (cached) process:
+        # the first ever is 0, later ones average over the gap since the last list.
+        # Prime every process, then read over a fresh half second.
+        for _ in psutil.process_iter(["cpu_percent"]):
+            pass
+        time.sleep(0.5)
+        attrs.append("cpu_percent")
     # psutil counts per core (100% = one core); show a share of the whole machine
     # like Task Manager, or idle reads ~1900% on a 20-thread PC.
     cores = psutil.cpu_count() or 1
     procs = []
-    for p in psutil.process_iter(["pid", "name", "cpu_percent", "memory_info"]):
+    for p in psutil.process_iter(attrs):
         try:
             info = p.info
             mem_mb = info["memory_info"].rss / (1024 * 1024) if info["memory_info"] else 0
@@ -41,7 +47,7 @@ def list_processes(
                     "name": f"{info['name'] or 'Unknown'}{' (this server)' if is_self else ''}",
                     # The server's own sample covers the moment it builds this list
                     # (~96%), so it looked like a runaway process an agent might kill.
-                    "cpu": None if is_self else (info["cpu_percent"] or 0) / cores,
+                    "cpu": None if is_self else (info.get("cpu_percent") or 0) / cores,
                     "mem_mb": round(mem_mb, 1),
                 }
             )
@@ -60,19 +66,13 @@ def list_processes(
     procs = procs[:limit]
     if not procs:
         return f"No processes found{f' matching {name}' if name else ''}."
-    table = tabulate(
-        [
-            [
-                p["pid"],
-                p["name"],
-                "-" if p["cpu"] is None else f"{p['cpu']:.1f}%",
-                f"{p['mem_mb']:.1f} MB",
-            ]
-            for p in procs
-        ],
-        headers=["PID", "Name", "CPU%", "Memory"],
-        tablefmt="simple",
-    )
+    rows = [[p["pid"], p["name"], f"{p['mem_mb']:.1f} MB"] for p in procs]
+    headers = ["PID", "Name", "Memory"]
+    if with_cpu:
+        for row, p in zip(rows, procs):
+            row.insert(2, "-" if p["cpu"] is None else f"{p['cpu']:.1f}%")
+        headers.insert(2, "CPU%")
+    table = tabulate(rows, headers=headers, tablefmt="simple")
     return f"Processes ({len(procs)} shown):\n{table}"
 
 
