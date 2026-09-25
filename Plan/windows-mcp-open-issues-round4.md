@@ -124,6 +124,7 @@ Evidence for every item: `docs/testing/windows-mcp-tool-test-report.md`, section
     - 2 lines into Notepad: old per-key SendKeys (10 ms a key) exact apart from Notepad's own autocorrect ("charlie" -> "Charlie"); Unicode one character per SendInput (10 ms) the same but 1 of 149 characters lost; bursts with no spaces kept line 1 and garbled right after the first Enter; bursts as today garbled right after "charlie ".
     - Word-by-word bursts with 5, 15 or 30 ms after each word and 30-50 ms after each line: all garbled right after "Charlie " (repeated "o", text lost or extra).
     - So: once Notepad has autocorrected a word or started a new line, any multi-character SendInput burst is garbled, whatever the pause before it; single characters survive. Cause inside Notepad not established. Autocorrect itself is Notepad's setting and changes words at any speed.
+    - Run 4 (user chose option 1, confirmed before coding): one character per SendInput, full 1,130 characters: 10 ms a character 12.5 s, 15-24 characters wrong ("llliet lllo"); 15 ms 18 s, 2-3 characters lost ("iilo"), "juliet" also auto-capitalised. So pacing does not make Notepad exact; option 1 not built (it would slow every app 8-20x for no fix).
   - [ ] d. [User] Choose (design choice): (1) one character at a time everywhere, ~10 ms a character (622 characters ~6.5 s, was 0.87 s); (2) one at a time only in Notepad-like editors (focused element class `RichEditD2DPT`), fast bursts elsewhere; (3) keep as is, guide warns (done: known-gaps.md, input.md).
 
 # Part B - Improvements
