@@ -215,6 +215,14 @@ class _DxcamBackend(_ScreenshotBackend):
         camera = self._get_camera(device_idx, output_idx)
         frame = camera.grab(region=region, copy=True, new_frame_only=False)
         if frame is None:
+            # Round-4 R4-11: a duplication lost while the PC sat idle or locked, or a
+            # still screen with no new frame for this region, grabs nothing. A new
+            # camera's first grab is the current screen, so try once more with one.
+            camera.release()
+            del self._camera_cache[(device_idx, output_idx)]
+            camera = self._get_camera(device_idx, output_idx)
+            frame = camera.grab(region=region, copy=True, new_frame_only=False)
+        if frame is None:
             raise RuntimeError("DXGI capture returned no frame")
         return Image.fromarray(frame)
 
@@ -350,6 +358,9 @@ def capture(
         chain = [cls]
 
     # Try each candidate: skip unavailable ones, catch failures and fall through.
+    # Each failure is named with the backend finally used (R4-11), so a reply saying
+    # "pillow" also says why the faster one was not used.
+    failures: list[str] = []
     for backend_cls in chain:
         if backend_cls.name in _degraded_backends:
             continue
@@ -366,12 +377,13 @@ def capture(
             continue
         try:
             image = inst.capture(capture_rect)
-        except OSError, RuntimeError, ValueError, IndexError:
+        except (OSError, RuntimeError, ValueError, IndexError) as e:
             logger.warning(
                 "Screenshot backend '%s' failed; trying next backend",
                 inst.name,
                 exc_info=selected != "auto",
             )
+            failures.append(f"{inst.name} failed: {e}")
             continue
 
         # A backend can also fail silently, returning a frame with nothing in it.
@@ -384,9 +396,15 @@ def capture(
                 "for this process and trying the next backend",
                 inst.name,
             )
+            failures.append(f"{inst.name} returned an unusable frame")
             continue
 
-        return image, inst.name
+        return image, _with_failures(inst.name, failures)
 
     # All candidates exhausted — pillow is always present as the last resort.
-    return _get_backend("pillow").capture(capture_rect), "pillow"
+    return _get_backend("pillow").capture(capture_rect), _with_failures("pillow", failures)
+
+
+def _with_failures(name: str, failures: list[str]) -> str:
+    """'pillow (dxcam failed: ...)': the backend used, and why earlier ones were not."""
+    return f"{name} ({'; '.join(failures)})" if failures else name

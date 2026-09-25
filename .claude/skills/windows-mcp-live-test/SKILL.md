@@ -172,6 +172,11 @@ cd "<repo root>" && timeout 180 env -u SSLKEYLOGFILE \
 - Report the result in plain words. Record any new lesson in this skill, and any behaviour
   change in `Skills/windows-mcp/references/`, in the same task (CLAUDE.md "Skills and Keeping Them Current").
 
+To test a lost screen duplication (what a lock or long idle does to dxcam) without locking:
+make the camera's `_duplicator.update_frame` return False once (dxcam's own ACCESS_LOST
+path), then capture. Releasing the duplicator instead makes it crash with an AttributeError
+that a real loss never gives.
+
 ## Display-scaling tests
 
 `scripts/dpi_check.py` (run as in section 3, hands off, ~30 s) checks Snapshot centres, label

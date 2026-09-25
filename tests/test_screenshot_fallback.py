@@ -96,14 +96,16 @@ class TestCaptureFallback:
         registry(dxcam, mss, FakeBackend("pillow", 100, result=good_image()))
 
         result, name = capture(None)
-        assert name == "mss", "should not have returned dxcam's empty frame"
+        assert name == "mss (dxcam returned an unusable frame)", (
+            "should not have returned dxcam's empty frame"
+        )
         assert result is mss_image
         assert dxcam.calls == 1
 
     def test_none_frame_falls_through_to_mss(self, registry):
         mss = FakeBackend("mss", 20, result=good_image())
         registry(FakeBackend("dxcam", 10, result=None), mss, FakeBackend("pillow", 100))
-        assert capture(None)[1] == "mss"
+        assert capture(None)[1] == "mss (dxcam returned an unusable frame)"
 
     def test_raising_backend_still_falls_through(self, registry):
         """Pre-existing behaviour must be preserved."""
@@ -113,7 +115,7 @@ class TestCaptureFallback:
             mss,
             FakeBackend("pillow", 100),
         )
-        assert capture(None)[1] == "mss"
+        assert capture(None)[1] == "mss (dxcam failed: DXGI capture returned no frame)"
 
     def test_unavailable_backend_is_skipped(self, registry):
         mss = FakeBackend("mss", 20, result=good_image())
@@ -136,8 +138,8 @@ class TestDegradedLatch:
         mss = FakeBackend("mss", 20, result=good_image())
         registry(dxcam, mss, FakeBackend("pillow", 100))
 
-        assert capture(None)[1] == "mss"
-        assert capture(None)[1] == "mss"
+        assert capture(None)[1] == "mss (dxcam returned an unusable frame)"
+        assert capture(None)[1] == "mss"  # latched: dxcam is no longer tried
         assert capture(None)[1] == "mss"
 
         assert dxcam.calls == 1, "degraded backend should be probed only once"
@@ -159,8 +161,20 @@ class TestDegradedLatch:
         registry(dxcam, FakeBackend("mss", 20, available=False), pillow)
 
         result, name = capture(None, backend="dxcam")
-        assert name == "pillow", "should fall back to the last resort, not return junk"
+        assert name == "pillow (dxcam returned an unusable frame)", (
+            "should fall back to the last resort, not return junk"
+        )
         assert _is_usable_capture(result)
+
+
+def test_the_fallback_name_says_why_the_faster_backend_failed(registry):
+    # Round-4 R4-11: the reply said only "Screenshot Backend: pillow".
+    registry(
+        FakeBackend("dxcam", 10, raises=RuntimeError("DXGI capture returned no frame")),
+        FakeBackend("mss", 20, available=False),
+        FakeBackend("pillow", 100, result=good_image()),
+    )
+    assert capture(None)[1] == "pillow (dxcam failed: DXGI capture returned no frame)"
 
 
 def test_forced_backend_that_cannot_run_warns_and_names_the_fallback(registry, caplog):

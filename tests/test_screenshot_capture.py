@@ -266,6 +266,27 @@ class TestDxcamBackend:
         backend = _DxcamBackend()
         with pytest.raises(RuntimeError, match="no frame"):
             backend.capture(MONITOR_1)
+        assert fake_dxcam.create.call_count == 2  # the fresh camera failed too
+
+    def test_empty_grab_is_retried_once_with_a_fresh_camera(self, monkeypatch):
+        # Round-4 R4-11: after the PC sat idle the first full capture fell back to pillow.
+        # A camera whose duplication was lost (lock, idle) grabs nothing once; a new one
+        # hands over the current screen on its first grab.
+        stale, fresh = MagicMock(), MagicMock()
+        stale.grab.return_value = None
+        fresh.grab.return_value = "frame"
+        fake_dxcam = MagicMock()
+        fake_dxcam.create.side_effect = [stale, fresh]
+        monkeypatch.setattr(screenshot, "dxcam", fake_dxcam)
+        monkeypatch.setattr(_DxcamBackend, "_iter_outputs", staticmethod(lambda: DXGI_OUTPUTS))
+
+        fake_image = Image.new("RGB", (4, 4), "red")
+        backend = _DxcamBackend()
+        with patch.object(Image, "fromarray", return_value=fake_image) as fromarray:
+            assert backend.capture(MONITOR_1) is fake_image
+        fromarray.assert_called_once_with("frame")
+        stale.release.assert_called_once()
+        assert backend._get_camera(0, 1) is fresh
 
 
 # ---------------------------------------------------------------------------
@@ -493,7 +514,7 @@ class TestCapture:
 
         image, backend_name = capture(MONITOR_0, backend="auto")
         # mss failed → pillow fallback
-        assert backend_name == "pillow"
+        assert backend_name == "pillow (mss failed: mss broken)"
         assert isinstance(image, Image.Image)
 
     def test_explicit_backend_exception_triggers_pillow_fallback(self, monkeypatch):
@@ -511,7 +532,7 @@ class TestCapture:
 
         image, backend_name = capture(MONITOR_0, backend="mss")
 
-        assert backend_name == "pillow"
+        assert backend_name == "pillow (mss failed: mss broken)"
         assert isinstance(image, Image.Image)
         assert image.size == (1920, 1080)
 
@@ -545,7 +566,7 @@ class TestCapture:
 
         image, backend_name = capture(MONITOR_1, backend="auto")
 
-        assert backend_name == "pillow"
+        assert backend_name == "pillow (dxcam failed: list index out of range)"
         assert image.size == (1920, 1080)
 
     def test_capture_returns_non_empty_image(self, monkeypatch):

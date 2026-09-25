@@ -12,9 +12,10 @@
 - It captures pending approval prompts too.
 - `width_reference_line` / `height_reference_line` draw a grid; either one alone works.
 - On one screen, full captures use the same method as `region` captures (header
-  "Screenshot Backend: dxcam"), which shows pop-ups such as Avast's alert. Once, after the PC
-  sat idle ~1.5 h, a full capture used pillow: check the Backend line and capture again when
-  a pop-up is expected. Several screens: see known-gaps.md.
+  "Screenshot Backend: dxcam"), which shows pop-ups such as Avast's alert, also after the PC
+  sat idle or was locked. If the line says pillow, it says why in brackets
+  (`pillow (dxcam failed: ...)`); that image can miss a pop-up. Several screens: see
+  known-gaps.md.
 - `zoom=true` with a `region` enlarges it to about 1280 px wide at full resolution, for small
   text; keep clicking with full-screen coordinates.
 
