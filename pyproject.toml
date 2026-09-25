@@ -79,6 +79,3 @@ asyncio_mode = "auto"
 
 [tool.uv]
 constraint-dependencies = ["pydantic-settings>=2.14.2"]
-
-[tool.uv.extra-build-dependencies]
-pyperclip = ["setuptools"]
