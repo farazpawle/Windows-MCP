@@ -52,6 +52,7 @@ from windows_mcp.tree.budget import TreeElementBudget, resolve_max_tree_elements
 from windows_mcp.tree.utils import (
     random_point_within_bounding_box,
     drop_occluded,
+    panels_over,
     is_unreadable_window,
     z_order_rank,
 )
@@ -831,9 +832,17 @@ class Tree:
                                     metadata["value"] = value.strip() if value else "(empty)"
                                     if not is_password and not is_dom:
                                         words = node.GetAllWordBoundingBoxes()
+                                        panels = panels_over(
+                                            node.NativeWindowHandle if words else 0
+                                        )
                                         for word, boxes in words:
                                             for box in boxes:
-                                                word_elements.append((word, box))
+                                                x, y = box.xcenter(), box.ycenter()
+                                                if not any(
+                                                    left <= x < right and top <= y < bottom
+                                                    for left, top, right, bottom in panels
+                                                ):
+                                                    word_elements.append((word, box))
                                 except Exception:
                                     pass
 

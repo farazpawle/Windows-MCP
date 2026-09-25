@@ -36,7 +36,8 @@
   can fill the cap alone: use `region` or raise the cap. Other windows fill the rest.
 - A word element's position is the centre of the word itself (the spaces after it are cut
   off), so Click `label=` on it lands in the word. In a proportional font the box ends a
-  little short; its centre still falls on the word.
+  little short; its centre still falls on the word. Words hidden under a panel drawn inside
+  the app's window (Notepad's Find and Replace) are left out; the panel's own boxes stay.
 - `display=[0]`, `[1]` and `[0,1]` work. Coordinates are virtual-desktop (a second screen to
   the right starts at x=1920 here) and clicks there land; the capture border shows on the
   screen captured. The screen layout is re-read on every call.

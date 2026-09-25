@@ -17,7 +17,7 @@ import win32process
 from psutil import Process
 
 import windows_mcp.uia as uia
-from windows_mcp.desktop.utils import is_window_hung
+from windows_mcp.desktop.utils import XAML_HOSTS, is_window_hung
 
 logger = logging.getLogger(__name__)
 
@@ -29,14 +29,6 @@ _seen: dict[int, str] | None = None
 
 # UIA runtime ids of the in-window dialogs reported after the last input action.
 _seen_dialogs: set[tuple] = set()
-
-# Child window classes of apps built on XAML (WinUI 3, UWP, XAML Islands): the ones that
-# draw modal dialogs inside their own window.
-_XAML_HOSTS = {
-    "Microsoft.UI.Content.DesktopChildSiteBridge",
-    "Windows.UI.Core.CoreWindow",
-    "Windows.UI.Composition.DesktopWindowContentBridge",
-}
 
 
 def _cloaked(handle: int) -> bool:
@@ -83,7 +75,7 @@ def _is_xaml_window(handle: int) -> bool:
     win32gui.EnumChildWindows(
         handle, lambda c, _: classes.add(win32gui.GetClassName(c)) or True, None
     )
-    return not classes.isdisjoint(_XAML_HOSTS)
+    return not classes.isdisjoint(XAML_HOSTS)
 
 
 def _question(names: list[str], dialog_name: str) -> str:

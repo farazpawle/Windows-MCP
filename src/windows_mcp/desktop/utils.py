@@ -12,7 +12,16 @@ __all__ = [
     "repair_surrogates",
     "is_elevated",
     "is_window_hung",
+    "XAML_HOSTS",
 ]
+
+# Child window classes of apps built on XAML (WinUI 3, UWP, XAML Islands). They draw
+# dialogs and panels inside their own window, composited above plain child windows.
+XAML_HOSTS = {
+    "Microsoft.UI.Content.DesktopChildSiteBridge",
+    "Windows.UI.Core.CoreWindow",
+    "Windows.UI.Composition.DesktopWindowContentBridge",
+}
 
 
 def is_window_hung(hwnd: int) -> bool:

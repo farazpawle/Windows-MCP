@@ -9,7 +9,12 @@ import win32gui
 import win32process
 
 import windows_mcp.uia as uia
-from windows_mcp.desktop.utils import is_window_hung, remove_private_use_chars, repair_surrogates
+from windows_mcp.desktop.utils import (
+    XAML_HOSTS,
+    is_window_hung,
+    remove_private_use_chars,
+    repair_surrogates,
+)
 from windows_mcp.uia import Control
 
 logger = logging.getLogger(__name__)
@@ -74,6 +79,36 @@ def top_level_window_at(x: int, y: int) -> int:
     """Handle of the top-level window that owns the screen point, or 0."""
     hwnd = win32gui.WindowFromPoint((x, y))
     return win32gui.GetAncestor(hwnd, win32con.GA_ROOT) if hwnd else 0
+
+
+def panels_over(host: int) -> list[tuple[int, int, int, int]]:
+    """Screen rectangles of XAML island child windows drawn over child window *host*.
+
+    Notepad's Find panel is one, laid over the document (R4-13). The compositor draws
+    islands on top although they sit below *host* in the stacking order, so WindowFromPoint
+    and UIA hit tests both report the document under them. Other windows on top are
+    drop_occluded's job; an element without its own window (*host* 0) is not checked.
+    """
+    if not host:
+        return []
+    rects = []
+
+    def add(handle: int, _) -> bool:
+        if (
+            win32gui.GetClassName(handle) in XAML_HOSTS
+            and win32gui.IsWindowVisible(handle)
+            and handle != host
+            and not win32gui.IsChild(handle, host)
+            and not win32gui.IsChild(host, handle)
+        ):
+            rects.append(win32gui.GetWindowRect(handle))
+        return True
+
+    try:
+        win32gui.EnumChildWindows(win32gui.GetAncestor(host, win32con.GA_ROOT), add, None)
+    except Exception as e:  # a window closing mid-enumeration
+        logger.debug("Panel check of window %s failed: %s", host, e)
+    return rects
 
 
 def covering_window(x: int, y: int, window: str) -> str:

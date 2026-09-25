@@ -149,6 +149,17 @@ not working in another window: the guard aborted a run on 2026-09-25 because the
 Ctrl+H/Ctrl+F do nothing in an empty tab (Find and Replace needs text): click the page, Type
 one letter, then Ctrl+H. After typing, the title is `*x - Notepad`, no longer "Untitled", so
 match the tab by handle, not by that title.
+If App `launch name=Notepad` says "window not detected yet", check for a **suspended** Notepad
+(psutil status `stopped`, WM_NULL times out, UIA reads fail with 0x80131505): the launch was
+handed to it. Only a force-end clears it (ask first; its tabs come back from Notepad's session).
+When Notepad opens with the user's restored tabs (some named "Untitled", so a title check is
+not enough): press OK on any "Cannot find ... file" message, invoke the "Add New Tab" button
+through UIA, take the one tab whose runtime id is new, and before every key check that the
+selected TabItem has that id; close it with Ctrl+W and "Don't save" (R4-13 runs, 2026-09-25).
+Notepad's Find panel is a XAML island child window drawn on top by the compositor, yet it sits
+below the document in the stacking order: WindowFromPoint under it returns `RichEditD2DPT`.
+At the PC the screen is 2560x1440, so the server scales coordinates (x0.75): run with
+`WINDOWS_MCP_RAW_COORDINATES=1` when the script passes win32 screen pixels.
 
 ## 3. Run it
 
