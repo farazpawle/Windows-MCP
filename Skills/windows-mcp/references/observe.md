@@ -51,10 +51,9 @@
 - Not found is a normal reply, not an error.
 - ~1.6 s for the full screen, ~0.6 s for a small region.
 - It reads visible pixels only: tiny, stylised or low-contrast text can be missed. A phrase
-  may run across table columns on one row ("North 460 units"). A short number alone in a
-  column can be missed in some fonts (Consolas "460"): then search a longer neighbour.
-- A full-screen search can join text of windows side by side into one line (".venv North
-  460 units": a side bar plus Notepad). Give the window's rectangle as `region`.
+  may run across table columns on one row ("North 460 units"), but never across two windows
+  side by side. A short number alone in a column can be missed in some fonts (Consolas "460"):
+  then search a longer neighbour.
 
 ## WaitFor
 

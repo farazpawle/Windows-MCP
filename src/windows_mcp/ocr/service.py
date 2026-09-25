@@ -11,6 +11,7 @@ import json
 import math
 import os
 import tempfile
+from collections.abc import Callable
 
 from PIL import Image
 
@@ -18,6 +19,7 @@ import windows_mcp.uia as uia
 from windows_mcp.desktop import screenshot as screenshot_capture
 from windows_mcp.powershell.service import PowerShellExecutor
 from windows_mcp.powershell.utils import ps_quote
+from windows_mcp.tree.utils import top_level_window_at
 
 _ENLARGE = 3
 _MAX_IMAGE_SIDE = 10_000  # OcrEngine.MaxImageDimension on Windows 11
@@ -94,39 +96,60 @@ def _turn_back(lines: list[dict], angle: float, width: int, height: int) -> None
             word["y"] = round(dx * sin + dy * cos + oy - word["h"] / 2)
 
 
-def _rows(lines: list[dict]) -> list[dict]:
-    """Join OCR lines that sit on one row, words left to right.
+def _rows(lines: list[dict], owner: Callable[[dict], object] = lambda line: None) -> list[dict]:
+    """Join OCR lines that sit on one row and have the same *owner*, words left to right.
 
     The engine splits a row at wide gaps, so each table column came back as its own
     line and "North 460 units" was never found (round-3 R3-I6). Lines count as one row
-    when their vertical centres are less than half the smaller line height apart.
+    when their vertical centres are less than half the smaller line height apart. The
+    owner (the window under the line) keeps side-by-side windows apart (round-4 R4-9):
+    a gap limit could not, since table columns are gaps wider than any between windows.
     """
 
     def centre(line: dict) -> float:
         return sum(w["y"] + w["h"] / 2 for w in line["words"]) / len(line["words"])
 
     rows: list[tuple[float, float, list[dict]]] = []
+    last_row: dict[object, tuple[float, float, list[dict]]] = {}  # per owner
     for line in sorted((line for line in lines if line.get("words")), key=centre):
-        cy, height = centre(line), max(w["h"] for w in line["words"])
-        if rows and abs(cy - rows[-1][0]) < min(height, rows[-1][1]) / 2:
-            rows[-1][2].extend(line["words"])
+        cy, height, key = centre(line), max(w["h"] for w in line["words"]), owner(line)
+        row = last_row.get(key)
+        if row and abs(cy - row[0]) < min(height, row[1]) / 2:
+            row[2].extend(line["words"])
         else:
-            rows.append((cy, height, list(line["words"])))
+            row = last_row[key] = (cy, height, list(line["words"]))
+            rows.append(row)
     return [{"words": sorted(words, key=lambda w: w["x"])} for _, _, words in rows]
 
 
 def find_phrase(
-    lines: list[dict], phrase: str, left: int, top: int, scale: float = 1.0
+    lines: list[dict],
+    phrase: str,
+    left: int,
+    top: int,
+    scale: float = 1.0,
+    window_at: Callable[[int, int], object] | None = None,
 ) -> list[tuple[str, int, int]]:
     """(row text, centre x, centre y) of each place *phrase* appears, case ignored.
 
     The phrase must appear in order within one row (see `_rows`), and may start or end
     inside a word. Word boxes are divided by *scale* (the enlargement) and offset by
-    (left, top) into screen pixels.
+    (left, top) into screen pixels. *window_at* (screen x, y -> window) keeps the text
+    of different windows in separate rows.
     """
+
+    def owner(line: dict) -> object:
+        if window_at is None:
+            return None
+        word = line["words"][0]
+        return window_at(
+            left + int((word["x"] + word["w"] / 2) / scale),
+            top + int((word["y"] + word["h"] / 2) / scale),
+        )
+
     wanted = " ".join(phrase.split()).lower()
     matches = []
-    for line in _rows(lines):
+    for line in _rows(lines, owner):
         text, spans = "", []
         for word in line.get("words") or []:
             text += " " if text else ""
@@ -156,4 +179,4 @@ def find_on_screen(phrase: str, rect: uia.Rect) -> list[tuple[str, int, int]]:
     scale = min(_ENLARGE, _MAX_IMAGE_SIDE / max(image.size))
     if scale != 1:
         image = image.resize((int(image.width * scale), int(image.height * scale)))
-    return find_phrase(read_lines(image), phrase, rect.left, rect.top, scale)
+    return find_phrase(read_lines(image), phrase, rect.left, rect.top, scale, top_level_window_at)

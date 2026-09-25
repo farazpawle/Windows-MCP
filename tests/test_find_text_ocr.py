@@ -64,6 +64,45 @@ def test_a_phrase_spans_table_columns_on_one_row():
     assert ocr.find_phrase(row, "units south", 0, 0) == []
 
 
+def test_lines_of_two_windows_on_one_row_are_not_joined():
+    # Round-4 R4-9: a full-screen search read ".venv North 460 units" (VS Code's side bar
+    # beside Notepad). Lines are joined only within the window under them.
+    row = [
+        {"words": [_word(".venv", 0, 100)]},
+        {"words": [_word("North", 200, 100)]},
+        {"words": [_word("460", 400, 100)]},
+    ]
+
+    def window_at(x, y):
+        return 1 if x < 1100 else 2  # screen x: ".venv" 1010, "North" 1110, "460" 1210
+
+    matches = ocr.find_phrase(row, "460", 1000, 0, 2, window_at=window_at)
+    assert [m[0] for m in matches] == ["North 460"]
+    assert ocr.find_phrase(row, ".venv north", 1000, 0, 2, window_at=window_at) == []
+
+
+def test_the_window_is_looked_up_at_screen_points(monkeypatch):
+    seen = []
+    row = [{"words": [_word("North", 200, 100)]}]
+    ocr.find_phrase(row, "north", 1000, 50, 2, window_at=lambda x, y: seen.append((x, y)))
+    # Word centre (220, 105) in the 2x image is (110, 52) on screen, offset by (1000, 50).
+    assert seen == [(1110, 102)]
+
+
+def test_find_on_screen_splits_rows_by_window(monkeypatch):
+    monkeypatch.setattr(
+        ocr.screenshot_capture, "capture", lambda rect: (Image.new("RGB", (5000, 100)), "x")
+    )
+    monkeypatch.setattr(
+        ocr,
+        "read_lines",
+        lambda image: [{"words": [_word("A", 0, 0)]}, {"words": [_word("B", 5000, 0)]}],
+    )
+    monkeypatch.setattr(ocr, "top_level_window_at", lambda x, y: x)
+    rect = SimpleNamespace(left=0, top=0, right=5000, bottom=100)
+    assert ocr.find_on_screen("a b", rect) == []
+
+
 # --- find_on_screen (enlarges before reading) ------------------------------------------
 
 
