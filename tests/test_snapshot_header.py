@@ -147,6 +147,8 @@ def test_focused_window_outside_region_is_still_named():
     desktop.get_windows = MagicMock(return_value=([focused], {1}))
     desktop.get_active_window = MagicMock(return_value=focused)
     desktop.get_cursor_location = MagicMock(return_value=(5, 5))
+    # A 1920x1080 screen whatever this PC's is (a 1366x768 session refused the region).
+    desktop.get_screen_box = MagicMock(return_value=_box(0, 0, 1920, 1080))
     with (
         patch("windows_mcp.desktop.service.get_current_desktop", return_value={"name": "D"}),
         patch("windows_mcp.desktop.service.get_all_desktops", return_value=[{"name": "D"}]),
