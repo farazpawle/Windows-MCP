@@ -34,7 +34,7 @@ These have no focus problems and are the most reliable way to act on the PC.
 - `delete`: a non-empty folder is refused unless `recursive=true`.
 - `list`: `pattern` filter. `search`: glob; without `recursive=true` it only looks in the top
   folder ("No matches" even when subfolders have hits).
-- `info`: size, dates, counts. A folder's "Contents" counts only its top level, while its
+- `info`: size, dates, counts. A folder's "Contents (top level only)" counts only its top level, while its
   "Size" is the total of every file inside, subfolders included, counted up to 10,000 files; a "Size note" line says when it stopped
   early (C:\Windows: 1.4 s).
 

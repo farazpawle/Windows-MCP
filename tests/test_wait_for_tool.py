@@ -238,6 +238,18 @@ def test_wait_for_active_window_matches_by_window_name() -> None:
     assert "active window matched" in result
 
 
+def test_wait_for_writes_window_titles_as_plain_text() -> None:
+    # Round-4 R4-15: Edge's title holds a zero-width space, which came back as "​".
+    title = "New tab - Microsoft​ Edge"
+    tools = _register_tools(FakeDesktop([_state(active_window_name=title)]))
+
+    result = asyncio.run(
+        tools["WaitFor"](condition="active_window", text="edge", timeout=1, interval=0.001)
+    )
+
+    assert f"active window matched '{title}'" in result and "\\u200b" not in result
+
+
 def test_wait_for_focused_element_matches_text_and_window() -> None:
     desktop = FakeDesktop(
         [

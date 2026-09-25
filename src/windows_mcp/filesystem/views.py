@@ -38,7 +38,11 @@ class File:
         ]
 
         if self.contents_files is not None and self.contents_dirs is not None:
-            lines.append(f"Contents: {self.contents_files} files, {self.contents_dirs} directories")
+            files, dirs = self.contents_files, self.contents_dirs
+            lines.append(
+                f"Contents (top level only): {files} file{'' if files == 1 else 's'}, "
+                f"{dirs} director{'y' if dirs == 1 else 'ies'}"
+            )
 
         if self.extension is not None:
             lines.append(f"Extension: {self.extension}")

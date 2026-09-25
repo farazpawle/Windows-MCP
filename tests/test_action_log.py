@@ -41,6 +41,18 @@ def test_secret_shapes_are_hidden(text, kept, gone):
 
 
 @pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        ('pwsh -Command "Connect -Token abc123"', 'pwsh -Command "Connect -Token [hidden]"'),
+        ("run 'set password=s3cret' now", "run 'set password=[hidden]' now"),
+    ],
+)
+def test_a_closing_quote_after_a_hidden_value_is_kept(text, expected):
+    # Round-4 R4-15: an unquoted value took the quote closing the command around it.
+    assert action_log.redact(text) == expected
+
+
+@pytest.mark.parametrize(
     "text",
     [
         r"HKLM:\SOFTWARE\Classes\CLSID\{0002DF01-0000-0000-C000-000000000046}",

@@ -352,7 +352,7 @@ def _matches_wait_condition(
             hint = _off_screen_hint(desktop_state, handles, desktop)
             return True, f"text {text!r} appeared{hint}"
         active_name = active_window.name if active_window else ""
-        return False, f"text {text!r} was absent; the active window was {active_name!r}"
+        return False, f"text {text!r} was absent; the active window was '{active_name}'"
 
     if condition == "active_window":
         expected = window_name or text
@@ -360,20 +360,20 @@ def _matches_wait_condition(
         active_name = active_window.name if active_window else ""
         if _text_matches(active_name, expected):
             hint = _off_screen_hint(desktop_state, [active_window.handle], desktop)
-            return True, f"active window matched {active_name!r}{hint}"
-        return False, f"active window was {active_name!r}"
+            return True, f"active window matched '{active_name}'{hint}"
+        return False, f"active window was '{active_name}'"
 
     if condition in {"element_exists", "element_enabled"}:
         for node in _iter_nodes(desktop_state):
             if _node_matches(node, text, window_name):
-                return True, f"element matched {getattr(node, 'name', '')!r}"
+                return True, f"element matched '{getattr(node, 'name', '')}'"
         return False, "matching element was absent"
 
     if condition == "focused_element":
         for node in _iter_nodes(desktop_state):
             metadata = getattr(node, "metadata", {})
             if metadata.get("has_focused") and _node_matches(node, text, window_name):
-                return True, f"focused element matched {getattr(node, 'name', '')!r}"
+                return True, f"focused element matched '{getattr(node, 'name', '')}'"
         return False, "matching focused element was absent"
 
     raise ValueError(f"Unsupported WaitFor condition: {condition}")

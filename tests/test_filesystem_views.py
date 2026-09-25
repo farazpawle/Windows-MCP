@@ -67,7 +67,13 @@ class TestFile:
     def test_to_string_with_contents(self):
         f = self._make_file(contents_files=10, contents_dirs=3)
         result = f.to_string()
-        assert "Contents: 10 files, 3 directories" in result
+        assert "Contents (top level only): 10 files, 3 directories" in result
+
+    def test_contents_counts_one_in_the_singular(self):
+        # Round-4 R4-15: "1 files" read wrong, and the count covers the top level only
+        # while Size includes subfolders.
+        f = self._make_file(contents_files=1, contents_dirs=1)
+        assert "Contents (top level only): 1 file, 1 directory" in f.to_string()
 
     def test_to_string_without_contents(self):
         f = self._make_file()

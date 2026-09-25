@@ -261,7 +261,7 @@ class TestGetFileInfo:
         (d / "child.txt").write_text("x", encoding="utf-8")
         result = get_file_info(str(d))
         assert "Type: Directory" in result
-        assert "1 files" in result
+        assert "Contents (top level only): 1 file, 0 directories" in result
 
     def test_not_found(self, tmp_path):
         result = get_file_info(str(tmp_path / "nope"))

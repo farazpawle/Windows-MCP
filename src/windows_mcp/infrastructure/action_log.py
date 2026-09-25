@@ -37,7 +37,8 @@ _TOOL_NAMES = {
 _SECRET_NAMES = ("password", "passwd", "secret", "token", "api_key", "apikey", "auth", "credential")
 
 # Secret shapes inside any text (arguments and replies).
-_VALUE = r"(\"[^\"]*\"|'[^']*'|[^\s,;}]+)"
+# An unquoted value stops before a quote that ends it: that quote closes the command around it.
+_VALUE = r"(\"[^\"]*\"|'[^']*'|[^\s,;}]+?(?=[\"']?(?:[\s,;}]|$)))"
 _PATTERNS = [
     # PowerShell parameters: -Password hunter2
     (
