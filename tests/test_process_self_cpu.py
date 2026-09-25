@@ -32,7 +32,8 @@ def test_own_process_is_marked_and_not_ranked_by_its_own_sample(monkeypatch):
     assert first_row.split()[0] == "4242"
     own = next(line for line in lines if line.split()[0] == str(me))
     assert "(this server)" in own
-    assert "97" not in own
+    # The CPU column itself: the real PID in the row can contain "97" (a flaky failure).
+    assert own.split("(this server)")[1].split()[0] == "-"
 
 
 def test_cpu_is_sampled_over_a_fresh_short_window(monkeypatch):
