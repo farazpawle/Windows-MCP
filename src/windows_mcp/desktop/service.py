@@ -17,7 +17,13 @@ from windows_mcp.vdm.core import (
     is_window_on_current_desktop,
 )
 from windows_mcp.desktop.views import DesktopState, Window, Browser, Status, Size, Display
-from windows_mcp.tree.views import BoundingBox, TreeElementNode, TreeState, SemanticNode
+from windows_mcp.tree.views import (
+    BoundingBox,
+    ScrollElementNode,
+    TreeElementNode,
+    TreeState,
+    SemanticNode,
+)
 from PIL import ImageFont, ImageDraw, Image
 from windows_mcp.tree.service import Tree
 from windows_mcp.desktop import screenshot as screenshot_capture
@@ -1033,25 +1039,25 @@ class Desktop:
     def get_coordinates_from_label(self, label: int) -> tuple[int, int]:
         return self.get_coordinates_from_labels([label])[0]
 
-    def get_coordinates_from_labels(self, labels: list[int]) -> list[tuple[int, int]]:
-        """Resolve multiple UI element labels to screen coordinates in bulk."""
+    def label_node(self, label: int) -> TreeElementNode | ScrollElementNode:
+        """The last Snapshot's element for *label* (interactive first, then scrollable)."""
         tree_state = self._label_tree()
         interactive_nodes = tree_state.interactive_nodes
         scrollable_nodes = tree_state.scrollable_nodes
-        interactive_len = len(interactive_nodes)
+        if label < 0:  # a negative index would silently pick from the end of the list
+            raise IndexError(f"Label {label} out of range")
+        if label < len(interactive_nodes):
+            return interactive_nodes[label]
+        scroll_idx = label - len(interactive_nodes)
+        if scroll_idx < len(scrollable_nodes):
+            return scrollable_nodes[scroll_idx]
+        raise IndexError(f"Label {label} out of range")
 
+    def get_coordinates_from_labels(self, labels: list[int]) -> list[tuple[int, int]]:
+        """Resolve multiple UI element labels to screen coordinates in bulk."""
         results = []
         for label in labels:
-            if label < 0:  # a negative index would silently pick from the end of the list
-                raise IndexError(f"Label {label} out of range")
-            if label < interactive_len:
-                element_node = interactive_nodes[label]
-            else:
-                scroll_idx = label - interactive_len
-                if scroll_idx < len(scrollable_nodes):
-                    element_node = scrollable_nodes[scroll_idx]
-                else:
-                    raise IndexError(f"Label {label} out of range")
+            element_node = self.label_node(label)
             x, y = element_node.center.x, element_node.center.y
             box = element_node.bounding_box
             window = element_node.window_name

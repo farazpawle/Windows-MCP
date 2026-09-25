@@ -106,11 +106,35 @@ def test_negative_label_is_refused_by_both_lookups(label):
         desktop.get_coordinates_from_labels([0, label])
 
 
-def test_click_with_negative_label_sends_no_input():
+def _label_desktop(name: str, x: int) -> MagicMock:
     desktop = MagicMock()
-    desktop.label_tree_state = tree("ClickMe", 203)
-    for method in ("_label_tree", "get_coordinates_from_label", "get_coordinates_from_labels"):
+    desktop.label_tree_state = tree(name, x)
+    desktop.release_held_button.return_value = False
+    for method in (
+        "_label_tree",
+        "label_node",
+        "get_coordinates_from_label",
+        "get_coordinates_from_labels",
+    ):
         setattr(desktop, method, getattr(Desktop, method).__get__(desktop))
+    return desktop
+
+
+def test_label_click_reply_names_the_labelled_element(monkeypatch):
+    # R4-8: the point read named the document under Notepad's Find panel.
+    monkeypatch.setattr(input_tools, "describe_point", lambda *a: 'document "Text editor" in "X"')
+    monkeypatch.setattr(input_tools, "to_model", lambda desktop, loc: loc)
+    mcp = FakeMCP()
+    input_tools.register(
+        mcp, get_desktop=lambda: _label_desktop("Replace all", 203), get_analytics=lambda: None
+    )
+
+    reply = asyncio.run(mcp.tools["Click"](label=0))
+    assert 'clicked button "Replace all" in "Harness" at (203,5)' in reply
+
+
+def test_click_with_negative_label_sends_no_input():
+    desktop = _label_desktop("ClickMe", 203)
     mcp = FakeMCP()
     input_tools.register(mcp, get_desktop=lambda: desktop, get_analytics=lambda: None)
 

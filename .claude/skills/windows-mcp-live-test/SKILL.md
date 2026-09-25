@@ -142,6 +142,9 @@ new window's handle), App `switch handle=` (a launched window is not always put 
 `guarded_call` then aborts), Type one letter, Ctrl+W, then press the dialog's "Don't save"
 through UIA (`FindFirst` by name, `GetInvokePattern().Invoke()`): only the test tab is lost.
 The question is a UIA element inside the window (`IsDialog`), not a window of its own.
+Ctrl+H/Ctrl+F do nothing in an empty tab (Find and Replace needs text): click the page, Type
+one letter, then Ctrl+H. After typing, the title is `*x - Notepad`, no longer "Untitled", so
+match the tab by handle, not by that title.
 
 ## 3. Run it
 

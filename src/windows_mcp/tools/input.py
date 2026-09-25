@@ -16,7 +16,13 @@ from windows_mcp.tools._new_windows import note_new_windows
 from windows_mcp.tools._screen_wait import SCREEN_CONDITIONS, screen_check
 from windows_mcp.tools.find_text import screen_rect
 from windows_mcp.tools._coords import to_model, to_screen
-from windows_mcp.tree.utils import describe_point, find_element, focused_value, scroll_position
+from windows_mcp.tree.utils import (
+    describe_point,
+    find_element,
+    focused_value,
+    name_element,
+    scroll_position,
+)
 
 
 WaitForCondition = Literal[
@@ -488,12 +494,18 @@ def register(
             raise ValueError("window only goes with element (the window to search).")
         desktop = get_desktop()
         loc = to_screen(desktop, _as_loc(loc))
+        # A found element is named as found: an in-window flyout (Notepad's Find panel)
+        # does not hit-test, so a read at the point names what is under it (R4-8).
+        target = None
         if element is not None:
             target_window, _ = desktop.pick_window(window, None)
-            _, _, fx, fy = find_element(target_window.handle, target_window.name, element)
+            kind, name, fx, fy = find_element(target_window.handle, target_window.name, element)
             loc = [fx, fy]
+            target = name_element(kind, name, target_window.name)
         elif label is not None:
             loc = _resolve_label(desktop, label)
+            node = desktop.label_node(label)
+            target = name_element(node.control_type.lower(), node.name, node.window_name)
         elif loc is None:
             loc = list(desktop.get_cursor_location())
         if len(loc) != 2:
@@ -502,7 +514,12 @@ def register(
         # clicks=0 only moves the pointer, which is how a held drag is steered.
         released = release_held_button(desktop) if clicks else ""
         # Read before clicking: the click may close or replace what it hits.
-        target = _point_description(loc) if clicks else ""
+        if not clicks:
+            target = ""
+        elif target is None:
+            target = _point_description(loc)
+        else:
+            target = f"{target} "
         desktop.click(loc=loc, button=button, clicks=clicks, modifiers=modifiers)
         if clicks == 0:
             return f"Moved to ({x},{y}) (hover)."

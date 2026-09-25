@@ -44,6 +44,7 @@ def _desktop(scale=0.5):
     desktop.coordinate_scale = scale
     desktop.label_tree_state = TreeState(interactive_nodes=[_node(400, 300)])
     desktop.get_coordinates_from_label.return_value = (400, 300)
+    desktop.label_node.return_value = _node(400, 300)
     desktop.get_coordinates_from_labels.return_value = [(400, 300)]
     desktop.get_cursor_location.return_value = (600, 200)
     desktop.drag.return_value = {"start": (20, 40), "duration": None}

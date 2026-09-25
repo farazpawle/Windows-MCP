@@ -11,9 +11,6 @@ Plan/completed/windows-mcp-open-issues-round3.md); the fix removes it.
 - **Snapshot lists elements hidden under an in-window panel** (R4-13), such as words under
   Notepad's open Find and Replace panel. Close the panel, or check with a Screenshot, before
   clicking a label there.
-- **Click can name the element under an in-window flyout** (R4-8): a click on Notepad's
-  "Replace all" was reported as `document "Text editor"`. The click itself lands at the
-  point; take a Screenshot to see what it did.
 - **FindText on the full screen can join lines of neighbouring windows** (R4-9) (".venv North
   460 units"). Give a `region`.
 - **PowerShell timeout replies ~2.4 s late** (R4-10); the command is still stopped.

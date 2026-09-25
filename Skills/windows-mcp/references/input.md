@@ -110,8 +110,11 @@ Coordinates · What the replies report · Shrunk screenshots
 
 ## What the replies report
 
-- Click names the element it hit, read just before clicking
-  (`clicked button "Save" in "Notepad" at (…)`).
+- Click names the element it hit (`clicked button "Save" in "Notepad" at (…)`): with
+  `element=` or `label=`, the element found; with `loc`, the one read at the point just before
+  clicking. A `loc` click on a panel drawn inside an app's window (Notepad's Find and Replace)
+  can name the element under the panel (`document "Text editor"`); click such buttons with
+  `element=`. A title-less pop-up is named after the window that owns it.
 - Type adds what the focused field now holds (`The field (edit "Search") now reads "…"`);
   password boxes are never shown.
 - Scroll adds the scroll area's position (`list "Files" is now at 45% (was 30%)`) or says it

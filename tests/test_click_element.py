@@ -215,6 +215,16 @@ def test_click_element_clicks_the_found_point(monkeypatch):
     assert "at (120,210)" in reply
 
 
+def test_click_element_reply_names_the_matched_element(monkeypatch):
+    # R4-8: Notepad's Find panel does not hit-test, so the point read named the document.
+    monkeypatch.setattr(input_tools, "find_element", lambda *a: ("button", "Replace all", 1, 2))
+    monkeypatch.setattr(
+        input_tools, "describe_point", lambda *a: 'document "Text editor" in "Notepad"'
+    )
+    reply = _click(_desktop(), element="Replace all")
+    assert 'clicked button "Replace all" in "Notepad" at (1,2)' in reply
+
+
 def test_click_element_defaults_to_the_front_window(monkeypatch):
     monkeypatch.setattr(input_tools, "find_element", lambda *a: ("button", "OK", 1, 2))
     desktop = _desktop()

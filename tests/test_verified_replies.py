@@ -75,6 +75,15 @@ def test_an_unnamed_field_is_not_renamed_after_its_window(screen):
     assert utils.describe_point(1, 2) == 'edit in "Notepad"'
 
 
+def test_an_untitled_popup_is_named_after_its_owner(screen, monkeypatch):
+    # R4-8: Edge's sign-in notice is a title-less window owned by the Edge window.
+    screen.control = _control("Got it")
+    titles = {5: "", 9: "New tab - Edge"}
+    monkeypatch.setattr(utils.win32gui, "GetWindowText", lambda h: titles[h])
+    monkeypatch.setattr(utils.win32gui, "GetAncestor", lambda h, flag: 9)
+    assert utils.describe_point(1, 2) == 'button "Got it" in "New tab - Edge"'
+
+
 def test_nothing_at_the_point(screen):
     screen.window = 0
     assert utils.describe_point(1, 2) == ""

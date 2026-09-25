@@ -192,6 +192,18 @@ def _described(control) -> str:
     return f'{control.LocalizedControlType} "{name}"' if name else control.LocalizedControlType
 
 
+def name_element(kind: str, name: str, window: str) -> str:
+    """'button "Save" in "Notepad"' for an element already found by name or label."""
+    name = _clean(name)
+    return f'{kind} "{name}" in "{_clean(window)}"' if name else f'{kind} in "{_clean(window)}"'
+
+
+def _window_title(handle: int) -> str:
+    """The window's title, or its owner's for a title-less pop-up (Edge's sign-in notice)."""
+    title = win32gui.GetWindowText(handle)
+    return title or win32gui.GetWindowText(win32gui.GetAncestor(handle, win32con.GA_ROOTOWNER))
+
+
 # Nameless parts a click lands on inside the real target (the text inside a button).
 _INNER_PARTS = {"TextControl", "ImageControl"}
 
@@ -201,7 +213,7 @@ def describe_point(x: int, y: int, max_depth: int = 3) -> str:
     handle = top_level_window_at(x, y)
     if not handle:
         return ""
-    window = f'in "{_clean(win32gui.GetWindowText(handle))}"'
+    window = f'in "{_clean(_window_title(handle))}"'
     if not _readable_window(handle):
         return f"{window} (not read)"
     try:
