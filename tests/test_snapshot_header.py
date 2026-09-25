@@ -119,6 +119,28 @@ def test_window_box_is_the_visible_frame(desktop):
     assert (box.width, box.height) == (1920, 1032)
 
 
+@pytest.mark.parametrize(
+    ("maximized", "expected"), [(True, (0, 0, 1920, 1032)), (False, (-8, -8, 1936, 1048))]
+)
+def test_maximized_window_box_is_clipped_to_the_work_area(desktop, maximized, expected):
+    # Round-4 R4-12: FactsERP's DWM frame is its outer rect, hidden borders included.
+    control = MagicMock(NativeWindowHandle=7, BoundingRectangle=Rect(-8, -8, 1928, 1040))
+    with (
+        patch(
+            "windows_mcp.desktop.service.uia.DwmGetWindowExtendFrameBounds",
+            return_value=Rect(-8, -8, 1928, 1040),
+        ),
+        patch("windows_mcp.desktop.service.uia.IsZoomed", return_value=maximized),
+        patch("windows_mcp.desktop.service.win32api.MonitorFromWindow", return_value=1),
+        patch(
+            "windows_mcp.desktop.service.win32api.GetMonitorInfo",
+            return_value={"Work": (0, 0, 1920, 1032), "Monitor": (0, 0, 1920, 1080)},
+        ),
+    ):
+        box = desktop._window_box(control)
+    assert (box.left, box.top, box.width, box.height) == expected
+
+
 def test_window_box_falls_back_to_outer_rect(desktop):
     control = MagicMock(NativeWindowHandle=7, BoundingRectangle=Rect(10, 20, 110, 220))
     with patch("windows_mcp.desktop.service.uia.DwmGetWindowExtendFrameBounds", return_value=None):

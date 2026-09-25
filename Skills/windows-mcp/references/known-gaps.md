@@ -9,5 +9,3 @@ Plan/completed/windows-mcp-open-issues-round3.md); the fix removes it.
 - **Snapshot lists elements hidden under an in-window panel** (R4-13), such as words under
   Notepad's open Find and Replace panel. Close the panel, or check with a Screenshot, before
   clicking a label there.
-- **App `list` shows a few maximized windows with their outer frame** (R4-12), at (-8,-8)
-  and 16 px larger; the visible window is at (0,0).

@@ -41,6 +41,7 @@ from fuzzywuzzy import process
 from time import sleep, time, perf_counter
 from psutil import Process
 import math
+import win32api
 import win32process
 import win32gui
 import win32con
@@ -1662,8 +1663,24 @@ class Desktop:
     def _window_box(self, control: uia.Control) -> BoundingBox:
         # The visible frame: the outer rect adds invisible resize borders (7 px a side,
         # 8 when maximised), so the listed size would not match what the image shows.
-        frame = uia.DwmGetWindowExtendFrameBounds(control.NativeWindowHandle)
-        return self._rect_to_bounding_box(frame or control.BoundingRectangle)
+        handle = control.NativeWindowHandle
+        box = self._rect_to_bounding_box(
+            uia.DwmGetWindowExtendFrameBounds(handle) or control.BoundingRectangle
+        )
+        if uia.IsZoomed(handle):
+            # Some apps' DWM frame is the outer rect (FactsERP: (-8,-8) 1936x1048); a
+            # maximised window shows only its monitor's work area (round-4 R4-12).
+            monitor = win32api.MonitorFromWindow(handle, win32con.MONITOR_DEFAULTTONEAREST)
+            left, top, right, bottom = win32api.GetMonitorInfo(monitor)["Work"]
+            box = self._rect_to_bounding_box(
+                uia.Rect(
+                    max(box.left, left),
+                    max(box.top, top),
+                    min(box.right, right),
+                    min(box.bottom, bottom),
+                )
+            )
+        return box
 
     def get_screen_size(self) -> Size:
         width, height = uia.GetVirtualScreenSize()

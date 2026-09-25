@@ -61,8 +61,8 @@
   or says it is still open (e.g. asking to save).
 - `list`: one line per window: `handle=... pid=... program State at (left,top) size WxH "title"`,
   the visible window in screen pixels (the units `resize` takes). Lines are not in
-  front-to-back order and the front window is not marked. A few apps' maximized windows show
-  their outer frame, at (-8,-8) and 16 px larger (known-gaps.md).
+  front-to-back order and the front window is not marked. A maximized window is its screen's
+  work area (taskbar excluded), e.g. at (0,0) size 1920x1032.
 - `move` with `display=N` (numbering as in DisplayInventory): keeps the offset but moves the
   window up/left to stay inside the work area (taskbar excluded), shrinks it to fit, and
   re-maximizes a maximized window; a minimized one is refused. Works across screens with
