@@ -90,7 +90,7 @@ System tools have no focus problems: prefer them over the UI when both can do th
   Double click ~0.5 s, Click `element=` ~0.3 s, Move drag ~1.3 s.
 - Type without `loc` ~0.1 s for short text, under 1 s for 600 characters with
   line breaks; MultiEdit ~0.45 s per field;
-  Process list ~0.9-1.1 s (~2.3-2.8 s sorted by CPU) with ~620 processes.
+  Process list under 0.05 s (~0.5 s sorted by CPU).
 
 ## References
 

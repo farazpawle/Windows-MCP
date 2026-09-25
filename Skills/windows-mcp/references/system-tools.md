@@ -64,9 +64,9 @@ These have no focus problems and are the most reliable way to act on the PC.
 
 - `list`: `name` is a plain substring filter ("pwsh" → only pwsh.exe); `sort_by` memory | cpu
   | name; `limit` 1 or more. The CPU% column (a share of the whole machine) appears only with
-  `sort_by="cpu"`, which takes ~2.3-2.8 s with ~620 processes (memory and name sorts
-  ~0.85-1.1 s; both grow with the process count). The CPU list starts with "System Idle
-  Process" (PID 0), which is idle time, not load. `details=true` adds
+  `sort_by="cpu"`, which takes ~0.5 s (a half-second sample; memory and name sorts under
+  0.05 s). The CPU list leaves out "System Idle Process" (PID 0: idle time, not load); a
+  memory or name list still shows it. `details=true` adds
   Started and Command line (secrets shown as [hidden]; `-` when Windows denies it): use it to
   see which program is behind a process, e.g. a hidden powershell.exe running a tray script.
 - `kill`: prefer `pid`; give `pid` **or** `name`, not both. By `name` it is an exact match

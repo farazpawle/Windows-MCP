@@ -8,6 +8,7 @@ from fastmcp.exceptions import ToolError
 
 from windows_mcp import process, registry
 from windows_mcp.filesystem.service import write_file
+from windows_mcp.process.snapshot import ProcCounters
 from windows_mcp.tools._args import as_bool
 from windows_mcp.tools import filesystem as filesystem_tool_module
 
@@ -109,8 +110,11 @@ def _fake_procs(names):
 
 class TestProcessNames:
     def test_list_filter_is_substring_not_fuzzy(self):
-        procs = _fake_procs(["pwsh.exe", "ShellExperienceHost.exe", "notepad.exe"])
-        with patch("psutil.process_iter", return_value=procs):
+        counters = {
+            pid: ProcCounters(name, 0, 0, None)
+            for pid, name in enumerate(["pwsh.exe", "ShellExperienceHost.exe", "notepad.exe"])
+        }
+        with patch("windows_mcp.process.service.read_counters", return_value=counters):
             result = process.list_processes(name="pwsh")
         assert "pwsh.exe" in result
         assert "ShellExperienceHost" not in result

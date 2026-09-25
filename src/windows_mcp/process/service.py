@@ -1,3 +1,4 @@
+import logging
 import os
 import subprocess
 import time
@@ -5,14 +6,47 @@ from datetime import datetime
 from typing import Literal
 
 from windows_mcp.infrastructure.action_log import redact
+from windows_mcp.process.snapshot import ProcCounters, read_counters
 
 
 __all__ = ["list_processes", "kill_process"]
+
+logger = logging.getLogger(__name__)
 
 
 def _strip_exe(name: str) -> str:
     name = name.strip().casefold()
     return name.removesuffix(".exe")
+
+
+def _counters() -> dict[int, ProcCounters]:
+    """Every process's counters: one system read, or psutil per process if that fails."""
+    try:
+        return read_counters()
+    except OSError as err:
+        import psutil
+
+        logger.warning("Process snapshot failed, reading each process instead: %s", err)
+        counters = {}
+        for p in psutil.process_iter(["pid", "name", "memory_info", "cpu_times", "create_time"]):
+            info = p.info
+            times = info["cpu_times"]
+            counters[info["pid"]] = ProcCounters(
+                name=info["name"] or "",
+                working_set=info["memory_info"].rss if info["memory_info"] else 0,
+                cpu_time=int((times.user + times.system) * 1e7) if times else 0,
+                create_time=info["create_time"],
+            )
+        return counters
+
+
+def _cmdline(pid: int) -> list[str] | None:
+    import psutil
+
+    try:
+        return psutil.Process(pid).cmdline()
+    except psutil.Error, OSError:
+        return None
 
 
 def list_processes(
@@ -28,40 +62,38 @@ def list_processes(
     # The CPU sample costs a 0.5 s wait, so only a CPU sort pays for it (round-3 R3-I3);
     # other sorts leave the column out rather than show made-up zeros.
     with_cpu = sort_by == "cpu"
-    attrs = ["pid", "name", "memory_info"]
+    counters = _counters()
+    cpu: dict[int, float] = {}
     if with_cpu:
-        # cpu_percent compares with the previous reading of the same (cached) process:
-        # the first ever is 0, later ones average over the gap since the last list.
-        # Prime every process, then read over a fresh half second.
-        for _ in psutil.process_iter(["cpu_percent"]):
-            pass
+        # CPU = CPU time used over a fresh half second, as a share of the whole machine
+        # like Task Manager (per core, idle read ~1900% on a 20-thread PC).
+        start = time.perf_counter()
         time.sleep(0.5)
-        attrs.append("cpu_percent")
-    if details:
-        attrs += ["create_time", "cmdline"]
-    # psutil counts per core (100% = one core); show a share of the whole machine
-    # like Task Manager, or idle reads ~1900% on a 20-thread PC.
-    cores = psutil.cpu_count() or 1
+        later = _counters()
+        window = (time.perf_counter() - start) * 1e7 * (psutil.cpu_count() or 1)
+        cpu = {
+            pid: max(c.cpu_time - counters[pid].cpu_time, 0) / window * 100
+            for pid, c in later.items()
+            if pid in counters
+        }
+        counters = later
     procs = []
-    for p in psutil.process_iter(attrs):
-        try:
-            info = p.info
-            mem_mb = info["memory_info"].rss / (1024 * 1024) if info["memory_info"] else 0
-            is_self = info["pid"] == own_pid
-            procs.append(
-                {
-                    "pid": info["pid"],
-                    "name": f"{info['name'] or 'Unknown'}{' (this server)' if is_self else ''}",
-                    # The server's own sample covers the moment it builds this list
-                    # (~96%), so it looked like a runaway process an agent might kill.
-                    "cpu": None if is_self else (info.get("cpu_percent") or 0) / cores,
-                    "mem_mb": round(mem_mb, 1),
-                    "started": info.get("create_time"),
-                    "cmdline": info.get("cmdline"),
-                }
-            )
-        except psutil.NoSuchProcess, psutil.AccessDenied:
+    for pid, c in counters.items():
+        # Idle time is not a process (round-4 R4-I1): it topped the CPU list at ~96%.
+        if with_cpu and pid == 0:
             continue
+        is_self = pid == own_pid
+        procs.append(
+            {
+                "pid": pid,
+                "name": f"{c.name or 'Unknown'}{' (this server)' if is_self else ''}",
+                # The server's own sample covers the moment it builds this list
+                # (~96%), so it looked like a runaway process an agent might kill.
+                "cpu": None if is_self else cpu.get(pid, 0.0),
+                "mem_mb": round(c.working_set / (1024 * 1024), 1),
+                "started": c.create_time,
+            }
+        )
     if name:
         # Plain substring match: the old fuzzy score let "pwsh" match ShellExperienceHost.
         needle = name.casefold()
@@ -89,7 +121,8 @@ def list_processes(
             row.append(
                 datetime.fromtimestamp(started).strftime("%Y-%m-%d %H:%M:%S") if started else "-"
             )
-            row.append(redact(subprocess.list2cmdline(p["cmdline"])) if p["cmdline"] else "-")
+            cmdline = _cmdline(p["pid"])
+            row.append(redact(subprocess.list2cmdline(cmdline)) if cmdline else "-")
         headers += ["Started", "Command line"]
     table = tabulate(rows, headers=headers, tablefmt="simple")
     return f"Processes ({len(procs)} shown):\n{table}"
