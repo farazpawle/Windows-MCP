@@ -9,6 +9,7 @@ itself and on the taskkill fallbacks used by the timeout path.
 
 import subprocess
 import sys
+import time
 
 import pytest
 
@@ -72,8 +73,7 @@ class TestCreationFlags:
 
         monkeypatch.setattr(subprocess, "run", spy)
 
-        # Sleep well past both the timeout and the grace period, and ignore
-        # CTRL_BREAK, so the graceful stop fails and taskkill is reached.
+        # Sleep well past the timeout, so taskkill is reached.
         with pytest.raises(subprocess.TimeoutExpired):
             run_with_graceful_timeout(
                 ["cmd", "/c", "ping 127.0.0.1 -n 30 > nul"],
@@ -89,7 +89,7 @@ class TestCreationFlags:
 
 
 class TestBehaviorUnchanged:
-    """The flag must not disturb capture, exit codes, or the graceful-stop path."""
+    """The flag must not disturb capture, exit codes, or the timeout path."""
 
     def test_exit_code_is_propagated(self):
         result = run_with_graceful_timeout(["cmd", "/c", "exit 3"], capture_output=True)
@@ -110,6 +110,16 @@ class TestBehaviorUnchanged:
     def test_check_raises_on_failure(self):
         with pytest.raises(subprocess.CalledProcessError):
             run_with_graceful_timeout(["cmd", "/c", "exit 1"], capture_output=True, check=True)
+
+    def test_timeout_is_prompt(self):
+        # Round-4 R4-10: a CTRL_BREAK cannot reach a CREATE_NO_WINDOW child, so waiting
+        # for it made every timeout reply 2 s late (timeout=1 took 3.3 s).
+        start = time.perf_counter()
+        with pytest.raises(subprocess.TimeoutExpired):
+            run_with_graceful_timeout(
+                ["cmd", "/c", "ping 127.0.0.1 -n 30 > nul"], capture_output=True, timeout=0.5
+            )
+        assert time.perf_counter() - start < 1.0
 
     def test_timeout_still_raises(self):
         with pytest.raises(subprocess.TimeoutExpired):

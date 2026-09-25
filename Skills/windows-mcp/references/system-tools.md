@@ -16,8 +16,9 @@ These have no focus problems and are the most reliable way to act on the PC.
   whose non-zero codes mean success pass `success_exit_codes`: `[0, 1]` for findstr
   (1 = no match), `[0,1,2,3,4,5,6,7]` for robocopy.
 - On timeout it is a tool error "Command execution timed out after N s" with
-  `Status Code: -1`, and the command really is stopped. The reply comes ~2.4 s after the
-  timeout (known-gaps.md). Raise `timeout` for long jobs; it must be at least 1.
+  `Status Code: -1`, and the command really is stopped, with anything it started; what it
+  printed before is kept. The reply comes ~0.25 s after the timeout. Raise `timeout` for long
+  jobs; it must be at least 1.
 - Web requests work (Invoke-WebRequest uses the Windows certificate store): the fallback when
   Scrape fails.
 - Notification AppIDs: `Get-StartApps`.
