@@ -1,7 +1,7 @@
 ---
 Title: Windows-MCP open issues backlog - round 4 (2026-09-24)
 Description: Findings of the round-4 real-work scenario test (all 21 tools driven through the connected server after the round-3 backlog, timed per call from Claude Code's MCP log), turned into a task file. Part A Bugs - 1 High (multi-line Type sends one key every 0.04 s: 622 characters took 26 s), 5 Medium (App launch names an older window; Snapshot word boxes include trailing spaces so word labels miss; WaitFor text_exists misses text inside documents; dialogs drawn inside an app's window are not noted; caret start/end work per line), 9 Low. Part B 7 improvements (Process list speed and output size, Snapshot word noise, fixed costs, reply boilerplate, list order, resize hint). Part C 2 new abilities (whole-field caret, FindText per window). Part D 31 guide, tool-description and test-skill corrections. Evidence is in docs/testing/windows-mcp-tool-test-report.md (Round 4). Status 2026-09-24: R4-1 fixed (622 multi-line characters in 0.87 s), R4-2 fixed (launch names the new window and its handle), R4-3 fixed (word boxes end at the word) R4-4 fixed (text_exists finds a phrase in a document) R4-5 fixed (in-window dialogs of XAML apps are noted) R4-6 fixed (caret start/end described as current line) and R4-7 fixed (Type/Scroll read-backs wait for the app), with D.3/D.4/D.5/D.9/D.10/D.12/D.20/D.22/D.27; all of Part D done (2026-09-25); R4-8 fixed (element=/label= clicks name the element found; 2026-09-25), guide ZIP rebuilt after it; R4-9 fixed (FindText keeps side-by-side windows apart); R4-10 fixed (timeouts reply ~0.25 s after the limit); R4-11 fixed (fast capture retried after a lost duplication; fallback says why); R4-12 fixed (maximized windows listed as their work area); next the Low bugs R4-13 to R4-15 and Parts B and C.
-Total Tasks: 98
+Total Tasks: 102
 ---
 # Windows-MCP open issues - round 4
 
@@ -98,6 +98,7 @@ Evidence for every item: `docs/testing/windows-mcp-tool-test-report.md`, section
   - [ ] a. Unit: an element whose centre hit-tests to another element of the same window that is not its ancestor or descendant is left out.
   - [ ] b. Apply the check to leaf elements only (cost).
   - **Verify:** Live - Snapshot with the Find panel open lists no word under the panel; Snapshot time stays under 0.35 s.
+  - Finding 2026-09-25 (probe, new Notepad window): a UIA hit test cannot do (a) - the panel does not answer ControlFromPoint (R4-8), and words have no UIA element. But the panel is its own child HWND: `Microsoft.UI.Content.DesktopChildSiteBridge` (275,179)-(943,295) > InputSiteWindowClass > Popup > LandmarkTarget > ScrollViewer > the buttons, layered over the document's `NotepadTextBox` child HWND (110,179)-(1108,673) (document `RichEditD2DPT`). So the check can be win32 `WindowFromPoint(word centre)`: keep the word only when the child window hit is the document's host window or inside it. No COM call, microseconds per word.
 
 - [ ] R4-14 **Low - uv warning on every server start** ("The `extra-build-dependencies` option is experimental ...", from `[tool.uv.extra-build-dependencies]` in `pyproject.toml`).
   - [ ] a. Check whether `pyperclip` still needs setuptools at build time (`uv lock --offline`, fresh venv).
@@ -112,6 +113,12 @@ Evidence for every item: `docs/testing/windows-mcp-tool-test-report.md`, section
   - [ ] e. Unit: folder info says "1 file" and states that Contents counts the top level.
   - [ ] f. Fix the Contents wording.
   - **Verify:** Unit only.
+
+- [ ] R4-16 **High (new, 2026-09-25) - long multi-line Type into Windows 11 Notepad came out garbled.** Found while probing R4-13 over Remote Desktop: Type (no loc, focused document) of 15 lines x 75 characters (1,130 characters) left 830 characters: "Line 1 alpha bravo Charlie jjjjjjjj...juliet oooooooo..." (a letter repeated many times, text lost, "charlie" capitalised). R4-1's 622 characters were exact in the WinForms harness text box, never checked in Notepad.
+  - [ ] a. Reproduce: the same text into the harness text box and into a new Notepad window, once each; note which garbles.
+  - [ ] b. Find the cause from evidence (input timing per run, Notepad's own features such as autocorrect or spell check, the Remote Desktop session) before changing anything.
+  - [ ] c. Unit test for the measured cause, then fix.
+  - **Verify:** Live - the 1,130-character text typed into a new Notepad window reads back exactly (twice), and the 622-character harness case still takes under 1 s.
 
 # Part B - Improvements
 
