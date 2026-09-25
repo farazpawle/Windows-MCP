@@ -230,8 +230,23 @@ def describe_point(x: int, y: int, max_depth: int = 3) -> str:
         return window
 
 
-def focused_value() -> str:
-    """' The field (edit "Search") now reads "hi".' for the focused field, else ""."""
+TYPED_TEXT_MISSING = (
+    " Warning: the field does not contain the typed text exactly; the app may have changed it"
+    " (auto-correct, formatting) or dropped keys. Check it before relying on it."
+)
+
+
+def _lines(text: str) -> str:
+    return text.replace("\r\n", "\n").replace("\r", "\n")
+
+
+def focused_value(typed: str | None = None) -> str:
+    """' The field (edit "Search") now reads "hi".' for the focused field, else "".
+
+    With *typed*, warns when the field does not contain it: Windows 11 Notepad
+    auto-corrects and garbles fast typing at any speed tried (round-4 R4-16), while
+    the reply otherwise shows only the start of the field.
+    """
     if not _readable_window(win32gui.GetForegroundWindow()):
         return ""
     try:
@@ -245,7 +260,12 @@ def focused_value() -> str:
         value = pattern.Value or ""
         shown = _clean(value, 100)
         size = f" ({len(value):,} characters)" if len(value) > 100 else ""
-        return f' The field ({field}) now reads "{shown}"{size}.'
+        reply = f' The field ({field}) now reads "{shown}"{size}.'
+        # ponytail: a field that reformats its input on purpose (a number or date box)
+        # is warned too; the wording leaves room for that.
+        if typed and _lines(typed) not in _lines(value):
+            reply += TYPED_TEXT_MISSING
+        return reply
     except Exception:
         logger.debug("Could not read the focused field", exc_info=True)
         return ""

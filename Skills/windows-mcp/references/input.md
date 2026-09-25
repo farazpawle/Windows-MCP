@@ -117,7 +117,9 @@ Coordinates · What the replies report · Shrunk screenshots
   can name the element under the panel (`document "Text editor"`); click such buttons with
   `element=`. A title-less pop-up is named after the window that owns it.
 - Type adds what the focused field now holds (`The field (edit "Search") now reads "…"`);
-  password boxes are never shown.
+  password boxes are never shown. If the field then lacks the typed text it adds "Warning:
+  the field does not contain the typed text exactly ..." (auto-correct, formatting or lost
+  keys; it waits up to 2 s for a slow field first): read the field before going on.
 - Scroll adds the scroll area's position (`list "Files" is now at 45% (was 30%)`) or says it
   could not be read.
 - Both are read once the app has caught up (two readings 0.05 s apart agree, at most 0.3 s

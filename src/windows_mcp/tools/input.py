@@ -17,6 +17,7 @@ from windows_mcp.tools._screen_wait import SCREEN_CONDITIONS, screen_check
 from windows_mcp.tools.find_text import screen_rect
 from windows_mcp.tools._coords import to_model, to_screen
 from windows_mcp.tree.utils import (
+    TYPED_TEXT_MISSING,
     describe_point,
     find_element,
     focused_value,
@@ -169,17 +170,18 @@ def _scroll_position(point: list, axis: str) -> tuple[str, float] | None:
 
 _SETTLE_GAP = 0.05  # seconds between two readings that must agree
 _SETTLE_CAP = 0.3  # seconds at most spent waiting for them to agree
+_MISMATCH_CAP = 2.0  # longer, while a field still lacks the typed text (R4-16)
 
 
-def _settled[T](read: Callable[[], T]) -> T:
-    """Read until two readings _SETTLE_GAP apart agree, or _SETTLE_CAP has passed.
+def _settled[T](read: Callable[[], T], cap: float | None = None) -> T:
+    """Read until two readings _SETTLE_GAP apart agree, or *cap* (_SETTLE_CAP) has passed.
 
     The app is still working through the input when the tool returns: Type read
     "213 characters" of 215 and Scroll "87.3%" of 100% (round-4 R4-7).
     """
     # ponytail: an app that has not started on the input yet reads the same twice and
     # is reported as it was; no case of that has been seen.
-    deadline = time.monotonic() + _SETTLE_CAP
+    deadline = time.monotonic() + (_SETTLE_CAP if cap is None else cap)
     last = read()
     while time.monotonic() < deadline:
         time.sleep(_SETTLE_GAP)
@@ -572,7 +574,11 @@ def register(
         typed = _typed_text(text)
         done = " Cleared the existing text first." if clear else ""
         done += " Pressed Enter." if press_enter else ""
-        done += _settled(focused_value)
+        field = _settled(lambda: focused_value(text))
+        if TYPED_TEXT_MISSING in field:
+            # A slow app may still be catching up: warn only once the field stops changing.
+            field = _settled(lambda: focused_value(text), cap=_MISMATCH_CAP)
+        done += field
         if loc is None:
             return f"Typed {typed} into the focused element{_focus_suffix(focus)}{done}"
         x, y = to_model(desktop, loc)

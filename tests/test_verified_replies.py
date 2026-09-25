@@ -123,6 +123,38 @@ def test_unnamed_field_value(screen):
     assert utils.focused_value() == ' The field (edit) now reads "hi".'
 
 
+@pytest.mark.parametrize(
+    ("value", "typed"),
+    [
+        ("before hello after", "hello"),
+        ("a\rb", "a\nb"),  # Notepad's document stores line breaks as CR
+        ("a\r\nb", "a\nb"),  # a WinForms box stores CR LF
+    ],
+)
+def test_typed_text_found_in_the_field_adds_no_warning(screen, value, typed):
+    screen.focused = _control("Body", kind="edit", patterns={VALUE: SimpleNamespace(Value=value)})
+    assert "Warning" not in utils.focused_value(typed)
+
+
+def test_typed_text_missing_from_the_field_is_warned(screen):
+    # Round-4 R4-16: Windows 11 Notepad auto-corrected and garbled a long Type
+    # ("Charlie jjjjjjj...") while the reply only showed the start of the text.
+    garbled = "Line 1 alpha bravo Charlie jjjjjjjjjjuliet"
+    screen.focused = _control(
+        "Text editor", kind="document", patterns={VALUE: SimpleNamespace(Value=garbled)}
+    )
+    reply = utils.focused_value(
+        "Line 1 alpha bravo charlie delta echo foxtrot golf hotel india juliet"
+    )
+    assert "Warning: the field does not contain the typed text exactly" in reply
+
+
+def test_password_field_is_never_compared(screen):
+    value = SimpleNamespace(Value="xxxx")
+    screen.focused = _control("Password", kind="edit", patterns={VALUE: value}, password=True)
+    assert "Warning" not in utils.focused_value("hunter2")
+
+
 def test_no_value_pattern_says_nothing(screen):
     screen.focused = _control("Canvas", kind="pane")
     assert utils.focused_value() == ""
@@ -199,9 +231,12 @@ def test_click_names_what_it_clicked_before_clicking(monkeypatch):
 
 def test_type_reports_the_field_afterwards(monkeypatch):
     monkeypatch.setattr(
-        input_tools, "focused_value", lambda: ' The field (edit "Search") now reads "hi".'
+        input_tools,
+        "focused_value",
+        lambda typed: f' The field (edit "Search") now reads "{typed}".',
     )
     reply = _tool("Type", MagicMock())(text="hi", loc=[5, 6])
+    # The typed text is passed on, so the read-back can check it arrived (R4-16).
     assert reply.endswith('The field (edit "Search") now reads "hi".')
 
 
@@ -239,6 +274,17 @@ def test_type_reports_the_field_once_it_settles(monkeypatch):
     )
     reply = _tool("Type", MagicMock())(text="hi", loc=[5, 6])
     assert reply.endswith(" 215 characters.")
+
+
+def test_type_waits_for_a_slow_field_before_warning(monkeypatch):
+    # Round-4 R4-16: a slow box read at 340 of 1,130 characters was warned about
+    # although all the text arrived; a mismatch waits up to 2 s while the field changes.
+    warn = f" 340 characters.{input_tools.TYPED_TEXT_MISSING}"
+    readings = [warn, f" 700 characters.{input_tools.TYPED_TEXT_MISSING}", " 1,130 characters."]
+    _readings(monkeypatch, "focused_value", readings)
+    monkeypatch.setattr(input_tools, "_SETTLE_CAP", 0.002)  # the first settle gives up early
+    reply = _tool("Type", MagicMock())(text="hi", loc=[5, 6])
+    assert reply.endswith(" 1,130 characters.")
 
 
 def test_a_reading_that_never_settles_stops_at_the_cap(monkeypatch):
