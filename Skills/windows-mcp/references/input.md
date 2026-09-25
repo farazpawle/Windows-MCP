@@ -52,7 +52,8 @@ Coordinates · What the replies report · Shrunk screenshots
 - Accents, CJK and emoji are typed correctly. Text is sent as keystrokes and never touches
   the clipboard (2,000 characters arrived intact). Line breaks and tabs are real Enter and
   Tab key presses (in a form, Tab moves to the next field); braces are typed as-is. A
-  622-character multi-line text takes under 1 s.
+  622-character multi-line text takes under 1 s. Windows 11 Notepad can garble typed text
+  (known-gaps.md): write documents with FileSystem instead.
 
 ## MultiEdit
 

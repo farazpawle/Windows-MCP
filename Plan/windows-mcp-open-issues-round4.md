@@ -1,7 +1,7 @@
 ---
 Title: Windows-MCP open issues backlog - round 4 (2026-09-24)
 Description: Findings of the round-4 real-work scenario test (all 21 tools driven through the connected server after the round-3 backlog, timed per call from Claude Code's MCP log), turned into a task file. Part A Bugs - 1 High (multi-line Type sends one key every 0.04 s: 622 characters took 26 s), 5 Medium (App launch names an older window; Snapshot word boxes include trailing spaces so word labels miss; WaitFor text_exists misses text inside documents; dialogs drawn inside an app's window are not noted; caret start/end work per line), 9 Low. Part B 7 improvements (Process list speed and output size, Snapshot word noise, fixed costs, reply boilerplate, list order, resize hint). Part C 2 new abilities (whole-field caret, FindText per window). Part D 31 guide, tool-description and test-skill corrections. Evidence is in docs/testing/windows-mcp-tool-test-report.md (Round 4). Status 2026-09-24: R4-1 fixed (622 multi-line characters in 0.87 s), R4-2 fixed (launch names the new window and its handle), R4-3 fixed (word boxes end at the word) R4-4 fixed (text_exists finds a phrase in a document) R4-5 fixed (in-window dialogs of XAML apps are noted) R4-6 fixed (caret start/end described as current line) and R4-7 fixed (Type/Scroll read-backs wait for the app), with D.3/D.4/D.5/D.9/D.10/D.12/D.20/D.22/D.27; all of Part D done (2026-09-25); R4-8 fixed (element=/label= clicks name the element found; 2026-09-25), guide ZIP rebuilt after it; R4-9 fixed (FindText keeps side-by-side windows apart); R4-10 fixed (timeouts reply ~0.25 s after the limit); R4-11 fixed (fast capture retried after a lost duplication; fallback says why); R4-12 fixed (maximized windows listed as their work area); next the Low bugs R4-13 to R4-15 and Parts B and C.
-Total Tasks: 102
+Total Tasks: 103
 ---
 # Windows-MCP open issues - round 4
 
@@ -119,6 +119,12 @@ Evidence for every item: `docs/testing/windows-mcp-tool-test-report.md`, section
   - [ ] b. Find the cause from evidence (input timing per run, Notepad's own features such as autocorrect or spell check, the Remote Desktop session) before changing anything.
   - [ ] c. Unit test for the measured cause, then fix.
   - **Verify:** Live - the 1,130-character text typed into a new Notepad window reads back exactly (twice), and the 622-character harness case still takes under 1 s.
+  - Findings 2026-09-25 (three live runs, new Notepad windows over Remote Desktop, each closed with Don't save; text read back through TextPattern):
+    - Harness text box, 1,130 characters, current code (32-character Unicode bursts, 10 ms apart): exact in 0.82 s. Notepad, same: garbled at character 19-27 every time, also with 50 ms between bursts, 8-character bursts, and made-up words.
+    - 2 lines into Notepad: old per-key SendKeys (10 ms a key) exact apart from Notepad's own autocorrect ("charlie" -> "Charlie"); Unicode one character per SendInput (10 ms) the same but 1 of 149 characters lost; bursts with no spaces kept line 1 and garbled right after the first Enter; bursts as today garbled right after "charlie ".
+    - Word-by-word bursts with 5, 15 or 30 ms after each word and 30-50 ms after each line: all garbled right after "Charlie " (repeated "o", text lost or extra).
+    - So: once Notepad has autocorrected a word or started a new line, any multi-character SendInput burst is garbled, whatever the pause before it; single characters survive. Cause inside Notepad not established. Autocorrect itself is Notepad's setting and changes words at any speed.
+  - [ ] d. [User] Choose (design choice): (1) one character at a time everywhere, ~10 ms a character (622 characters ~6.5 s, was 0.87 s); (2) one at a time only in Notepad-like editors (focused element class `RichEditD2DPT`), fast bursts elsewhere; (3) keep as is, guide warns (done: known-gaps.md, input.md).
 
 # Part B - Improvements
 
