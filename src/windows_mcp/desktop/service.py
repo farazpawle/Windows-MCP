@@ -733,7 +733,7 @@ class Desktop:
         elif target_window.status == Status.MAXIMIZED:
             return (
                 f"Cannot resize {target_window.name}: it is maximized. "
-                "Restore it first (e.g. Shortcut win+down).",
+                'Restore it first with App mode="restore".',
                 1,
             )
         else:

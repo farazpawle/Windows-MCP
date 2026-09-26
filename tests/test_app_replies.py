@@ -108,6 +108,8 @@ def test_resize_of_maximised_window_is_worded_as_refusal(control):
     assert status == 1
     assert reply.startswith("Cannot resize Calculator")
     assert "maximized" in reply
+    # Round-4 R4-I7: the hint named a keyboard shortcut, which acts on the focused window.
+    assert 'mode="restore"' in reply and "win+down" not in reply
 
 
 def _switch(desktop, name):

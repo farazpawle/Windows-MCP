@@ -50,7 +50,7 @@
   pixels): a `list` position fed back keeps the window in place.
 - With no `name` it acts on the window in front right now.
 - A maximized or minimized window is refused ("Cannot resize ...: it is maximized"): restore
-  first. A `window_size` that is not two positive numbers, or a `window_loc` fully off every
+  it first with App `mode="restore"` (the reply says so). A `window_size` that is not two positive numbers, or a `window_loc` fully off every
   display, is refused.
 
 ## minimize / maximize / restore / close / list / move
