@@ -31,7 +31,7 @@ list: skipped" line) where PyPI says "No active window found".
      FileSystem and Registry over UI automation.
    - Never `press_enter=true` unless a fresh screenshot shows the target on top at that spot.
 2. **Verify by effect, never by the reply.** "Clicked / Typed / Sent" means the call ran.
-   Check a screenshot, file content, registry read or process list. Failures are tool errors.
+   Check with the cheapest proof (see "UI workflow"). Failures are tool errors.
 3. **Kill by PID, not by name.** Win11 Notepad runs every tab in one process, and a kill by
    name ends every process with that name. List first, then kill only a PID you launched.
    To close a window, use App `close` instead (by name, or `handle=` for same-named windows).
@@ -69,15 +69,30 @@ list: skipped" line) where PyPI says "No active window found".
 
 System tools have no focus problems: prefer them over the UI when both can do the job.
 
-## UI workflow
+## UI workflow: cheapest step first
 
-1. DisplayInventory once, then Snapshot (label ids are in its text).
-2. App switch, or App `launch_executable` (save the PID), then WaitFor `active_window`.
-3. Screenshot to confirm the target is ON TOP at the coordinates.
-4. Act with Snapshot centres, `label=` or Click `element=`. No Enter or shortcuts unless
-   focus is proven.
-5. Verify the effect: Screenshot, WaitFor `text_exists`, or a file or registry read.
-6. Clean up: kill only your own PIDs, remove sandbox files and keys, confirm with `Test-Path`.
+A Screenshot takes the server a fraction of a second but costs you seconds to read the picture; a text
+reply costs almost nothing to read. Start on the lowest rung, climb one only when a step fails
+or leaves doubt, and drop back down after it succeeds.
+
+1. **No UI:** PowerShell, FileSystem, Registry or Process, when they can do the job.
+2. **Act by name, no picture:** App switch or `launch_executable` (save the PID), WaitFor
+   `active_window`, then Click `element=` with `window=`. Its spot check refuses when another
+   window (an approval prompt) covers the target, so no Screenshot is needed first.
+3. **Name unknown:** Snapshot of a `region` or the whole screen (text), then `label=`.
+4. **No elements** (games, canvas, VS Code family) **or a text check failed:** Screenshot of a
+   `region`; FindText for words.
+5. **Region not enough:** full Screenshot, then `zoom=true` on a region for small text.
+
+Check each step with the cheapest proof: Type's "now reads" line, a new-window or dialog note
+in the reply, WaitFor `text_exists` / `element_exists` / `active_window`, or a file, registry
+or process read. Screenshot only when none of these can show the effect.
+
+Always take a fresh Screenshot first, on any rung, before a `loc` click or Type, Type with
+`press_enter=true`, Type with no target, or Shortcut: these hit whatever is on top, which can
+be an approval prompt (golden rule 1).
+
+Clean up: kill only your own PIDs, remove sandbox files and keys, confirm with `Test-Path`.
 
 ## Typical cost per call
 
