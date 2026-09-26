@@ -97,7 +97,7 @@
     },
     {
       "name": "FindText",
-      "description": "Finds text on screen by OCR (Windows' built-in text recognition) for apps with no accessibility data, such as games, remote desktops and canvas apps. Returns every place the phrase appears with a clickable [x, y] position. Searches every screen, or region=[left, top, right, bottom] only."
+      "description": "Finds text on screen by OCR (Windows' built-in text recognition) for apps with no accessibility data, such as games, remote desktops and canvas apps. Returns every place the phrase appears with a clickable [x, y] position. Searches every screen, or region=[left, top, right, bottom] only, or one window (window= title or handle)."
     },
     {
       "name": "Snapshot",

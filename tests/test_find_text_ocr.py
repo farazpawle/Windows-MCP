@@ -103,6 +103,22 @@ def test_find_on_screen_splits_rows_by_window(monkeypatch):
     assert ocr.find_on_screen("a b", rect) == []
 
 
+def test_find_on_screen_keeps_only_matches_in_the_window(monkeypatch):
+    # Round-4 R4-N2: a match under another window (the chat beside Notepad) is dropped.
+    monkeypatch.setattr(
+        ocr.screenshot_capture, "capture", lambda rect: (Image.new("RGB", (300, 100)), "x")
+    )
+    monkeypatch.setattr(
+        ocr,
+        "read_lines",
+        lambda image: [{"words": [_word("North", 0, 0)]}, {"words": [_word("North", 600, 150)]}],
+    )
+    monkeypatch.setattr(ocr, "top_level_window_at", lambda x, y: 7 if x < 100 else 8)
+    rect = SimpleNamespace(left=0, top=0, right=300, bottom=100)
+    assert ocr.find_on_screen("north", rect, window=7) == [("North", 6, 1)]
+    assert len(ocr.find_on_screen("north", rect)) == 2
+
+
 # --- find_on_screen (enlarges before reading) ------------------------------------------
 
 
@@ -216,8 +232,9 @@ def _desktop(scale=1.0):
 def screen(monkeypatch):
     state = SimpleNamespace(matches=[], rects=[])
 
-    def find(text, rect):
+    def find(text, rect, window=None):
         state.rects.append((rect.left, rect.top, rect.right, rect.bottom))
+        state.window = window
         return state.matches
 
     monkeypatch.setattr(find_text_tools, "find_on_screen", find)
@@ -247,6 +264,53 @@ def test_find_text_caps_the_list(screen):
 def test_find_text_not_found_is_a_plain_reply(screen):
     reply = _tool(find_text_tools, "FindText", _desktop())(text="Sign in")
     assert reply.startswith('"Sign in" was not found on screen')
+
+
+def _with_window(desktop, status="Normal", box=(100, 50, 900, 650)):
+    left, top, right, bottom = box
+    window = SimpleNamespace(
+        name="Notepad",
+        handle=42,
+        status=SimpleNamespace(value=status),
+        bounding_box=SimpleNamespace(left=left, top=top, right=right, bottom=bottom),
+    )
+    desktop.pick_window.return_value = (window, "")
+    return desktop
+
+
+@pytest.mark.parametrize(
+    ("window", "name", "handle"), [("Notepad", "Notepad", None), (42, None, 42)]
+)
+def test_find_text_window_reads_only_that_window(screen, window, name, handle):
+    # Round-4 R4-N2: window= is a name or a handle; only its rectangle is read.
+    desktop = _with_window(_desktop())
+    screen.matches = [("North 460 units", 300, 200)]
+    reply = _tool(find_text_tools, "FindText", desktop)(text="North", window=window)
+    desktop.pick_window.assert_called_once_with(name, handle, required=True)
+    assert screen.rects == [(100, 50, 900, 650)] and screen.window == 42
+    assert reply.startswith('Found "North" 1 time')
+
+
+def test_find_text_window_and_region_overlap(screen):
+    desktop = _with_window(_desktop())
+    _tool(find_text_tools, "FindText", desktop)(text="x", window=42, region=[0, 0, 500, 300])
+    assert screen.rects == [(100, 50, 500, 300)]
+
+
+@pytest.mark.parametrize(
+    ("status", "region", "error"),
+    [("Minimized", None, "minimized"), ("Normal", [1000, 0, 1200, 100], "outside")],
+)
+def test_find_text_window_that_cannot_be_read_is_an_error(screen, status, region, error):
+    desktop = _with_window(_desktop(), status=status)
+    with pytest.raises(ValueError, match=error):
+        _tool(find_text_tools, "FindText", desktop)(text="x", window=42, region=region)
+    assert screen.rects == []
+
+
+def test_find_text_not_found_in_a_window_names_it(screen):
+    reply = _tool(find_text_tools, "FindText", _with_window(_desktop()))(text="x", window=42)
+    assert reply.startswith('"x" was not found in "Notepad"')
 
 
 def test_find_text_needs_text(screen):

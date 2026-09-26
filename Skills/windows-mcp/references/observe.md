@@ -48,7 +48,10 @@
 
 - Text on screen by OCR, for apps with no UI tree (games, remote desktops, canvas apps).
   Prefer Snapshot or Click `element=` where elements exist.
-- `text`: case ignored, words in order on one line, may be part of a word. Optional `region`.
+- `text`: case ignored, words in order on one line, may be part of a word. Optional `region`,
+  and/or `window` (title, or handle as a number from App `list`): only that window's visible
+  part is read, and a match under a window lying over it is left out. A minimized window
+  is an error.
 - Lists every spot with a clickable `(x,y)`, within 1 px of the real centre.
 - Not found is a normal reply, not an error.
 - ~1.6 s for the full screen, ~0.6 s for a small region.

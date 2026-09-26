@@ -169,8 +169,14 @@ def find_phrase(
     return matches
 
 
-def find_on_screen(phrase: str, rect: uia.Rect) -> list[tuple[str, int, int]]:
-    """Capture *rect* (screen pixels) and find *phrase* in it; positions in screen pixels."""
+def find_on_screen(
+    phrase: str, rect: uia.Rect, window: int | None = None
+) -> list[tuple[str, int, int]]:
+    """Capture *rect* (screen pixels) and find *phrase* in it; positions in screen pixels.
+
+    With *window* (a handle), only matches whose centre shows that window are kept, so
+    text of a window lying over it is dropped (round-4 R4-N2).
+    """
     # The screenshot module directly: Desktop.get_screenshot flashes a border on every call.
     image, _ = screenshot_capture.capture(rect)
     # Measured 2026-09-23: at 1x the OCR split "Zebra Quartz" into "Zebra Q uartz" and
@@ -179,4 +185,9 @@ def find_on_screen(phrase: str, rect: uia.Rect) -> list[tuple[str, int, int]]:
     scale = min(_ENLARGE, _MAX_IMAGE_SIDE / max(image.size))
     if scale != 1:
         image = image.resize((int(image.width * scale), int(image.height * scale)))
-    return find_phrase(read_lines(image), phrase, rect.left, rect.top, scale, top_level_window_at)
+    matches = find_phrase(
+        read_lines(image), phrase, rect.left, rect.top, scale, top_level_window_at
+    )
+    if window is not None:
+        matches = [m for m in matches if top_level_window_at(m[1], m[2]) == window]
+    return matches
