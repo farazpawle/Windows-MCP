@@ -32,7 +32,7 @@ def _window(name, box, handle, status=Status.NORMAL):
     )
 
 
-def _header(cursor, region):
+def _header(cursor, region, **kwargs):
     state = DesktopState(
         active_desktop={"name": "Desktop 1"},
         all_desktops=[{"name": "Desktop 1"}],
@@ -55,7 +55,58 @@ def _header(cursor, region):
         "",
     )
     capture.update(desktop_state=state, screenshot_bytes=None)
-    return build_snapshot_response(capture, include_ui_details=False)[0]
+    kwargs.setdefault("include_ui_details", False)
+    return build_snapshot_response(capture, **kwargs)[0]
+
+
+_SECTIONS = ("Active Desktop", "All Desktops", "Focused Window", "Opened Windows")
+
+
+def _no_tree_capture(tool_name):
+    # What capture_desktop_state returns when no window list was read.
+    state = DesktopState(
+        active_desktop={"name": "Desktop 1"},
+        all_desktops=[{"name": "Desktop 1"}],
+        active_window=None,
+        windows=[],
+        cursor_position=(5, 6),
+        tree_state=TreeState(),
+    )
+    desktop = MagicMock(**{"get_state.return_value": state})
+    return capture_desktop_state(
+        desktop,
+        use_vision=True,
+        use_dom=False,
+        use_annotation=False,
+        use_ui_tree=False,
+        width_reference_line=None,
+        height_reference_line=None,
+        display=None,
+        region=None,
+        tool_name=tool_name,
+    )
+
+
+# Round-4 R4-I5: ~450 characters of empty "skipped" tables in every Screenshot reply.
+def test_screenshot_only_reply_has_no_skipped_tables():
+    capture = _no_tree_capture("Screenshot tool")
+    note = "UI Tree: X"
+    text = build_snapshot_response(capture, include_ui_details=False, ui_detail_note=note)[0]
+    assert not any(section in text for section in _SECTIONS)
+    assert text.count("UI Tree") == 1 and "Skipped" not in text
+
+
+def test_snapshot_without_tree_says_skipped_once():
+    capture = _no_tree_capture("Snapshot tool")
+    text = build_snapshot_response(capture, include_ui_details=True)[0]
+    assert not any(section in text for section in _SECTIONS)
+    assert "No elements found" not in text
+    assert text.count("UI Tree") == 1 and "skipped" in text
+
+
+def test_tree_capture_keeps_the_window_sections():
+    text = _header((5, 6), None, include_ui_details=True)
+    assert all(section in text for section in _SECTIONS)
 
 
 # a. cursor outside the region

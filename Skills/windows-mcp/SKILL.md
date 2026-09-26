@@ -11,8 +11,8 @@ Claude Code and Claude Desktop on this PC both run the **local repo** build
 
 The **PyPI** release (`uvx windows-mcp`, other machines or configs) differs in many places:
 read `references/pypi-differences.md` before using it. To tell them apart: local repo Snapshot
-lines start with `[label:N]`, and its Screenshot says "Skipped (screenshot-only…)" where PyPI
-says "No active window found".
+lines start with `[label:N]`, and its Screenshot has no window tables (one "UI Tree and window
+list: skipped" line) where PyPI says "No active window found".
 
 ## This machine
 

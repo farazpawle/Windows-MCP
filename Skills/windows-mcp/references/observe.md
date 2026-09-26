@@ -6,8 +6,8 @@
 
 ## Screenshot
 
-- The fast image, with no UI tree and no window list (it says "Skipped (screenshot-only…)");
-  use Snapshot for windows.
+- The fast image, with no UI tree and no window list (one line says "UI Tree and window
+  list: skipped"; the reply text is ~300 characters); use Snapshot for windows.
 - `display=[n]` picks a display; a bad index is an error that lists the valid ones.
 - It captures pending approval prompts too.
 - `width_reference_line` / `height_reference_line` draw a grid; either one alone works.

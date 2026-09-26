@@ -756,7 +756,8 @@ class TestSnapshotTools:
         result = asyncio.run(main_module.screenshot_tool(display=[1]))
 
         assert len(result) == 2
-        assert "UI Tree: Skipped for fast screenshot-only capture." in result[0]
+        assert "UI Tree and window list: skipped for fast screenshot-only capture." in result[0]
+        assert "Opened Windows" not in result[0]
         call = fake_desktop.get_state.call_args.kwargs
         assert call["use_vision"] is True
         assert call["use_ui_tree"] is False

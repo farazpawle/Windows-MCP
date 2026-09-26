@@ -144,7 +144,7 @@ def register(mcp, *, get_desktop, get_analytics):
         return build_snapshot_response(
             capture_result,
             include_ui_details=False,
-            ui_detail_note="UI Tree: Skipped for fast screenshot-only capture. Call Snapshot when you need interactive or scrollable elements.",
+            ui_detail_note="UI Tree and window list: skipped for fast screenshot-only capture. Call Snapshot when you need windows or interactive or scrollable elements.",
         )
 
     state_tool = _state_tool

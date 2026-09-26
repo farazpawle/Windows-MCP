@@ -210,9 +210,9 @@ def _capture(**kwargs):
 # 2.5 Screenshot says the window list was skipped, not that there are no windows
 class TestWindowListSkipped:
     def test_screenshot_only_reports_skipped(self):
+        # None, not "No windows found": the reply leaves the sections out (round-4 R4-I5).
         result, _ = _capture(use_ui_tree=False)
-        assert result["windows"].startswith("Skipped")
-        assert result["active_window"].startswith("Skipped")
+        assert result["windows"] is None and result["active_window"] is None
 
     def test_ui_tree_capture_lists_windows(self):
         result, desktop = _capture(use_ui_tree=True)

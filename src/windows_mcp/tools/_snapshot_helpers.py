@@ -34,9 +34,6 @@ def _zoom_scale(region: list | None) -> float:
     return min(ZOOM_WIDTH / (right - left), MAX_IMAGE_HEIGHT / (bottom - top))
 
 
-WINDOW_LIST_SKIPPED = "Skipped (screenshot-only; call Snapshot to list windows)"
-
-
 def _screenshot_scale() -> float:
     value = os.getenv("WINDOWS_MCP_SCREENSHOT_SCALE", "1.0")
     try:
@@ -162,11 +159,12 @@ def capture_desktop_state(
     if use_ui_tree:
         windows = desktop_state.windows_to_string()
         active_window = desktop_state.active_window_to_string()
+        active_desktop = desktop_state.active_desktop_to_string()
+        all_desktops = desktop_state.desktops_to_string()
     else:
-        # Windows are not enumerated on the fast path; "No windows found" would be false.
-        windows = active_window = WINDOW_LIST_SKIPPED
-    active_desktop = desktop_state.active_desktop_to_string()
-    all_desktops = desktop_state.desktops_to_string()
+        # Windows are not enumerated on the fast path; None leaves the window sections out
+        # of the reply ("No windows found" would be false; round-4 R4-I5).
+        windows = active_window = active_desktop = all_desktops = None
     if profile_enabled:
         metadata_render_ms = (time.perf_counter() - stage_started_at) * 1000
         stage_started_at = time.perf_counter()
@@ -268,10 +266,6 @@ def build_snapshot_response(
     interactive_elements = repair_surrogates(interactive_elements)
     scrollable_elements = repair_surrogates(scrollable_elements)
     semantic_tree = repair_surrogates(semantic_tree)
-    windows = repair_surrogates(windows)
-    active_window = repair_surrogates(active_window)
-    active_desktop = repair_surrogates(active_desktop)
-    all_desktops = repair_surrogates(all_desktops)
 
     scale = capture_result.get("coordinate_scale", 1.0)
 
@@ -329,10 +323,18 @@ def build_snapshot_response(
             metadata_text += "Coordinate Space: Virtual desktop coordinates\n"
     if desktop_state.screenshot_backend:
         metadata_text += f"Screenshot Backend: {desktop_state.screenshot_backend}\n"
+    no_tree = windows is None  # nothing was enumerated (use_ui_tree=False)
+    if no_tree and not ui_detail_note:
+        ui_detail_note = "UI Tree and window list: skipped (use_ui_tree=false)."
     if ui_detail_note:
         metadata_text += f"{ui_detail_note}\n"
 
-    response_text = dedent(f"""
+    response_text = f"\n{metadata_text}"
+    if not no_tree:
+        windows, active_window, active_desktop, all_desktops = map(
+            repair_surrogates, (windows, active_window, active_desktop, all_desktops)
+        )
+        response_text = dedent(f"""
     {metadata_text}
     Active Desktop:
     {active_desktop}
@@ -346,7 +348,7 @@ def build_snapshot_response(
     Opened Windows:
     {windows}
     """)
-    if include_ui_details:
+    if include_ui_details and not no_tree:
         response_text += dedent(f"""
 
     UI Tree:
