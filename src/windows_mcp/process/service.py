@@ -13,6 +13,8 @@ __all__ = ["list_processes", "kill_process"]
 
 logger = logging.getLogger(__name__)
 
+_CMDLINE_MAX = 200
+
 
 def _strip_exe(name: str) -> str:
     name = name.strip().casefold()
@@ -122,9 +124,14 @@ def list_processes(
                 datetime.fromtimestamp(started).strftime("%Y-%m-%d %H:%M:%S") if started else "-"
             )
             cmdline = _cmdline(p["pid"])
-            row.append(redact(subprocess.list2cmdline(cmdline)) if cmdline else "-")
+            text = redact(subprocess.list2cmdline(cmdline)) if cmdline else "-"
+            # Cut after redact, so a cut never splits a secret out of redact's reach.
+            # A browser's ~2,000-character line made 5 rows ~10,000 characters (R4-I2).
+            row.append(text if len(text) <= _CMDLINE_MAX else text[: _CMDLINE_MAX - 1] + "…")
         headers += ["Started", "Command line"]
     table = tabulate(rows, headers=headers, tablefmt="simple")
+    # tabulate pads every row to the widest last cell; the padding is only spaces.
+    table = "\n".join(line.rstrip() for line in table.splitlines())
     return f"Processes ({len(procs)} shown):\n{table}"
 
 

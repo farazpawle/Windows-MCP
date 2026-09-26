@@ -67,8 +67,10 @@ These have no focus problems and are the most reliable way to act on the PC.
   `sort_by="cpu"`, which takes ~0.5 s (a half-second sample; memory and name sorts under
   0.05 s). The CPU list leaves out "System Idle Process" (PID 0: idle time, not load); a
   memory or name list still shows it. `details=true` adds
-  Started and Command line (secrets shown as [hidden]; `-` when Windows denies it): use it to
-  see which program is behind a process, e.g. a hidden powershell.exe running a tray script.
+  Started and Command line (secrets shown as [hidden]; `-` when Windows denies it; cut to 200
+  characters with "…"): use it to see which program is behind a process, e.g. a hidden
+  powershell.exe running a tray script. For a full command line, use PowerShell
+  `(Get-CimInstance Win32_Process -Filter "ProcessId=<pid>").CommandLine`.
 - `kill`: prefer `pid`; give `pid` **or** `name`, not both. By `name` it is an exact match
   (`.exe` optional) and ends every process with that name. `force` is available. Replies
   "Terminated: exe (PID)".

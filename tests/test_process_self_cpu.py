@@ -121,6 +121,23 @@ def test_details_show_start_time_and_command_line_with_secrets_hidden(monkeypatc
     assert system.rstrip().endswith("-")
 
 
+def test_long_command_lines_are_cut_and_rows_not_padded(monkeypatch):
+    # Round-4 R4-I2: one browser's 2,000-character command line padded every row to it.
+    _feed(monkeypatch, {1: _c("edge.exe", mem_mb=500), 2: _c("tiny.exe", mem_mb=5)})
+    cmdlines = {1: ["msedge.exe", "--flag=" + "x" * 2000], 2: ["tiny.exe"]}
+    monkeypatch.setattr(
+        psutil, "Process", lambda pid: SimpleNamespace(cmdline=lambda: cmdlines[pid])
+    )
+
+    lines = list_processes(details=True).splitlines()
+
+    edge = next(line for line in lines if line.lstrip().startswith("1 "))
+    tiny = next(line for line in lines if line.lstrip().startswith("2 "))
+    assert edge.endswith("…") and len(edge.split("msedge.exe", 1)[1]) < 200
+    assert tiny.endswith("tiny.exe")
+    assert all(line == line.rstrip() for line in lines)
+
+
 def test_plain_list_reads_no_command_lines(monkeypatch):
     _feed(monkeypatch, {4242: _c("busy.exe")})
     monkeypatch.setattr(psutil, "Process", lambda pid: pytest.fail("read a command line"))
