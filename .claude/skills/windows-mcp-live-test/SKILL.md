@@ -163,8 +163,14 @@ through UIA, take the one tab whose runtime id is new, and before every key chec
 selected TabItem has that id; close it with Ctrl+W and "Don't save" (R4-13 runs, 2026-09-25).
 Notepad's Find panel is a XAML island child window drawn on top by the compositor, yet it sits
 below the document in the stacking order: WindowFromPoint under it returns `RichEditD2DPT`.
-At the PC the screen is 2560x1440, so the server scales coordinates (x0.75): run with
+A safer Notepad test tab: with Notepad already open, a second App `launch name=Notepad` opens a
+separate window holding one fresh tab (round 5, 2026-09-26); type only there, closing its tab
+closes that window, and the user's window is never touched.
+Check the screen size with DisplayInventory first (1920x1080 in rounds 4-5, 2560x1440 once):
+above 1920x1080 the server scales coordinates (x0.75 at 2560x1440), so run with
 `WINDOWS_MCP_RAW_COORDINATES=1` when the script passes win32 screen pixels.
+Starting `test_harness.ps1` yourself (not through `start_window`) for a connected-tool test
+opens a visible console window per harness; input replies then name it as a new window.
 
 ## 3. Run it
 

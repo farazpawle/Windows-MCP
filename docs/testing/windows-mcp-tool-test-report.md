@@ -1,8 +1,8 @@
 ---
-Title: Windows-MCP tool test report (2026-09-22 to 2026-09-24)
-Description: Live test results for all 20 windows-mcp tools on the maintainer's Windows 11 PC, run from Claude Code against the local repo on 2026-09-22. Round 1 - a verdict per tool, the ten bugs found and fixed, and post-restart re-tests. Round 2 (after every round-1 item was fixed) - per-tool verdicts again, confirmation that all round-1 fixes held, and 49 new bugs (6 High - registry paths act as wildcards and reach the file system, Snapshot labels renumbered by WaitFor, off-screen points clamped and clicked, an on-top unfocused window gets no Snapshot elements, pop-up menus don't hide covered elements; 16 Medium; 27 Low), plus a comparison with Claude Cowork computer use giving 14 improvements and 8 new-tool ideas, with how each was verified. Round-2 backlog (all done) - Plan/completed/windows-mcp-open-issues-round2.md. Round 3 (2026-09-24) - all 21 tools in a real-work scenario plus per-tool timings: 2 High bugs (windows that cannot be maximized missing from the window list; a full-screen capture missing Avast's front alert), 2 Medium, 5 Low, 9 improvements, 1 new ability; an Avast alert traced to another app; backlog Plan/completed/windows-mcp-open-issues-round3.md. Round 4 (2026-09-24, after the round-3 backlog) - the same scenario with per-call timings from Claude Code's MCP log: 1 High bug (multi-line Type ~42 ms per character), 5 Medium (App launch names an old window, Snapshot word boxes include trailing spaces, text_exists misses document text, in-window dialogs not noted, caret start/end per line), 9 Low, 7 improvements, 2 new abilities, 31 guide and skill corrections; backlog Plan/windows-mcp-open-issues-round4.md.
+Title: Windows-MCP tool test report (2026-09-22 to 2026-09-26)
+Description: Live test results for all 20 windows-mcp tools on the maintainer's Windows 11 PC, run from Claude Code against the local repo on 2026-09-22. Round 1 - a verdict per tool, the ten bugs found and fixed, and post-restart re-tests. Round 2 (after every round-1 item was fixed) - per-tool verdicts again, confirmation that all round-1 fixes held, and 49 new bugs (6 High - registry paths act as wildcards and reach the file system, Snapshot labels renumbered by WaitFor, off-screen points clamped and clicked, an on-top unfocused window gets no Snapshot elements, pop-up menus don't hide covered elements; 16 Medium; 27 Low), plus a comparison with Claude Cowork computer use giving 14 improvements and 8 new-tool ideas, with how each was verified. Round-2 backlog (all done) - Plan/completed/windows-mcp-open-issues-round2.md. Round 3 (2026-09-24) - all 21 tools in a real-work scenario plus per-tool timings: 2 High bugs (windows that cannot be maximized missing from the window list; a full-screen capture missing Avast's front alert), 2 Medium, 5 Low, 9 improvements, 1 new ability; an Avast alert traced to another app; backlog Plan/completed/windows-mcp-open-issues-round3.md. Round 4 (2026-09-24, after the round-3 backlog) - the same scenario with per-call timings from Claude Code's MCP log: 1 High bug (multi-line Type ~42 ms per character), 5 Medium (App launch names an old window, Snapshot word boxes include trailing spaces, text_exists misses document text, in-window dialogs not noted, caret start/end per line), 9 Low, 7 improvements, 2 new abilities, 31 guide and skill corrections; backlog Plan/windows-mcp-open-issues-round4.md. Round 5 (2026-09-26) - every round-4 fix held (multi-line Type 26 s -> 0.8 s, Process 1 s -> 12 ms); 1 Medium bug (Scrape use_dom drops table text), 3 Low, 4 improvements, 4 guide corrections; backlog Plan/windows-mcp-open-issues-round5.md.
 Tags: testing, qa, windows-mcp
-Updated: 2026-09-24
+Updated: 2026-09-26
 ---
 
 # Windows-MCP tool test report
@@ -295,3 +295,91 @@ Compared SKILL.md, the seven references, each tool's description and known-gaps.
 - Nine windows-mcp servers (09:09-15:50, this session's included) were running, left by earlier Claude sessions; only this session's was used.
 - Avast logged nothing during the session (last entry 06:35 UTC = 10:35 local); its log opened only with `FileShare` ReadWrite + Delete.
 - Clean-up verified with PowerShell: `HKCU:\Software\WMCP-Test` gone, scratch folders gone, Notepad/Explorer/Edge/test pwsh closed by own handle or PID, clipboard equal to the backup.
+
+# Round 5 (2026-09-26, re-test of the round-4 fixes, all 21 tools)
+
+**Setup:** at the PC (console session, one 1920x1080 display, 100%), the windows-mcp server Claude Code is connected to, restarted 12:02 from this repo on branch `fix/open-issues-backlog` (all round-4 fixes committed; working tree clean; server 4.0.3). Type's description lists `field_start`, so the connected server ran the fixed code. Test only: no code was changed. The user was hands-off during the input steps (12:09-12:17, and 12:19-12:20 for MultiEdit).
+
+**Method:** the round-4 "weekly sales report" job again, with every round-4 fix re-checked where the job reaches it. Every change was checked a second way: PowerShell and .NET reads of files and raw registry values, the harness text file, Notepad's document through UIA TextPattern, Explorer's selection through `Shell.Application`, `GetTopWindow` and DWM rectangles, the clipboard. Timing is end to end per call from Claude Code's MCP log, as in round 4. Notepad safety: no Notepad was running; the first `launch` restored the user's five tabs into one window, and the test used the separate window the second `launch` opened (one fresh tab, its runtime id and the front window checked before every key). The clipboard held an image: saved as DIB before the first overwrite and restored through Clipboard `set image=` (pixels identical).
+
+## Round-4 re-checks
+
+| Item | Result | Evidence |
+|---|---|---|
+| R4-1 multi-line Type | **Pass** | 622 characters, 19 line breaks into the harness text box in 0.82 s (round 4: 26.2 s); box text equal line for line. |
+| R4-16 Type into Notepad | Pass (warns) | 622 characters: Notepad holds 361 characters of repeated letters ("eeee...", "0000..."); the reply warned "the field does not contain the typed text exactly". 2.6 s. Clipboard set + Ctrl+A/Ctrl+V pasted the same text exactly. |
+| R4-2 launch reply | **Pass** | With Notepad open, `launch name=Notepad` replied "Untitled - Notepad launched (handle 1837470)": the new window (EnumWindows), not the user's "\*Untitled" (855664). 2.56 s. |
+| R4-3 word labels | **Pass** | Click `label=` on word "filler" (reply names it), Type "X": "Line 70 filXler". |
+| R4-4 text_exists | **Pass** | "North leads the week" in the document found in 0.33 s; a missing phrase timed out naming the active window. |
+| R4-5 in-window dialog | **Pass** | Ctrl+W on the modified tab: the Shortcut reply itself named `"Do you want to save changes to Weekly Sales Report - Week 39.txt?"`; the next Move did not repeat it. |
+| R4-6, R4-N1 caret | **Pass** | Caret mid-line 10 of the harness box: `start`/`end` gave "[S]1. North ... 431[E]"; `field_start`/`field_end` put "[FS]" before line 1 and "[FE]" after the last. |
+| R4-7 read-backs | **Pass** | Type's character count equal to the box (641-655, line breaks counted as two); Scroll 100.1% -> 73 -> 45.4 -> 17.9, each "now" equal to the next "was"; UIA read 17.857. |
+| R4-8 element names | **Pass** | Click `element="button:Replace all"` replied `button "Replace all"`; 410 -> 405 in the document. |
+| R4-9 FindText rows | **Pass** | Full screen "North 460" -> row "North 460 12.50" (rest under the Find panel); nothing joined from VS Code. |
+| R4-N2 FindText window= | Pass, with a note | `window=` handle or title: both "North" lines, nothing from other windows. Its crop reads the table row as "North 12.50" (R5-4). |
+| R4-10 PowerShell timeout | **Pass** | `timeout=2` on an 8 s sleep: 2.35 s, status -1 (round 4: 4.36 s). |
+| R4-11 first capture | **Pass** | First full Screenshot of the session: `Screenshot Backend: dxcam`. |
+| R4-12 maximized rects | **Pass** | Three maximized windows at (0,0) 1920x1032 = DisplayInventory work area (outer rect -8,-8). |
+| R4-I6 list order | Pass, with a note | Order equal to a `GetTopWindow` walk; "(front)" on VS Code. The first call had no "(front)": the taskbar's hidden-icons panel was in front (R5-I3). |
+| R4-13 hidden words | **Pass** | With Find and Replace open, the words under it ("Revenue", "5750.00") were not listed; visible ones were. |
+| R4-14 uv warning | **Pass** | Server stderr at start: only "INFO Starting MCP server 'windows-mcp' with transport 'stdio'". |
+| R4-15 cosmetics | **Pass** | Process details: `-Command "... -Token [hidden]"` keeps its closing quote; WaitFor names Edge in plain quotes (real zero-width space, no `​`); folder info "Contents (top level only): 1 file, 1 directory". |
+| R4-I1 Process speed | **Pass** | Memory 12 ms (round 4: 0.85-1.06 s), CPU 0.52 s with no System Idle Process; working set equal to Get-Process. |
+| R4-I2 details size | **Pass** | `details=true limit=5`: ~1,450 characters, 17 ms. |
+| R4-I4 fixed costs | **Pass** | Double click 0.28 s (selected the word), drag 0.31 s (selected "regional leads"); Notification 0.78 s. |
+| R4-I5 Screenshot reply | **Pass** | ~320 characters, no empty tables. |
+| R4-I7 resize hint | **Pass** | `Cannot resize ...: it is maximized. Restore it first with App mode="restore".` Restore + resize then exact (DWM frame 800x500 at 200,150). |
+
+## Other tools
+
+FileSystem (write CRLF and Unicode exact, copy, info, recursive delete, 6-11 ms), Registry (all seven value types exact in raw .NET reads incl. `(Default)` and the sub-key guard, 0.25-0.33 s), PowerShell (CSV total 1540, revenue 19059.5; failing command a tool error), Process kill (6 ms, gone), MultiSelect (Explorer selection = notes.txt + report.txt, 0.49 s), MultiEdit (two harness text boxes, "North 460" and "South 405 café" exact, 0.92 s for 2 fields; round 4 0.90 s), Wait (1 s took 1.01 s), Notification (in the notification centre under Do Not Disturb, found by WaitFor `screen_text` and FindText), Clipboard (Unicode + emoji exact by `-ceq`; image set), DisplayInventory, WaitFor `active_window` (0.40-0.69 s), App launch_executable/close/minimize/maximize/restore/list: all pass. **Scrape `use_dom` fails on tables** (R5-1).
+
+## Timing (ms, end to end, from the MCP log)
+
+| Tool | Round 5 | Round 4 |
+|---|---|---|
+| Type 622 multi-line (harness) | 824 | 26,177 |
+| Type short (no loc) | 79-183 | 26-35 |
+| Type 622 at loc into Notepad | 2,599 (garbled) | - |
+| Process memory / CPU / details | 12 / 521 / 17 | 847-1,064 / 2,258-2,819 / 930 |
+| PowerShell / timeout=2 | 270-479 / 2,345 | 354-473 / 4,360 |
+| Registry | 254-326 | 303-401 |
+| FileSystem / Clipboard / DisplayInventory | 6-11 / 4-54 / 4 | 4-17 / 4-7 / 6 |
+| Screenshot full | 80-237 | 8-96 |
+| Snapshot region | 201-244 | 175-323 |
+| Click loc / label / double / element= | 196 / 190 / 283 / 271-304 (Edge 1,502) | 176 / - / 475-486 / 256-296 |
+| Move hover / drag | 169 / 310 | 150 / 1,285 |
+| Scroll | 683-718 | 269-560 |
+| Shortcut | 46-140 | 46-88 |
+| MultiSelect (2) | 489 | 370-430 |
+| WaitFor text_exists / active_window / screen_text | 334 / 400-688 / 768 | - / 340-490 / 600 |
+| FindText full / region / window= | 1,228-1,291 / 525-822 / 663-822 | 1,242 / 651-813 / - |
+| App launch Notepad / list / window modes | 2,559-2,601 / 58-81 / 58-206 | 2,258 / 16-99 / 72-176 |
+| Notification / Scrape use_dom | 781 / 202 | 1,197 / 320 |
+
+No call froze or hung.
+
+## Bugs
+
+- **R5-1 (Medium) Scrape `use_dom` leaves out table text.** A local page with a heading, a paragraph, a 3-row table and a button returned only the heading and paragraph ("Whole page visible (no scrolling)"). WaitFor `text_exists use_dom=true` found the table's "405" in 0.21 s, so the text is in the tree; Scrape's informative-text filter keeps only text-type controls and links (`tree/service.py` "Informative Check"), not table cells. An agent reading a report or price table gets nothing.
+- **R5-2 (Low) Registry `list` reply has a stray carriage return** after the last value ("Revenue : 5000000000\r\n\nSub-Keys").
+- **R5-3 (Low) Snapshot lists Notepad's document twice** (one entry with the value, one with the scroll position) and gives 100.1% at the bottom. With `use_vision=true` the reply is not JSON-escaped and the value's bare `\r` line breaks run the lines together ("Week 39Region").
+- **R5-4 (Low) FindText `window=` misses a phrase the full screen finds.** Its crop is the window rectangle (31,26)-(1031,628); OCR then reads the table row as "North 12.50", so "North 460" is "not found", while a region 5 px larger reads "North 460 12.50". A `region` equal to the window rectangle gives the same miss, so the window filter is fine; the engine is sensitive to the crop.
+
+## Improvements
+
+- **R5-I1 Scroll is slower:** 0.68-0.72 s a call (round 4: 0.27-0.56 s; guide ~0.5 s), apparently the wait for the app to settle (R4-7).
+- **R5-I2 Click `element=` in Edge took 1.5 s** the first time (Notepad 0.27-0.30 s).
+- **R5-I3 App `list` with no "(front)"** when the foreground is not a listed window (the taskbar's hidden-icons panel): say what is in front instead.
+- **R5-I4 Long text into Notepad:** typing is still unusable there (361 of 622 characters, garbled); a paste of the same text through the clipboard was exact in 0.1 s. A Type option that pastes (backing up and restoring the clipboard) would cover XAML editors.
+
+## Guide check
+
+Compared SKILL.md, the references and the tool descriptions with the results. Corrections (D5-1 to D5-4 in `Plan/windows-mcp-open-issues-round5.md`): Scroll timing (~0.7 s, not ~0.5 s) and Click (~0.2 s); Click `element=` in a browser can take ~1.5 s; `references/web.md` does not say `use_dom` drops table text (R5-1, needs a known-gaps entry until fixed); known-gaps R4-16 should give the working alternative (Clipboard `set` then Ctrl+V, after backing the clipboard up). Tool descriptions matched what the tools did.
+
+## Environmental notes
+
+- The first Notepad `launch` restored the user's five tabs; they were never typed into (runtime ids and TabState file names unchanged). That window was left open and minimized, since closing it could ask about the user's unsaved tabs.
+- Edge's throwaway profile signed itself in and showed the "now syncing" notice again (dismissed with Click `element=`).
+- Avast logged nothing during the session (last entry 05:57 UTC = 09:57 local).
+- Clean-up verified: `HKCU:\Software\WMCP-Test` gone, scratch folders gone, harness windows, throwaway PowerShell processes, the test Explorer window and Edge closed; clipboard image restored pixel-identical.
