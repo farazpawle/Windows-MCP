@@ -64,6 +64,8 @@ Process · Clipboard · Notification · Scrape
   files on it are lost.** Back them up first.
 - Type with empty `text` and `clear=true` raises "string index out of range" although it
   cleared.
+- Type has no `caret_position` `field_start` / `field_end`: send Shortcut `ctrl+home` or
+  `ctrl+end` first.
 - MultiEdit moves a bad target to the screen corner, and later fields may fail silently.
 - MultiSelect says "multi-selected" whether or not Ctrl was held.
 - Scroll accepts `wheel_times` of 0 or less and does nothing. **Horizontal scroll sends

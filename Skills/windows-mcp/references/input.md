@@ -46,9 +46,9 @@ Coordinates · What the replies report · Shrunk screenshots
 - `clear=true` empties the field first, old-style boxes that ignore Ctrl+A included. Empty
   `text` with `clear=true` just clears it. Never in an Explorer file list: it sends Ctrl+A
   then Backspace, which goes up a folder.
-- `caret_position`: `start` or `end` of the **current line** (Home/End), not of the whole
-  field. For the start or end of a multi-line field, send Shortcut `ctrl+home` or
-  `ctrl+end` first. `press_enter=true` sends Enter (see golden rule 1).
+- `caret_position`: `start` or `end` of the **current line** (Home/End); `field_start` or
+  `field_end` of the **whole field** (Ctrl+Home/Ctrl+End). `press_enter=true` sends Enter
+  (see golden rule 1).
 - Accents, CJK and emoji are typed correctly. Text is sent as keystrokes and never touches
   the clipboard (2,000 characters arrived intact). Line breaks and tabs are real Enter and
   Tab key presses (in a form, Tab moves to the next field); braces are typed as-is. A

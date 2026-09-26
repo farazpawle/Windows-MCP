@@ -105,3 +105,23 @@ def test_blocked_input_is_an_error(monkeypatch):
     monkeypatch.setattr(core, "_send_inputs", lambda inputs: 0, raising=False)
     with pytest.raises(OSError, match="blocked"):
         core.SendUnicodeText("abc")
+
+
+@pytest.mark.parametrize(
+    ("caret", "key"),
+    [
+        ("start", "{Home}"),
+        ("end", "{End}"),
+        ("field_start", "{Ctrl}{Home}"),
+        ("field_end", "{Ctrl}{End}"),
+    ],
+)
+def test_caret_position_key_is_pressed_before_the_text(caret, key):
+    # Round-4 R4-N1: start/end are the current line; field_start/field_end the whole field.
+    calls = []
+    with (
+        patch.object(uia, "SendUnicodeText", lambda t, *a, **k: calls.append(("text", t))),
+        patch.object(uia, "SendKeys", lambda keys, *a, **k: calls.append(("key", keys))),
+    ):
+        Desktop.__new__(Desktop).type(None, "x", caret_position=caret)
+    assert calls == [("key", key), ("text", "x")]

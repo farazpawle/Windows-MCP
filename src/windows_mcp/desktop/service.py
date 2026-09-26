@@ -1160,7 +1160,7 @@ class Desktop:
         self,
         loc: tuple[int, int] | None,
         text: str,
-        caret_position: Literal["start", "idle", "end"] = "idle",
+        caret_position: Literal["start", "idle", "end", "field_start", "field_end"] = "idle",
         clear: bool | str = False,
         press_enter: bool | str = False,
     ):
@@ -1170,10 +1170,15 @@ class Desktop:
             x, y = loc
             self._require_on_screen([(x, y)])
             uia.Click(x, y, waitTime=self._SETTLE)
-        if caret_position == "start":
-            uia.SendKeys("{Home}", waitTime=0.05)
-        elif caret_position == "end":
-            uia.SendKeys("{End}", waitTime=0.05)
+        # start/end are the current line; field_start/field_end the whole field (R4-N1).
+        caret_keys = {
+            "start": "{Home}",
+            "end": "{End}",
+            "field_start": "{Ctrl}{Home}",
+            "field_end": "{Ctrl}{End}",
+        }.get(caret_position)
+        if caret_keys:
+            uia.SendKeys(caret_keys, waitTime=0.05)
         if clear is True or (isinstance(clear, str) and clear.lower() == "true"):
             sleep(self._SETTLE)
             uia.SendKeys("{Ctrl}a", waitTime=0.05)
