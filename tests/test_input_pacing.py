@@ -30,7 +30,6 @@ def test_modifier_click_releases_keys_within_100ms_of_mouse_up(clicks):
         patch.object(uia, "PressKey", lambda code, waitTime: events.append(("down", waitTime))),
         patch.object(uia, "ReleaseKey", lambda code, waitTime: events.append(("up", waitTime))),
         patch.object(uia, "Click", lambda x, y, waitTime=0.5: events.append(("click", waitTime))),
-        patch.object(uia, "GetDoubleClickTime", return_value=500),
         patch.object(service, "sleep", lambda s: events.append(("sleep", s))),
     ):
         d.click((10, 20), clicks=clicks, modifiers=["shift"])
@@ -50,8 +49,12 @@ def test_modifier_click_releases_keys_within_100ms_of_mouse_up(clicks):
         lambda d: d.scroll((10, 20)),
         lambda d: d.multi_select(True, [(10, 20), (30, 40)]),
         lambda d: d.multi_edit([(10, 20, "hi")]),
+        # Round-4 R4-I4: drag kept two 0.5 s waits (1.29 s) and a double click waited
+        # half the double-click time between presses (0.48 s).
+        lambda d: d.drag((50, 60), from_loc=(10, 20)),
+        lambda d: d.click((10, 20), clicks=2),
     ],
-    ids=["click", "move", "scroll", "multi_select", "multi_edit"],
+    ids=["click", "move", "scroll", "multi_select", "multi_edit", "drag", "double_click"],
 )
 def test_no_input_waits_more_than_100ms(action):
     # Round-3 R3-I1: a fixed 0.5 s settle made every click/hover/scroll cost ~0.5 s.
@@ -65,12 +68,12 @@ def test_no_input_waits_more_than_100ms(action):
     d._finish_clear = lambda: None
     with (
         patch.object(uia, "Click", rec(0.5)),
+        patch.object(uia, "DragDrop", rec(0.5)),
         patch.object(uia, "MoveTo", rec(0.5)),
         patch.object(uia, "WheelDown", rec(0.5)),
         patch.object(uia, "PressKey", rec(0.5)),
         patch.object(uia, "ReleaseKey", rec(0.5)),
         patch.object(uia, "SendKeys", rec(0.5)),
-        patch.object(uia, "GetDoubleClickTime", return_value=500),
         patch.object(service, "sleep", waits.append),
     ):
         action(d)

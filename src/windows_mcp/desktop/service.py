@@ -1149,10 +1149,12 @@ class Desktop:
 
     def _click_button(self, x: int, y: int, button: str, clicks: int) -> None:
         press = {"left": uia.Click, "right": uia.RightClick, "middle": uia.MiddleClick}[button]
-        # Presses must fall inside GetDoubleClickTime(), or apps see separate single clicks.
-        dbl_wait = uia.GetDoubleClickTime() / 2000.0
+        # Presses must fall inside the double-click time, or apps see separate single clicks.
+        # Press to press is 0.05 s held + this gap = 0.1 s, inside the fastest setting the
+        # Mouse settings slider allows (200 ms). Half the double-click time (0.25 s by
+        # default) made a double click 0.48 s (round-4 R4-I4).
         for i in range(clicks):
-            press(x, y, waitTime=dbl_wait if i < clicks - 1 else 0)
+            press(x, y, waitTime=0.05 if i < clicks - 1 else 0)
 
     def type(
         self,
@@ -1333,13 +1335,16 @@ class Desktop:
         )
         effective_duration = self._normalize_drag_duration(duration)
         self._require_on_screen([(x, y)] + ([normalized_from_loc] if normalized_from_loc else []))
-        sleep(0.5)
         if normalized_from_loc is None:
             cx, cy = uia.GetCursorPos()
         else:
             cx, cy = normalized_from_loc
+        # No fixed 0.5 s before and after (round-4 R4-I4: drag took 1.29 s); the settle
+        # matches the other input tools (R3-I1). The pointer path itself is unchanged.
         with _keys_held(list(modifiers)):
-            uia.DragDrop(cx, cy, x, y, moveSpeed=1, duration=effective_duration)
+            uia.DragDrop(
+                cx, cy, x, y, moveSpeed=1, waitTime=self._SETTLE, duration=effective_duration
+            )
         return {
             "start": [cx, cy],
             "end": [x, y],

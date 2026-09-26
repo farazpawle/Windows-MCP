@@ -20,7 +20,7 @@ def test_desktop_drag_uses_explicit_start_and_duration(
     monkeypatch.setattr(
         service.uia,
         "DragDrop",
-        lambda x1, y1, x2, y2, moveSpeed=1, duration=None: calls.append(
+        lambda x1, y1, x2, y2, moveSpeed=1, waitTime=0.5, duration=None: calls.append(
             (x1, y1, x2, y2, moveSpeed, duration)
         ),
     )

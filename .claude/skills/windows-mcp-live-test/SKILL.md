@@ -99,6 +99,11 @@ content, kill its own PID after): its words are listed. Without the Grid the win
 the box's text, not its title, so `window_name` matching fails. A single click on a word label then Type "X"
 shows where the click landed without touching the clipboard.
 
+To prove a double click or drag selected text (not just that clicks were logged): Type one
+long word into the harness text box, double-click it or drag across it (the box's child Edit
+rect from `EnumChildWindows`), then Type "X": `<log>.text` is exactly "X" only if the word was
+selected. No clipboard needed (R4-I4, 2026-09-26).
+
 The harness text box ignores Ctrl+A (it is a multiline WinForms box), so Ctrl+A then
 Backspace deletes only the last character: compare the new tail, or use a fresh window per case.
 
