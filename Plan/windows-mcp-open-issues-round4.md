@@ -195,7 +195,7 @@ Evidence for every item: `docs/testing/windows-mcp-tool-test-report.md`, section
 
 Guide = `Skills/windows-mcp/`. Rebuild the Claude Desktop ZIP (round-3 D.2) after these.
 
-- [x] D.32 Rebuild the Claude Desktop skill ZIP: `windows-mcp-skill-2026-09-25.zip` (20.3 KB, the `Skills/windows-mcp` folder as `windows-mcp/...`) built in the user's Downloads folder on 2026-09-25; the older ZIP there was left as it was. Rebuilt in place after R4-8 (20.8 KB, same name, user's choice), and again after R4-13 and R4-15 (20.8 KB).
+- [x] D.32 Rebuild the Claude Desktop skill ZIP: `windows-mcp-skill-2026-09-25.zip` (20.3 KB, the `Skills/windows-mcp` folder as `windows-mcp/...`) built in the user's Downloads folder on 2026-09-25; the older ZIP there was left as it was. Rebuilt in place after R4-8 (20.8 KB, same name, user's choice), and again after R4-13 and R4-15 (20.8 KB), and after R4-I2/I5/I6/I7 on 2026-09-26 (20.9 KB, 8 files).
 - [ ] D.33 [User] Upload the new ZIP in Claude Desktop (needs the user's Claude account): Customize > Skills > open the existing windows-mcp skill and replace it, or delete it and "+" > Create skill > Upload a skill > the ZIP; keep it toggled on.
 
 - [x] D.1 (done: web.md opens pages with launch_executable msedge.exe (bare name), notes the throwaway-profile window) `references/web.md`: "To open a page, start `msedge.exe <url>` (full path: known-gaps.md). It opens a new tab" - outdated: bare `msedge.exe` works (App Paths, R3-I5), known-gaps has no Edge entry, and a throwaway `--user-data-dir` opens its own window. Rewrite.
