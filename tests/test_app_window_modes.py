@@ -138,11 +138,16 @@ def test_list_shows_handle_pid_process_state_and_title():
         _window("Inbox", 5678, Status.MAXIMIZED, pid=8812, box=(-8, -8, 1936, 1048)),
     ]
     names = {4120: "notepad.exe", 8812: "chrome.exe"}
-    with patch(f"{WC}.Process", side_effect=lambda pid: SimpleNamespace(name=lambda: names[pid])):
+    with (
+        patch(f"{WC}.Process", side_effect=lambda pid: SimpleNamespace(name=lambda: names[pid])),
+        patch(f"{WC}.win32gui.GetForegroundWindow", return_value=1234),
+    ):
         reply = window_control.format_list(windows)
+    # Round-4 R4-I6: front to back, the window in front marked.
     assert reply.splitlines() == [
-        "2 windows:",
-        'handle=1234 pid=4120 notepad.exe Normal at (100,50) size 800x600 "notes.txt - Notepad"',
+        "2 windows, front to back:",
+        'handle=1234 pid=4120 notepad.exe Normal at (100,50) size 800x600 "notes.txt - Notepad"'
+        " (front)",
         'handle=5678 pid=8812 chrome.exe Maximized at (-8,-8) size 1936x1048 "Inbox"',
     ]
 

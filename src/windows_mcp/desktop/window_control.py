@@ -58,7 +58,9 @@ def close(window) -> str:
 def format_list(windows) -> str:
     if not windows:
         return "No windows found on the desktop."
-    lines = [f"{len(windows)} windows:"]
+    # get_windows keeps EnumWindows' front-to-back order (round-4 R4-I6).
+    lines = [f"{len(windows)} windows, front to back:"]
+    front = win32gui.GetForegroundWindow()
     for window in windows:
         try:
             exe = Process(window.process_id).name()
@@ -69,6 +71,7 @@ def format_list(windows) -> str:
         lines.append(
             f"handle={window.handle} pid={window.process_id} {exe} {window.status.value} "
             f'at ({box.left},{box.top}) size {box.width}x{box.height} "{window.name}"'
+            + (" (front)" if window.handle == front else "")
         )
     return "\n".join(lines)
 
