@@ -265,6 +265,35 @@ def describe_point(x: int, y: int, max_depth: int = 3) -> str:
         return window
 
 
+def expect_at(x: int, y: int, expect: str, max_depth: int = 3) -> str | None:
+    """None when the element at (x, y) or one of its first *max_depth* ancestors has a
+    name containing *expect* (case ignored); else what is there, for a refusal (R6-3).
+
+    Ancestors count because a click on a button's text hits a Text child. A hung or
+    VS Code-family window is refused unread, like describe_point.
+    """
+    handle = top_level_window_at(x, y)
+    if not handle:
+        return "nothing is there"
+    title = _clean(_window_title(handle))
+    if not _readable_window(handle):
+        return f'the window there ("{title}") is not read (VS Code-family or not responding)'
+    want = expect.casefold()
+    try:
+        control = uia.ControlFromPoint(x, y)
+        for _ in range(max_depth + 1):
+            if control is None:
+                break
+            if want in (control.Name or "").casefold():
+                return None
+            control = control.GetParentControl()
+    except Exception:
+        logger.debug("Could not read the element at (%s, %s)", x, y, exc_info=True)
+        return f'the element there could not be read (in "{title}")'
+    found = describe_point(x, y)
+    return f"found {found}" if found else "nothing is there"
+
+
 TYPED_TEXT_MISSING = (
     " Warning: the field does not contain the typed text exactly; the app may have changed it"
     " (auto-correct, formatting) or dropped keys. Check it before relying on it."

@@ -19,6 +19,7 @@ from windows_mcp.tools._coords import to_model, to_screen
 from windows_mcp.tree.utils import (
     TYPED_TEXT_MISSING,
     describe_point,
+    expect_at,
     find_element,
     focused_value,
     name_element,
@@ -162,6 +163,24 @@ def _point_description(point: list) -> str:
     """'button "Save" in "Notepad" ' for a Click reply (round-2 B.10), else ""."""
     described = describe_point(*point) if _is_point(point) else ""
     return f"{described} " if described else ""
+
+
+def _as_expect(expect: str | None) -> str | None:
+    if expect is not None and not expect.strip():
+        raise ValueError("expect must name what should be at the point (it was blank).")
+    return expect.strip() if expect is not None else None
+
+
+def _require_expected(expect: str | None, loc: list, shown: tuple[int, int], verb: str) -> None:
+    """Refuse before any input when *expect* is not what is at *loc* (R6-3)."""
+    if expect is None:
+        return
+    reason = expect_at(loc[0], loc[1], expect)
+    if reason is not None:
+        raise ValueError(
+            f'Not {verb}: expected "{expect}" at ({shown[0]},{shown[1]}) but {reason}. '
+            "Take a new Screenshot or Snapshot before trying again."
+        )
 
 
 def _scroll_reader(point: list, axis: str) -> Callable[[], tuple[str, float] | None]:
@@ -463,7 +482,12 @@ def register(
             "modifiers holds keys during the click, e.g. 'shift' to extend a selection, "
             "'ctrl' to add to it or open a link in a new tab, 'ctrl+shift'. "
             "Allowed: ctrl, shift, alt, win (aliases: control, windows, super, cmd, command, "
-            "meta, option), separated by +, a comma or a space. Not allowed with clicks=0, which only moves the pointer."
+            "meta, option), separated by +, a comma or a space. Not allowed with clicks=0, which only moves the pointer. "
+            "expect='Save' checks before clicking that the element at the point, or one of its "
+            "first three parents, has a name containing 'Save' (case ignored); otherwise nothing "
+            "is clicked and the error names what is there. Use it with loc when a pop-up may have "
+            "covered the spot since the last Screenshot. VS Code-family and not-responding "
+            "windows are never read, so expect always refuses there."
         ),
         annotations=ToolAnnotations(
             title="Click",
@@ -483,8 +507,10 @@ def register(
         modifiers: list[str] | str | None = None,
         element: str | None = None,
         window: str | None = None,
+        expect: str | None = None,
         ctx: Context = None,
     ) -> str:
+        expect = _as_expect(expect)
         if type(clicks) is not int or clicks not in _CLICK_NAMES:
             raise ValueError(f"clicks must be 0, 1, 2 or 3 (got {clicks!r})")
         modifiers = _as_modifiers(modifiers)
@@ -514,6 +540,7 @@ def register(
         if len(loc) != 2:
             raise ValueError("Location must be a list of exactly 2 integers [x, y]")
         x, y = to_model(desktop, loc)
+        _require_expected(expect, loc, (x, y), "clicked")
         # clicks=0 only moves the pointer, which is how a held drag is steered.
         released = release_held_button(desktop) if clicks else ""
         # Read before clicking: the click may close or replace what it hits.
@@ -533,7 +560,7 @@ def register(
 
     @mcp.tool(
         name="Type",
-        description="Types text at specified coordinates [x, y] or passing a UI element's label/id. Set clear=True to clear existing text first, False to append. Set press_enter=True to submit after typing. Set caret_position to 'start' or 'end' (start or end of the current line: Home/End), 'field_start' or 'field_end' (start or end of the whole field: Ctrl+Home/Ctrl+End) or 'idle' (default). Provide loc or label to click the field first; with neither, types into the element that already has keyboard focus (no click, so the caret and selection stay put).",
+        description="Types text at specified coordinates [x, y] or passing a UI element's label/id. Set clear=True to clear existing text first, False to append. Set press_enter=True to submit after typing. Set caret_position to 'start' or 'end' (start or end of the current line: Home/End), 'field_start' or 'field_end' (start or end of the whole field: Ctrl+Home/Ctrl+End) or 'idle' (default). Provide loc or label to click the field first; with neither, types into the element that already has keyboard focus (no click, so the caret and selection stay put). expect='Search' (with loc or label) checks before clicking the field that the element at the point, or one of its first three parents, has a name containing 'Search' (case ignored); otherwise nothing is clicked or typed and the error names what is there. VS Code-family and not-responding windows are never read, so expect always refuses there.",
         annotations=ToolAnnotations(
             title="Type",
             readOnlyHint=False,
@@ -551,14 +578,22 @@ def register(
         clear: bool | str = False,
         caret_position: Literal["start", "idle", "end", "field_start", "field_end"] = "idle",
         press_enter: bool | str = False,
+        expect: str | None = None,
         ctx: Context = None,
     ) -> str:
+        expect = _as_expect(expect)
         desktop = get_desktop()
         loc = to_screen(desktop, _as_loc(loc))
         if label is not None:
             loc = _resolve_label(desktop, label)
         if loc is not None and len(loc) != 2:
             raise ValueError("Location must be a list of exactly 2 integers [x, y]")
+        if expect is not None:
+            if loc is None:
+                raise ValueError(
+                    "expect needs loc or label: the point to check before clicking the field."
+                )
+            _require_expected(expect, loc, to_model(desktop, loc), "typed")
         # Only a located Type clicks; typing into the focused element leaves a drag alone.
         released = release_held_button(desktop) if loc is not None else ""
         # Read the focus before typing: typing can move it (Tab, Enter in a form).

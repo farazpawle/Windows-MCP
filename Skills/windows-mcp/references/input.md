@@ -27,6 +27,11 @@ Coordinates · What the replies report · Shrunk screenshots
     a UI Automation client asks. Retry after ~2 s.
 - A right-click menu appears ~1 s after Click returns: WaitFor `element_exists` or
   `screen_idle` before reading it.
+- `expect="Save"` with `loc`: before clicking, the element at the point or one of its first
+  three parents must have a name containing "Save" (case ignored), else nothing is clicked and
+  the error names what is there (`found pane in "<pop-up>"`). Use it when a pop-up may have
+  covered the spot since the last Screenshot. Costs ~0.005 s. Always refuses on a VS
+  Code-family or not-responding window (never read).
 
 ## Spot check (label= and element=)
 
@@ -43,6 +48,8 @@ Coordinates · What the replies report · Shrunk screenshots
 - Clicks `loc`/`label` first, then types. With neither it types into whatever has keyboard
   focus, without a click, so the caret and selection stay put (after a click or shortcut
   placed the caret, or to replace a selection). Make sure the right window is focused.
+- `expect=` works as on Click (needs `loc` or `label`): nothing is clicked or typed when the
+  field at the point is not named like it.
 - `clear=true` empties the field first, old-style boxes that ignore Ctrl+A included. Empty
   `text` with `clear=true` just clears it. Never in an Explorer file list: it sends Ctrl+A
   then Backspace, which goes up a folder.

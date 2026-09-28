@@ -1,6 +1,6 @@
 ---
 Title: Windows-MCP round 6 - speed and accuracy (tasks)
-Description: Task list for Plan/windows-mcp-round6-speed-accuracy-plan.md. Part A accuracy (R6-1 App switch confirms the front window, R6-2 multi-click re-checks each item, R6-3 optional expect= on Click/Type by loc). Part B speed (R6-4 cached element search, closes R5-I2; R6-5 Scroll re-reads one element, closes R5-I1; R6-6 Registry via winreg keeping today's replies, closes R5-2; R6-7 OCR helper only if the user approves). Part C fewer calls (R6-8 recipes page; R6-9 "steps in one go" tool, design approved by the user first). Part D cleanup (R6-10 one fuzzy library). Part E user-only checks from round 4 (R6-11). Part F finish (R6-12 round-5 guide fixes and one guide ZIP rebuild). [User] tasks: R6-7b, R6-9b, R6-11a, R6-11b. Status 2026-09-28: R6-1, R6-2 and R6-5 done; R6-4 closed by measurement with no code change (the 1.5 s was a throwaway Edge profile slowing every window); the rest not started.
+Description: Task list for Plan/windows-mcp-round6-speed-accuracy-plan.md. Part A accuracy (R6-1 App switch confirms the front window, R6-2 multi-click re-checks each item, R6-3 optional expect= on Click/Type by loc). Part B speed (R6-4 cached element search, closes R5-I2; R6-5 Scroll re-reads one element, closes R5-I1; R6-6 Registry via winreg keeping today's replies, closes R5-2; R6-7 OCR helper only if the user approves). Part C fewer calls (R6-8 recipes page; R6-9 "steps in one go" tool, design approved by the user first). Part D cleanup (R6-10 one fuzzy library). Part E user-only checks from round 4 (R6-11). Part F finish (R6-12 round-5 guide fixes and one guide ZIP rebuild). [User] tasks: R6-7b, R6-9b, R6-11a, R6-11b. Status 2026-09-28: R6-1, R6-2, R6-3 and R6-5 done; R6-4 closed by measurement with no code change (the 1.5 s was a throwaway Edge profile slowing every window); the rest not started.
 Total Tasks: 66
 ---
 
@@ -37,15 +37,16 @@ then R6-11. R5-I4 is a user decision, any time.
   - **Verify:** Live - MultiSelect of items 1 and 3 on the shifting list stops at item 3 with the error; on an unchanged list both are selected.
   - **Done 2026-09-28:** live on the harness (`shifting_list=True`): MultiSelect labels of items 1 and 3 clicked item 1 (the window logged it and the inserted row), then stopped with "MultiSelect stopped at label 4: ... no longer at its spot ... Done: label 6."; item 3 was never clicked. On an unchanged list both clicks were logged (0.43 s). Also: Ctrl is now released in a `finally`, and failures name items as `locs[i]` / `label N`.
 
-- [ ] R6-3 **Click and Type by position can refuse when the wrong thing is there (optional `expect=`).**
-  - [ ] a. Unit: Click `loc` with `expect="Save"` clicks when the element at the point or one of its first three ancestors has a name containing "Save" (case ignored).
-  - [ ] b. Unit: with something else at the point, it refuses without clicking and names what is there.
-  - [ ] c. Unit: on a VS Code-family or not-responding window, `expect` refuses without reading that window's tree.
-  - [ ] d. Unit: Click `loc` without `expect` behaves as today.
-  - [ ] e. Add `expect` to Click.
-  - [ ] f. Add `expect` to Type.
-  - [ ] g. Update the Click and Type tool descriptions and their entries in `references/input.md`.
+- [x] R6-3 **Click and Type by position can refuse when the wrong thing is there (optional `expect=`).**
+  - [x] a. Unit: Click `loc` with `expect="Save"` clicks when the element at the point or one of its first three ancestors has a name containing "Save" (case ignored).
+  - [x] b. Unit: with something else at the point, it refuses without clicking and names what is there.
+  - [x] c. Unit: on a VS Code-family or not-responding window, `expect` refuses without reading that window's tree.
+  - [x] d. Unit: Click `loc` without `expect` behaves as today.
+  - [x] e. Add `expect` to Click.
+  - [x] f. Add `expect` to Type.
+  - [x] g. Update the Click and Type tool descriptions and their entries in `references/input.md`.
   - **Verify:** Live - harness: a matching `expect` clicks; a pop-up opened between the Screenshot and the Click makes it refuse; Click time within 0.02 s of today's.
+  - **Done 2026-09-28:** live on the harness (Save button, text box, a second harness window as the pop-up): `expect="save"` clicked; with the pop-up over the button Click refused (`found pane in "R63Popup"`) and the pop-up logged nothing; Type with `expect="Save"` on the text box refused and nothing was typed. The main window logged exactly the 13 allowed clicks. Timing over 6 alternating pairs: median 0.160 s plain, 0.164 s with `expect`. Extra unit tests: a fourth parent is too far, a blank `expect` is refused, Type `expect` without `loc`/`label` is refused, a UIA error refuses.
 
 # Part B - Speed
 
