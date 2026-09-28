@@ -18,6 +18,9 @@
 - A throwaway profile signs itself into the Windows Microsoft account and shows a "now
   syncing" notice over the page; `use_dom` then returns the notice's text. Click its
   "Got it" first.
+- While a throwaway profile is starting and syncing, every window answers slowly: Click
+  `element=` and App calls by window name can take ~1.5-2 s instead of ~0.5 s. With an
+  everyday Edge profile, Click `element=` in Edge takes about 0.5 s.
 - Close only your own tab afterwards (Ctrl+W while it is active).
 - The first or last line says top / middle / bottom, or "Whole page visible".
 

@@ -46,9 +46,10 @@ Work order: these items are slotted into the round-6 order (`Plan/windows-mcp-ro
   - [ ] b. Shorten the settle wait where the position is already stable.
   - **Verify:** Live - three Scrolls in a Notepad test tab: each under 0.5 s, each "now" equal to the next "was".
 
-- [ ] R5-I2 **Click `element=` in Edge took 1.5 s** the first time (Notepad 0.27-0.30 s).
-  - [ ] a. Profile Click `element="button:Got it"` on a fresh throwaway Edge window.
+- [x] R5-I2 **Click `element=` in Edge took 1.5 s** the first time (Notepad 0.27-0.30 s).
+  - [x] a. Profile Click `element="button:Got it"` on a fresh throwaway Edge window.
   - **Verify:** Live - the profile names where the 1.5 s goes; fix only if one step dominates.
+  - **Done 2026-09-28 in round-6 R6-4:** the time went to finding the window by name, slowed PC-wide while the throwaway Edge profile starts and syncs (with an everyday Edge, 0.06-0.08 s). No code change (user decision); see R6-4's findings.
 
 - [ ] R5-I3 **App `list` shows no "(front)"** when the foreground is not a listed window (the taskbar's hidden-icons panel was open).
   - [ ] a. Unit: when the foreground is not listed, the header names what is in front.

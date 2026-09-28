@@ -1,6 +1,6 @@
 ---
 Title: Windows-MCP round 6 - speed and accuracy (tasks)
-Description: Task list for Plan/windows-mcp-round6-speed-accuracy-plan.md. Part A accuracy (R6-1 App switch confirms the front window, R6-2 multi-click re-checks each item, R6-3 optional expect= on Click/Type by loc). Part B speed (R6-4 cached element search, closes R5-I2; R6-5 Scroll re-reads one element, closes R5-I1; R6-6 Registry via winreg keeping today's replies, closes R5-2; R6-7 OCR helper only if the user approves). Part C fewer calls (R6-8 recipes page; R6-9 "steps in one go" tool, design approved by the user first). Part D cleanup (R6-10 one fuzzy library). Part E user-only checks from round 4 (R6-11). Part F finish (R6-12 round-5 guide fixes and one guide ZIP rebuild). [User] tasks: R6-7b, R6-9b, R6-11a, R6-11b. Status 2026-09-28: R6-1 and R6-2 done; the rest not started.
+Description: Task list for Plan/windows-mcp-round6-speed-accuracy-plan.md. Part A accuracy (R6-1 App switch confirms the front window, R6-2 multi-click re-checks each item, R6-3 optional expect= on Click/Type by loc). Part B speed (R6-4 cached element search, closes R5-I2; R6-5 Scroll re-reads one element, closes R5-I1; R6-6 Registry via winreg keeping today's replies, closes R5-2; R6-7 OCR helper only if the user approves). Part C fewer calls (R6-8 recipes page; R6-9 "steps in one go" tool, design approved by the user first). Part D cleanup (R6-10 one fuzzy library). Part E user-only checks from round 4 (R6-11). Part F finish (R6-12 round-5 guide fixes and one guide ZIP rebuild). [User] tasks: R6-7b, R6-9b, R6-11a, R6-11b. Status 2026-09-28: R6-1 and R6-2 done; R6-4 closed by measurement with no code change (the 1.5 s was a throwaway Edge profile slowing every window); the rest not started.
 Total Tasks: 66
 ---
 
@@ -49,14 +49,19 @@ then R6-11. R5-I4 is a user decision, any time.
 
 # Part B - Speed
 
-- [ ] R6-4 **Click `element=` fetches every match's details in one request (root cause of R5-I2).**
-  - [ ] a. Profile Click `element="button:Got it"` on a fresh throwaway Edge window: search, per-match reads, cover check.
-  - [ ] b. Unit: the element search reads type, name, box and offscreen from a cache request.
-  - [ ] c. Build the cache request for those four properties.
-  - [ ] d. Switch the search to `FindAllBuildCache` and cached reads.
-  - [ ] e. Live: on the Edge page, cached values equal the uncached ones for every match.
-  - [ ] f. Tick R5-I2 in `Plan/windows-mcp-open-issues-round5.md`, pointing here.
+- [x] R6-4 **Click `element=` fetches every match's details in one request (root cause of R5-I2).** Closed by measurement, no code change (user decision 2026-09-28).
+  - [x] a. Profile Click `element="button:Got it"` on a fresh throwaway Edge window: search, per-match reads, cover check.
+  - [-] b. Unit: the element search reads type, name, box and offscreen from a cache request. Not done: see findings.
+  - [-] c. Build the cache request for those four properties. Not done.
+  - [-] d. Switch the search to `FindAllBuildCache` and cached reads. Not done.
+  - [x] e. Live: on the Edge page, cached values equal the uncached ones for every match (equal in every round; measured, not adopted).
+  - [x] f. Tick R5-I2 in `Plan/windows-mcp-open-issues-round5.md`, pointing here.
   - **Verify:** Live - Click `element=` in Edge under 0.5 s (was 1.5 s); Notepad no slower than 0.30 s; the same element picked as before.
+  - **Findings 2026-09-28 (the premise was wrong):**
+    - `find_element` on the throwaway Edge page with the sync notice: FindAll 0.29-0.31 s, uncached reads of all 3 matches 0.019 s, cover check ~0.08 s, total 0.39-0.40 s. `FindAllBuildCache` saved 0.02-0.06 s. Warm, on a page without the notice: 0.017 s in total.
+    - A full Click `element="button:Got it" window="R64 Profile Page"`: 1.6-2.0 s, of which `pick_window` (by name, i.e. `get_windows`) was 1.16-1.39 s on every call, `find_element` 0.18-0.33 s and the click with its settle 0.17 s.
+    - `get_windows` normally takes 0.06-0.09 s, and `pick_window` by name against the user's own Edge takes 0.06-0.08 s. With a fresh throwaway Edge profile it took 1.56 s 3 s after the start, 0.09 s at 10 s and 20 s, and 1.4-1.8 s from about 40 s on (after the profile signs in and syncs). Every UIA call slowed then (ControlFromHandle 0.013-0.035 s per window of any app, against 0.001 s), with low CPU use. Cause not found; it is outside this code.
+    - So round 5's 1.5 s was the throwaway profile's start-up and sync, not the element search. Guide note added to `references/web.md`.
 
 - [ ] R6-5 **Scroll re-reads the element it found instead of walking up again (R5-I1).**
   - [ ] a. Profile one Scroll in Notepad and in the harness: wheel, settle wait, each position read.

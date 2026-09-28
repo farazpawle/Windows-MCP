@@ -116,7 +116,12 @@ Real apps: Edge with `--app=<file URL> --user-data-dir=<scratchpad>` gives a thr
 page in its own process (kill it with `taskkill /T /PID`); its elements appear to UIA only
 after a first query, so retry Click `element=` once. The throwaway profile signs itself into
 the Windows Microsoft account and shows a "now syncing" notice over the page (Scrape
-`use_dom` then returns the notice's text): click its "Got it" first. `explorer.exe <scratch folder>` opens a
+`use_dom` then returns the notice's text): click its "Got it" first. That notice can be an
+untitled top-level msedge window over the page centre, so `guarded_call`'s point check aborts
+there: check instead that the window at the point belongs to the throwaway Edge's process tree.
+**Never time other tools with a throwaway profile open:** from ~30-40 s after its start
+(sign-in and sync) every UIA call on the PC slows 10-30x (App list/switch by name ~1.4 s
+instead of ~0.08 s) until it closes (R6-4, 2026-09-28). `explorer.exe <scratch folder>` opens a
 window titled "<folder> - File Explorer" (explorer.exe is shared: close it by WM_CLOSE, never
 kill). Never Type `clear=true` into an Explorer file list: it sends Ctrl+A then Backspace,
 which navigates up a folder. Explorer's right-click menu is a separate "Pop-upHost" window
