@@ -341,8 +341,11 @@ def _scroll_percent(control, axis: str) -> float | None:
     if pattern is None:
         return None
     if axis == "vertical":
-        return round(pattern.VerticalScrollPercent, 1) if pattern.VerticallyScrollable else None
-    return round(pattern.HorizontalScrollPercent, 1) if pattern.HorizontallyScrollable else None
+        percent = pattern.VerticalScrollPercent if pattern.VerticallyScrollable else None
+    else:
+        percent = pattern.HorizontalScrollPercent if pattern.HorizontallyScrollable else None
+    # Notepad reports 100.1 at the bottom (round-5 R5-3).
+    return None if percent is None else round(min(max(percent, 0), 100), 1)
 
 
 def _scroll_area(x: int, y: int, axis: str, max_depth: int = 15) -> tuple | None:

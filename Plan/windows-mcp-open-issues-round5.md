@@ -25,14 +25,15 @@ Work order: these items are slotted into the round-6 order (`Plan/windows-mcp-ro
   - [ ] b. Strip the PowerShell output's line ends before building the reply.
   - **Verify:** Live - Registry `list` on a test key with 6 values: no `\r` in the reply.
 
-- [ ] R5-3 **Low - Snapshot lists Notepad's document twice and a scroll of 100.1%.** One `document "Text editor"` entry has the value, a second at the same point has `[v:100.1%]`. With `use_vision=true` the value's bare `\r` line breaks run the lines together ("Week 39Region").
-  - [ ] a. Unit: an element that is both informative and scrollable is listed once, with value and scroll position.
-  - [ ] b. Merge the two entries.
-  - [ ] c. Unit: a scroll percent above 100 is shown as 100.
-  - [ ] d. Clamp the percent.
-  - [ ] e. Unit: a value with `\r` line breaks is shown with `\n`.
-  - [ ] f. Normalise the value's line breaks.
+- [x] R5-3 **Low - Snapshot lists Notepad's document twice and a scroll of 100.1%.** One `document "Text editor"` entry has the value, a second at the same point has `[v:100.1%]`. With `use_vision=true` the value's bare `\r` line breaks run the lines together ("Week 39Region").
+  - [x] a. Unit: an element that is both informative and scrollable is listed once, with value and scroll position.
+  - [x] b. Merge the two entries.
+  - [x] c. Unit: a scroll percent above 100 is shown as 100.
+  - [x] d. Clamp the percent.
+  - [x] e. Unit: a value with `\r` line breaks is shown with `\n`.
+  - [x] f. Normalise the value's line breaks.
   - **Verify:** Live - Snapshot of a Notepad test tab scrolled to the end: one document entry, `v:100%`, value lines separate.
+  - **Done 2026-09-28 (round 6):** fixed where the tree text is written (`tree/views.py`), the data lists are unchanged: an input entry and a scroll entry of the same element (same window, type, name and box) are printed as one line, the input entry's label and point, with the scroll position; percents are capped at 0-100 (also in Scroll's reply, `tree/utils.py` `_scroll_percent`); a value's line breaks print as `\n`. Live on a Notepad file tab (158 lines) scrolled to the end through UIA, one Snapshot with the merge switched off and one with it: without, `[label:27] document "Text editor" ... [value:...]` and `[label:100] document "Text editor" ... [v:100.0%]`; with, one line `[label:27] ... [value:"Week 1\nRegion North 401..."]  [v:100.0%]`. Printed as `100.0%` (the style of every other percent), not `100%`. The tab was closed through its own Close button.
 
 - [ ] R5-4 **Low - FindText `window=` misses a phrase the full screen finds.** The window crop (31,26)-(1031,628) makes OCR read "North 460 12.50" as "North 12.50", so "North 460" is not found; a region 5 px larger reads it. The same miss with `region` = the window rectangle, so the window filter is fine; the engine is sensitive to the crop.
   - [ ] a. Measure on a saved screenshot which padding (e.g. 8-16 px of margin, or 4x instead of 3x) reads the row every time.

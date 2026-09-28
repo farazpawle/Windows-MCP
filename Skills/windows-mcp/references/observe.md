@@ -38,6 +38,10 @@
   off), so Click `label=` on it lands in the word. In a proportional font the box ends a
   little short; its centre still falls on the word. Words hidden under a panel drawn inside
   the app's window (Notepad's Find and Replace) are left out; the panel's own boxes stay.
+- An element that takes text and also scrolls (Notepad's `document "Text editor"`) is one
+  line with its `[value:...]` and its `[v:N%]` scroll position; its label works for Click,
+  Type and Scroll. Line breaks in a value show as `\n`, so each element stays on one line.
+  Scroll positions never exceed 100% (Notepad reports 100.1 at the bottom).
 - `display=[0]`, `[1]` and `[0,1]` work. Coordinates are virtual-desktop (a second screen to
   the right starts at x=1920 here) and clicks there land; the capture border shows on the
   screen captured. The screen layout is re-read on every call.

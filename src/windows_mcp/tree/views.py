@@ -20,6 +20,16 @@ def _action_for(control_type: str) -> str:
     return _ACTION_MAP.get(control_type.lower(), "click")
 
 
+def _scroll_parts(metadata: dict[str, Any]) -> list[str]:
+    parts = []
+    for short, axis in (("v", "vertical"), ("h", "horizontal")):
+        if metadata.get(f"{axis}_scrollable"):
+            # Notepad reports 100.1 at the bottom (round-5 R5-3).
+            pct = min(max(metadata.get(f"{axis}_scroll_percent", 0), 0.0), 100.0)
+            parts.append(f"{short}:{pct}%")
+    return parts
+
+
 def _node_meta_str(metadata: dict[str, Any]) -> str:
     parts = []
     if metadata.get("has_focused"):
@@ -27,6 +37,9 @@ def _node_meta_str(metadata: dict[str, Any]) -> str:
     if metadata.get("is_password"):
         parts.append("password")
     value = metadata.get("value")
+    if isinstance(value, str):
+        # A raw line break split the entry (Notepad's bare CRs ran lines together, R5-3).
+        value = value.replace("\r\n", "\n").replace("\r", "\n").replace("\n", "\\n")
     # Compare against None rather than testing truthiness: a slider sitting at its
     # minimum reports value 0.0, which is falsy, so a plain `if value` silently hides
     # the value of every zeroed volume/brightness/zoom control.
@@ -46,21 +59,15 @@ def _node_meta_str(metadata: dict[str, Any]) -> str:
     shortcut = metadata.get("shortcut")
     if shortcut:
         parts.append(f"shortcut:{shortcut}")
+    parts += _scroll_parts(metadata)  # only on an entry merged with its scroll twin
     if not parts:
         return ""
     return "  " + "  ".join(f"[{p}]" for p in parts)
 
 
 def _scroll_meta_str(metadata: dict[str, Any]) -> str:
-    parts = []
-    if metadata.get("has_focused"):
-        parts.append("focused")
-    if metadata.get("vertical_scrollable"):
-        pct = metadata.get("vertical_scroll_percent", 0)
-        parts.append(f"v:{pct}%")
-    if metadata.get("horizontal_scrollable"):
-        pct = metadata.get("horizontal_scroll_percent", 0)
-        parts.append(f"h:{pct}%")
+    parts = ["focused"] if metadata.get("has_focused") else []
+    parts += _scroll_parts(metadata)
     if not parts:
         return ""
     return "  " + "  ".join(f"[{p}]" for p in parts)
@@ -159,6 +166,29 @@ def _format_semantic_node(
     return f'{ctrl} "{name}"'
 
 
+def _twin_key(node: SemanticNode) -> tuple:
+    box = node.bounding_box
+    edges = (box.left, box.top, box.right, box.bottom) if box else None
+    return (node.window_name, node.control_type, node.name, edges)
+
+
+def _merge_scroll_twins(children: list[SemanticNode]) -> list[SemanticNode]:
+    """List an element that takes input and scrolls (Notepad's document) once (R5-3).
+
+    The traversal records it as a scroll entry and an input entry; the input entry's
+    label and point serve Click, Type and Scroll, and it takes the scroll position.
+    """
+    inputs = {_twin_key(c): c for c in children if c.element_type == "interactive"}
+    kept = []
+    for child in children:
+        twin = inputs.get(_twin_key(child)) if child.element_type == "scrollable" else None
+        if twin is None:
+            kept.append(child)
+        else:
+            twin.metadata.update({k: v for k, v in child.metadata.items() if k != "has_focused"})
+    return kept
+
+
 def _render_semantic_node(
     node: SemanticNode,
     lines: list[str],
@@ -178,8 +208,9 @@ def _render_semantic_node(
 
     extension = "    " if is_last else "│   "
     new_prefix = prefix + extension
-    for i, child in enumerate(node.children):
-        _render_semantic_node(child, lines, new_prefix, i == len(node.children) - 1, labels, scale)
+    children = _merge_scroll_twins(node.children)
+    for i, child in enumerate(children):
+        _render_semantic_node(child, lines, new_prefix, i == len(children) - 1, labels, scale)
 
 
 def _prune_structural(node: SemanticNode) -> bool:
