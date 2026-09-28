@@ -1,6 +1,6 @@
 # Known gaps and workarounds
 
-Each entry names its backlog item (round 4: Plan/windows-mcp-open-issues-round4.md; round 3:
+Each entry names its backlog item (round 4: Plan/completed/windows-mcp-open-issues-round4.md; round 3:
 Plan/completed/windows-mcp-open-issues-round3.md); the fix removes it.
 
 - **Typing into Windows 11 Notepad can garble text** (R4-16): once Notepad auto-corrects a

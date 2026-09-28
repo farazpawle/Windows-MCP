@@ -1,7 +1,7 @@
 ---
 Title: Windows-MCP round 6 - speed and accuracy (tasks)
-Description: Task list for Plan/windows-mcp-round6-speed-accuracy-plan.md. Part A accuracy (R6-1 App switch confirms the front window, R6-2 multi-click re-checks each item, R6-3 optional expect= on Click/Type by loc). Part B speed (R6-4 cached element search, closes R5-I2; R6-5 Scroll re-reads one element, closes R5-I1; R6-6 Registry via winreg, closes R5-2; R6-7 OCR helper only if the user approves). Part C fewer calls (R6-8 recipes page; R6-9 "steps in one go" tool, design approved by the user first). Part D cleanup (R6-10 one fuzzy library). Two [User] decisions: R6-7b, R6-9b. Status 2026-09-28: not started.
-Total Tasks: 55
+Description: Task list for Plan/windows-mcp-round6-speed-accuracy-plan.md. Part A accuracy (R6-1 App switch confirms the front window, R6-2 multi-click re-checks each item, R6-3 optional expect= on Click/Type by loc). Part B speed (R6-4 cached element search, closes R5-I2; R6-5 Scroll re-reads one element, closes R5-I1; R6-6 Registry via winreg, closes R5-2; R6-7 OCR helper only if the user approves). Part C fewer calls (R6-8 recipes page; R6-9 "steps in one go" tool, design approved by the user first). Part D cleanup (R6-10 one fuzzy library). Part E user-only checks carried over from round 4 (R6-11 lock/unlock, guide ZIP upload). [User] tasks: R6-7b, R6-9b, R6-11a, R6-11b. Status 2026-09-28: not started.
+Total Tasks: 57
 ---
 
 # Round 6 - speed and accuracy
@@ -103,10 +103,17 @@ R6-3, R6-8, R6-9, R6-7; R6-10 any time. One commit per item.
   - [ ] d. Correct CLAUDE.md: fuzzy matching is for window and app names; element names use exact, then a single partial, match.
   - **Verify:** `pytest` green; Live App `launch name=Notepad` and `switch name=Notepad` pick the same window as before.
 
+# Part E - Carried over from rounds 4 and 5 (user only)
+
+- [ ] R6-11 **Open user checks from round 4** (were R4-11c, D.33 and round-5 task 8.6).
+  - [ ] a. [User] Optional lock/unlock check (needs the user: over Remote Desktop a lock ends the session view and only the user can sign back in): press Win+L, sign back in, then ask Claude for a full Screenshot; its Backend line should read dxcam.
+  - [ ] b. [User] Upload the guide ZIP in Claude Desktop (needs the user's Claude account): Customize > Skills > replace the windows-mcp skill with the ZIP; keep it on. Do it once, after R6-8g rebuilds the ZIP.
+  - **Verify:** the user reports the Backend line and that the skill shows the new recipes page.
+
 # Implementation verification
 
 - Every item's Verify done live and checked a second way, with times from the MCP log.
 - Speed items: same target picked and same reply text as before, only faster.
 - `pytest`, `ruff check .` and `ruff format --check .` clean with zero warnings.
 - Guide, tool descriptions and CLAUDE.md updated with each change; `known-gaps.md` lines removed for fixed items; guide ZIP rebuilt at the end.
-- Open `[User]` tasks listed to the user at the end of each session: R6-7b, R6-9b.
+- Open `[User]` tasks listed to the user at the end of each session: R6-7b, R6-9b, R6-11a, R6-11b.

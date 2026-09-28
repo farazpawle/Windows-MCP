@@ -86,7 +86,7 @@ Total Tasks: 53
 - [x] 8.3 Compare the guide and tool descriptions with the results; list corrections.
 - [x] 8.4 Write `Plan/windows-mcp-open-issues-round5.md` for any failure or correction.
 - [x] 8.5 Clean up: registry key, scratch folders, own windows and processes.
-- [ ] 8.6 [User] Settle round-4 R4-11c (optional lock/unlock check) and D.33 (upload the guide ZIP): both need the user at the PC or in their Claude account.
+- [x] 8.6 [User] Settle round-4 R4-11c (optional lock/unlock check) and D.33 (upload the guide ZIP): both need the user at the PC or in their Claude account. Not done; carried over to round 6 R6-11 (2026-09-28).
 - **Verify:** clean-up checked with PowerShell; report frontmatter updated.
 
 # Implementation verification
