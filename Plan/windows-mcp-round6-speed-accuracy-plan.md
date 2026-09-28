@@ -31,6 +31,7 @@ has today, and is verified to pick the same target as before.
 | R6-8 | Jobs with no screen part (settings, files, process checks) are often done by clicking through menus in 8-10 calls; one PowerShell call does them. | guide |
 | R6-9 | Short fixed input sequences (click, type, key, wait) cost one model round-trip per step. | new tool |
 | R6-10 | `fuzzywuzzy` (old name) is imported; `thefuzz` (its maintained successor, same API) is also a dependency and unused. CLAUDE.md says fuzzy matching is used for element names; it is used for window and app names only. | `desktop/service.py`, `pyproject.toml`, CLAUDE.md |
+| R6-13 | (Logged 2026-09-28 during R5-3.) A `region` Snapshot of Notepad listed its elements bottom-to-top: scroll bar first, title-bar buttons last. The region filter keeps order; the native-window reorder step is the likely cause. Not yet checked without `region`. | `tree/service.py` `get_nodes`, `tree/views.py` `_reverse_children_order` |
 
 # Design notes
 
@@ -80,7 +81,7 @@ has today, and is verified to pick the same target as before.
 
 # Order
 
-R6-1, R6-4, R6-5, R6-2, R6-3, R5-1, R5-3, R5-4, R5-I3, R6-6, R6-10, R6-8, R6-9, R6-7, R6-12,
+R6-1, R6-4, R6-5, R6-2, R6-3, R5-1, R5-3, R5-4, R5-I3, R6-13, R6-6, R6-10, R6-8, R6-9, R6-7, R6-12,
 then the user's R6-11. Reasons: the wrong-window risk first; then the two slowest calls
 agents make often (browser element click, Scroll), whose caching work shares one approach;
 then the other accuracy gaps and round-5's bugs; Registry and cleanup after, as they touch

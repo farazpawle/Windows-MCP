@@ -1,7 +1,7 @@
 ---
 Title: Windows-MCP round 6 - speed and accuracy (tasks)
-Description: Task list for Plan/windows-mcp-round6-speed-accuracy-plan.md. Part A accuracy (R6-1 App switch confirms the front window, R6-2 multi-click re-checks each item, R6-3 optional expect= on Click/Type by loc). Part B speed (R6-4 cached element search, closes R5-I2; R6-5 Scroll re-reads one element, closes R5-I1; R6-6 Registry via winreg keeping today's replies, closes R5-2; R6-7 OCR helper only if the user approves). Part C fewer calls (R6-8 recipes page; R6-9 "steps in one go" tool, design approved by the user first). Part D cleanup (R6-10 one fuzzy library). Part E user-only checks from round 4 (R6-11). Part F finish (R6-12 round-5 guide fixes and one guide ZIP rebuild). [User] tasks: R6-7b, R6-9b, R6-11a, R6-11b. Status 2026-09-28: R6-1, R6-2, R6-3 and R6-5 done; R6-4 closed by measurement with no code change (the 1.5 s was a throwaway Edge profile slowing every window); the rest not started.
-Total Tasks: 66
+Description: Task list for Plan/windows-mcp-round6-speed-accuracy-plan.md. Part A accuracy (R6-1 App switch confirms the front window, R6-2 multi-click re-checks each item, R6-3 optional expect= on Click/Type by loc, R6-13 Snapshot order of a native window, logged 2026-09-28). Part B speed (R6-4 cached element search, closes R5-I2; R6-5 Scroll re-reads one element, closes R5-I1; R6-6 Registry via winreg keeping today's replies, closes R5-2; R6-7 OCR helper only if the user approves). Part C fewer calls (R6-8 recipes page; R6-9 "steps in one go" tool, design approved by the user first). Part D cleanup (R6-10 one fuzzy library). Part E user-only checks from round 4 (R6-11). Part F finish (R6-12 round-5 guide fixes and one guide ZIP rebuild). [User] tasks: R6-7b, R6-9b, R6-11a, R6-11b. Status 2026-09-28: R6-1, R6-2, R6-3 and R6-5 done (R5-1 and R5-3 too, in the round-5 file); R6-4 closed by measurement with no code change (the 1.5 s was a throwaway Edge profile slowing every window); the rest not started.
+Total Tasks: 70
 ---
 
 # Round 6 - speed and accuracy
@@ -13,7 +13,7 @@ One commit per item.
 
 **Order** (round-5 items in their recommended slot; they stay in
 `Plan/windows-mcp-open-issues-round5.md`):
-R6-1, R6-4, R6-5, R6-2, R6-3, R5-1, R5-3, R5-4, R5-I3, R6-6, R6-10, R6-8, R6-9, R6-7, R6-12,
+R6-1, R6-4, R6-5, R6-2, R6-3, R5-1, R5-3, R5-4, R5-I3, R6-13, R6-6, R6-10, R6-8, R6-9, R6-7, R6-12,
 then R6-11. R5-I4 is a user decision, any time.
 
 # Part A - Accuracy
@@ -47,6 +47,12 @@ then R6-11. R5-I4 is a user decision, any time.
   - [x] g. Update the Click and Type tool descriptions and their entries in `references/input.md`.
   - **Verify:** Live - harness: a matching `expect` clicks; a pop-up opened between the Screenshot and the Click makes it refuse; Click time within 0.02 s of today's.
   - **Done 2026-09-28:** live on the harness (Save button, text box, a second harness window as the pop-up): `expect="save"` clicked; with the pop-up over the button Click refused (`found pane in "R63Popup"`) and the pop-up logged nothing; Type with `expect="Save"` on the text box refused and nothing was typed. The main window logged exactly the 13 allowed clicks. Timing over 6 alternating pairs: median 0.160 s plain, 0.164 s with `expect`. Extra unit tests: a fourth parent is too far, a blank `expect` is refused, Type `expect` without `loc`/`label` is refused, a UIA error refuses.
+
+- [ ] R6-13 **Low - Snapshot may list a native window's elements bottom-to-top.** Found during R5-3 (2026-09-28), user asked to log it: a `region` Snapshot of a Notepad file tab listed the scroll bar first, then the words from the last line up, the document, tabs, menu, and the title-bar buttons last (labels count down the page). The region filter keeps the order it is given, so the likely cause is the reorder step for native windows (`tree/service.py` `get_nodes`, `_reverse_children_order`). Not yet checked without `region`, or in other apps.
+  - [ ] a. Live: Snapshot of a Notepad test tab with and without `region`, and of the harness window: note the order each lists.
+  - [ ] b. Unit: a native window's elements are listed top of the window first (title bar, menu, tabs, document), words in reading order.
+  - [ ] c. Fix the order where it goes wrong.
+  - **Verify:** Live - Snapshot of a Notepad test tab, with and without `region`: title-bar buttons and menu first, the document's words in reading order; labels unchanged for Click.
 
 # Part B - Speed
 
