@@ -190,6 +190,9 @@ closes it with no question as long as nothing was typed. Leave the window open.
 Check the screen size with DisplayInventory first (1920x1080 in rounds 4-5, 2560x1440 once):
 above 1920x1080 the server scales coordinates (x0.75 at 2560x1440), so run with
 `WINDOWS_MCP_RAW_COORDINATES=1` when the script passes win32 screen pixels.
+To put a window App `list` does not list in front without a click (R5-I3, 2026-09-28): Win+B
+focuses the taskbar tray (`Shell_TrayWnd`), then Enter opens the hidden-icons panel
+(`TopLevelWindowForOverflowXamlIsland`); Escape twice closes it, and focus stays on the taskbar.
 Starting `test_harness.ps1` yourself (not through `start_window`) for a connected-tool test
 opens a visible console window per harness; input replies then name it as a new window.
 

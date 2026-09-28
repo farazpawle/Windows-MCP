@@ -65,7 +65,9 @@
   or says it is still open (e.g. asking to save).
 - `list`: one line per window: `handle=... pid=... program State at (left,top) size WxH "title"`,
   the visible window in screen pixels (the units `resize` takes). Lines run front to back;
-  the window in front ends with `(front)`. A maximized window is its screen's
+  the window in front ends with `(front)`. When what is in front is not a listed window (the
+  taskbar, its hidden-icons panel), a second line names it instead:
+  `In front, not listed: handle=... class Shell_TrayWnd ""`. A maximized window is its screen's
   work area (taskbar excluded), e.g. at (0,0) size 1920x1032.
 - `move` with `display=N` (numbering as in DisplayInventory): keeps the offset but moves the
   window up/left to stay inside the work area (taskbar excluded), shrinks it to fit, and

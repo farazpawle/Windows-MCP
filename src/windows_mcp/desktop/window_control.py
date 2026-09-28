@@ -61,6 +61,15 @@ def format_list(windows) -> str:
     # get_windows keeps EnumWindows' front-to-back order (round-4 R4-I6).
     lines = [f"{len(windows)} windows, front to back:"]
     front = win32gui.GetForegroundWindow()
+    # The front window may be one get_windows leaves out (the taskbar's hidden-icons
+    # panel, Alt+Tab), so no line would carry "(front)"; name it instead (round-5 R5-I3).
+    if not front:
+        lines.append("Nothing is in front (the desktop has no foreground window).")
+    elif all(window.handle != front for window in windows):
+        lines.append(
+            f"In front, not listed: handle={front} class {win32gui.GetClassName(front)} "
+            f'"{win32gui.GetWindowText(front)}"'
+        )
     for window in windows:
         try:
             exe = Process(window.process_id).name()

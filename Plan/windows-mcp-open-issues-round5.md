@@ -1,6 +1,6 @@
 ---
 Title: Windows-MCP open issues - round 5
-Description: Findings of the round-5 re-test (2026-09-26, all 21 tools through the connected server after the round-4 backlog, timed from Claude Code's MCP log), as a task file. Every round-4 fix held. Part A Bugs - 1 Medium (Scrape use_dom drops table text), 3 Low (Registry list stray carriage return; Snapshot lists Notepad's document twice and 100.1% scroll; FindText window= crop misses a phrase the full screen finds). Part B 4 improvements (Scroll 0.7 s, Click element= in Edge 1.5 s, App list front marker when a system panel is in front, a paste option for long text into Notepad). Part D 4 guide corrections. Evidence in docs/testing/windows-mcp-tool-test-report.md (Round 5). Not fixed yet: the user makes the fix plan.
+Description: Findings of the round-5 re-test (2026-09-26, all 21 tools through the connected server after the round-4 backlog, timed from Claude Code's MCP log), as a task file. Every round-4 fix held. Part A Bugs - 1 Medium (Scrape use_dom drops table text), 3 Low (Registry list stray carriage return; Snapshot lists Notepad's document twice and 100.1% scroll; FindText window= crop misses a phrase the full screen finds). Part B 4 improvements (Scroll 0.7 s, Click element= in Edge 1.5 s, App list front marker when a system panel is in front, a paste option for long text into Notepad). Part D 4 guide corrections. Evidence in docs/testing/windows-mcp-tool-test-report.md (Round 5). Fixes run in round 6 (Plan/windows-mcp-round6-speed-accuracy-tasks.md); done as of 2026-09-28: R5-1, R5-3, R5-4, R5-I1, R5-I2, R5-I3.
 Total Tasks: 25
 ---
 
@@ -56,10 +56,11 @@ Work order: these items are slotted into the round-6 order (`Plan/windows-mcp-ro
   - **Verify:** Live - the profile names where the 1.5 s goes; fix only if one step dominates.
   - **Done 2026-09-28 in round-6 R6-4:** the time went to finding the window by name, slowed PC-wide while the throwaway Edge profile starts and syncs (with an everyday Edge, 0.06-0.08 s). No code change (user decision); see R6-4's findings.
 
-- [ ] R5-I3 **App `list` shows no "(front)"** when the foreground is not a listed window (the taskbar's hidden-icons panel was open).
-  - [ ] a. Unit: when the foreground is not listed, the header names what is in front.
-  - [ ] b. Add that line.
+- [x] R5-I3 **App `list` shows no "(front)"** when the foreground is not a listed window (the taskbar's hidden-icons panel was open).
+  - [x] a. Unit: when the foreground is not listed, the header names what is in front.
+  - [x] b. Add that line.
   - **Verify:** Live - with the hidden-icons panel open, App `list` says what is in front.
+  - **Done 2026-09-28:** a line under the header, `In front, not listed: handle=N class C "title"`, or "Nothing is in front" when there is no foreground window. Live (in-process server, Win+B then Enter): with the tray focused it named `Shell_TrayWnd`, with the panel open `TopLevelWindowForOverflowXamlIsland "System tray overflow window."`, each equal to `GetForegroundWindow`, no line marked `(front)`, 0.045-0.05 s; with VS Code in front the reply was unchanged.
 
 - [ ] R5-I4 **Long text into Notepad is still unusable by typing** (361 of 622 characters, repeated letters; the reply warns). A clipboard paste of the same text was exact in 0.1 s.
   - [ ] a. [User] Decide (design choice): add a Type option that pastes (backing up and restoring the clipboard), or keep the guide's FileSystem / Clipboard workaround only.

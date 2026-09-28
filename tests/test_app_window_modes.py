@@ -152,6 +152,41 @@ def test_list_shows_handle_pid_process_state_and_title():
     ]
 
 
+def _list_with_front(front, title="", class_name=""):
+    with (
+        patch(f"{WC}.Process", side_effect=lambda pid: SimpleNamespace(name=lambda: "notepad.exe")),
+        patch(f"{WC}.win32gui.GetForegroundWindow", return_value=front),
+        patch(f"{WC}.win32gui.GetWindowText", return_value=title),
+        patch(f"{WC}.win32gui.GetClassName", return_value=class_name),
+    ):
+        return window_control.format_list([_window("notes.txt - Notepad", 1234)]).splitlines()
+
+
+def test_list_names_an_unlisted_front_window():
+    # Round-5 R5-I3: the taskbar's hidden-icons panel in front left no "(front)" at all.
+    lines = _list_with_front(999, class_name="TopLevelWindowForOverflowXamlIsland")
+    assert lines[:2] == [
+        "1 windows, front to back:",
+        'In front, not listed: handle=999 class TopLevelWindowForOverflowXamlIsland ""',
+    ]
+    assert not any(line.endswith("(front)") for line in lines)
+
+
+def test_list_unlisted_front_window_shows_its_title():
+    lines = _list_with_front(999, title="Task Switching", class_name="XamlExplorerHostIslandWindow")
+    assert lines[1] == (
+        'In front, not listed: handle=999 class XamlExplorerHostIslandWindow "Task Switching"'
+    )
+
+
+def test_list_says_when_nothing_is_in_front():
+    assert _list_with_front(0)[1] == "Nothing is in front (the desktop has no foreground window)."
+
+
+def test_list_adds_no_line_when_front_is_listed():
+    assert len(_list_with_front(1234)) == 2
+
+
 def test_list_empty():
     assert window_control.format_list([]) == "No windows found on the desktop."
 
