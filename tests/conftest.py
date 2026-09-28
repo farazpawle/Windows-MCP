@@ -8,8 +8,29 @@ import pytest
 # explicitly via monkeypatch.
 os.environ.setdefault("WINDOWS_MCP_DISABLE_FLASH", "1")
 
+import ctypes
+from unittest.mock import MagicMock
+
+import win32api
 from windows_mcp.tree.views import BoundingBox, Center, TreeElementNode, ScrollElementNode
 from windows_mcp.desktop.views import Window, Status, DesktopState
+
+
+@pytest.fixture(autouse=True)
+def _no_real_input(monkeypatch):
+    """Unit tests never send input to the real desktop.
+
+    Tests that patched SendKeys but not the Unicode typing path typed "hi", "new" and
+    "x" into whatever window was in front, a user's Notepad note included (2026-09-28).
+    Stubbed where every path ends, the Windows API itself, so no wrapper can be missed;
+    tests that check calls patch the higher-level function themselves, which still wins.
+    """
+    user32 = ctypes.windll.user32
+    # SendInput reports how many events it sent; the typing code checks that count.
+    monkeypatch.setattr(user32, "SendInput", MagicMock(side_effect=lambda n, *a: n))
+    for name in ("keybd_event", "mouse_event", "SetCursorPos"):
+        monkeypatch.setattr(user32, name, MagicMock(return_value=1))
+        monkeypatch.setattr(win32api, name, MagicMock(return_value=None))
 
 
 @pytest.fixture(autouse=True)

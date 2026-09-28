@@ -171,6 +171,12 @@ below the document in the stacking order: WindowFromPoint under it returns `Rich
 A safer Notepad test tab: with Notepad already open, a second App `launch name=Notepad` opens a
 separate window holding one fresh tab (round 5, 2026-09-26); type only there, closing its tab
 closes that window, and the user's window is never touched.
+For a read-only or scroll test with a long document (R6-5, 2026-09-28), `notepad.exe <scratch
+file>` opens the file as its own tab (restoring the user's tabs if Notepad was closed): the
+title is `<file> - Notepad` while it is selected; check that before every input, and Ctrl+W
+closes it with no question as long as nothing was typed. Leave the window open.
+**Never run `pytest` while a user's document is in front** unless `tests/conftest.py`
+`_no_real_input` is in place: before it existed, a run typed "hi"/"new" into the front window.
 Check the screen size with DisplayInventory first (1920x1080 in rounds 4-5, 2560x1440 once):
 above 1920x1080 the server scales coordinates (x0.75 at 2560x1440), so run with
 `WINDOWS_MCP_RAW_COORDINATES=1` when the script passes win32 screen pixels.
