@@ -277,6 +277,7 @@ def test_switch_by_handle_picks_that_window():
     with (
         patch("windows_mcp.desktop.service.uia.IsIconic", return_value=False),
         patch.object(Desktop, "bring_window_to_top") as bring,
+        patch("windows_mcp.desktop.service.win32gui.GetForegroundWindow", return_value=22),
     ):
         reply = desktop.app("switch", handle=22)
     bring.assert_called_once_with(22)

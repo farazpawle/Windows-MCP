@@ -42,6 +42,10 @@
 
 - Brings the window to the front. In Claude Desktop the approval click undoes it (golden
   rule 1).
+- Checks the window really came to the front (or a dialog it owns did), retrying once. When
+  Windows refuses, the reply is an error naming the window still in front ("Could not bring
+  X to the front: Windows kept "Y" (handle N) in front."); a following Type with no `loc`
+  would go to that window, so switch again or Click the target first. Takes ~0.1 s.
 
 ## resize
 

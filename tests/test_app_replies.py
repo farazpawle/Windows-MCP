@@ -112,12 +112,66 @@ def test_resize_of_maximised_window_is_worded_as_refusal(control):
     assert 'mode="restore"' in reply and "win+down" not in reply
 
 
-def _switch(desktop, name):
+def _switch(desktop, name, fronts=None, owners=None):
+    """Switch with the front window mocked: *fronts* is the sequence GetForegroundWindow
+    returns (default: whatever window was last brought to the top), *owners* maps a
+    handle to its root owner."""
+    brought = []
+    fronts = iter(fronts) if fronts is not None else None
     with (
         patch(f"{SERVICE}.uia.IsIconic", return_value=False),
-        patch.object(Desktop, "bring_window_to_top") as bring,
+        patch.object(Desktop, "bring_window_to_top", side_effect=brought.append) as bring,
+        patch(
+            f"{SERVICE}.win32gui.GetForegroundWindow",
+            side_effect=lambda: next(fronts) if fronts else brought[-1],
+        ),
+        patch(
+            f"{SERVICE}.win32gui.GetAncestor",
+            side_effect=lambda h, _flag: (owners or {}).get(h, h),
+        ),
+        patch(f"{SERVICE}.win32gui.GetWindowText", side_effect=lambda h: f"Window {h}"),
+        patch(f"{SERVICE}.sleep"),
     ):
         return desktop.switch_app(name), bring
+
+
+# R6-1 a. the front window after the switch (and one retry) is not the target: tool error
+def test_switch_refused_names_window_in_front():
+    (reply, status), bring = _switch(
+        _desktop([_window("WMCP Harness", 1)]), "WMCP Harness", fronts=[9] * 100
+    )
+    assert status == 1
+    assert bring.call_count == 2  # e. retried once
+    assert "WMCP Harness" in reply and '"Window 9"' in reply
+    assert not reply.startswith("Switched")
+
+
+def test_switch_with_nothing_in_front_is_error_not_crash():
+    (reply, status), _ = _switch(
+        _desktop([_window("WMCP Harness", 1)]), "WMCP Harness", fronts=[0] * 100
+    )
+    assert status == 1
+    assert reply.startswith("Could not bring WMCP Harness to the front")
+
+
+# R6-1 b. a dialog owned by the target coming to the front counts as success
+def test_switch_to_window_whose_dialog_comes_front():
+    (reply, status), bring = _switch(
+        _desktop([_window("WMCP Harness", 1)]), "WMCP Harness", fronts=[5] * 100, owners={5: 1}
+    )
+    assert status == 0
+    assert reply == "Switched to WMCP Harness window."
+    bring.assert_called_once_with(1)
+
+
+# R6-1 e. the retry that works is a success
+def test_switch_succeeds_on_retry():
+    (reply, status), bring = _switch(
+        _desktop([_window("WMCP Harness", 1)]), "WMCP Harness", fronts=[9] * 6 + [1] * 100
+    )
+    assert status == 0
+    assert bring.call_count == 2
+    assert reply == "Switched to WMCP Harness window."
 
 
 # c. replies keep the window's own title

@@ -1,6 +1,6 @@
 ---
 Title: Windows-MCP round 6 - speed and accuracy (tasks)
-Description: Task list for Plan/windows-mcp-round6-speed-accuracy-plan.md. Part A accuracy (R6-1 App switch confirms the front window, R6-2 multi-click re-checks each item, R6-3 optional expect= on Click/Type by loc). Part B speed (R6-4 cached element search, closes R5-I2; R6-5 Scroll re-reads one element, closes R5-I1; R6-6 Registry via winreg keeping today's replies, closes R5-2; R6-7 OCR helper only if the user approves). Part C fewer calls (R6-8 recipes page; R6-9 "steps in one go" tool, design approved by the user first). Part D cleanup (R6-10 one fuzzy library). Part E user-only checks from round 4 (R6-11). Part F finish (R6-12 round-5 guide fixes and one guide ZIP rebuild). [User] tasks: R6-7b, R6-9b, R6-11a, R6-11b. Status 2026-09-28: not started; re-checked against the code the same day.
+Description: Task list for Plan/windows-mcp-round6-speed-accuracy-plan.md. Part A accuracy (R6-1 App switch confirms the front window, R6-2 multi-click re-checks each item, R6-3 optional expect= on Click/Type by loc). Part B speed (R6-4 cached element search, closes R5-I2; R6-5 Scroll re-reads one element, closes R5-I1; R6-6 Registry via winreg keeping today's replies, closes R5-2; R6-7 OCR helper only if the user approves). Part C fewer calls (R6-8 recipes page; R6-9 "steps in one go" tool, design approved by the user first). Part D cleanup (R6-10 one fuzzy library). Part E user-only checks from round 4 (R6-11). Part F finish (R6-12 round-5 guide fixes and one guide ZIP rebuild). [User] tasks: R6-7b, R6-9b, R6-11a, R6-11b. Status 2026-09-28: R6-1 done; the rest not started.
 Total Tasks: 66
 ---
 
@@ -18,15 +18,16 @@ then R6-11. R5-I4 is a user decision, any time.
 
 # Part A - Accuracy
 
-- [ ] R6-1 **App switch confirms the window really came to the front.**
-  - [ ] a. Unit: when the window in front after the switch is not the target, the reply is a tool error naming the window in front.
-  - [ ] b. Unit: a dialog owned by the target coming to the front counts as success.
-  - [ ] c. Unit: a switch that works first time still replies "Switched to ...".
-  - [ ] d. After the switch, poll the front window for up to 0.1 s and compare it with the target or a window it owns.
-  - [ ] e. Retry the switch once when they differ.
-  - [ ] f. Raise the error when the retry also fails.
-  - [ ] g. Update the App `switch` entry in `Skills/windows-mcp/references/apps-windows.md`.
+- [x] R6-1 **App switch confirms the window really came to the front.**
+  - [x] a. Unit: when the window in front after the switch is not the target, the reply is a tool error naming the window in front.
+  - [x] b. Unit: a dialog owned by the target coming to the front counts as success.
+  - [x] c. Unit: a switch that works first time still replies "Switched to ...".
+  - [x] d. After the switch, poll the front window for up to 0.1 s and compare it with the target or a window it owns.
+  - [x] e. Retry the switch once when they differ.
+  - [x] f. Raise the error when the retry also fails.
+  - [x] g. Update the App `switch` entry in `Skills/windows-mcp/references/apps-windows.md`.
   - **Verify:** Live - switch to the harness window while another window is in front: the reply matches `GetForegroundWindow`; App `launch` of an already-open app (which switches) still works. The refused-switch path is proven by the unit test (Windows' focus lock cannot be forced reliably live).
+  - **Done 2026-09-28:** three live switches between two harness windows, each with the other in front: `GetForegroundWindow` equalled the target every time, 0.075-0.117 s per call. The `launch` check was dropped: `launch` never calls `switch_app` (the plan note was wrong), so it is unchanged. Extra unit test: nothing in front (handle 0) gives the error, not a crash.
 
 - [ ] R6-2 **MultiSelect / MultiEdit re-check each labelled item just before its click** (`loc` items have nothing to check against and are clicked as today).
   - [ ] a. Add to the live-test harness a list that inserts a row above item 2 when item 1 is clicked.

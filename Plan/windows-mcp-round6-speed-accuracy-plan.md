@@ -37,8 +37,8 @@ has today, and is verified to pick the same target as before.
 - **R6-1:** after the switch, poll `GetForegroundWindow()` for up to 0.1 s and compare it with
   the target or a window the target owns (a dialog it opened comes to the front instead of
   it); on a mismatch retry the switch once, then reply with a tool error naming the window
-  that is in front. `switch_app` is the only caller of `bring_window_to_top`; App `launch` of
-  an already-open app goes through it too.
+  that is in front. `switch_app` is the only caller of `bring_window_to_top` (App `launch` does
+  not switch).
 - **R6-2:** before each click, run the existing still-there check for that label; if it fails,
   stop without clicking and say which item moved and how many clicks were done. No silent
   re-targeting: the agent takes a new Snapshot.

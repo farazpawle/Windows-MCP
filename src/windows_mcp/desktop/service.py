@@ -919,7 +919,20 @@ class Desktop:
             target_handle = window.handle
 
             was_minimized = uia.IsIconic(target_handle)
-            self.bring_window_to_top(target_handle)
+            # Windows' focus lock can refuse the switch without an error reaching us, and a
+            # following Type then goes to the old window: confirm, retry once, else fail.
+            front = None
+            for _ in range(2):
+                self.bring_window_to_top(target_handle)
+                front = self._front_window_other_than(target_handle)
+                if front is None:
+                    break
+            if front is not None:
+                return (
+                    f"Could not bring {window.name} to the front: Windows kept "
+                    f'"{win32gui.GetWindowText(front)}" (handle {front}) in front.',
+                    1,
+                )
             if was_minimized:
                 content = f"Restored {window.name} from minimized and switched to it."
             else:
@@ -927,6 +940,22 @@ class Desktop:
             return content + note, 0
         except Exception as e:
             return (f"Error switching app: {str(e)}", 1)
+
+    @staticmethod
+    def _front_window_other_than(target_handle: int) -> int | None:
+        """Poll the front window for up to 0.1 s; None once it is *target_handle* or a
+        window it owns (a dialog it opened comes to the front instead of it), else the
+        handle still in front."""
+        front = None
+        for _ in range(5):
+            front = win32gui.GetForegroundWindow()
+            # front is 0 while Windows is between two foreground windows.
+            if front == target_handle or (
+                front and win32gui.GetAncestor(front, win32con.GA_ROOTOWNER) == target_handle
+            ):
+                return None
+            sleep(0.02)
+        return front
 
     def bring_window_to_top(self, target_handle: int):
         if not win32gui.IsWindow(target_handle):
