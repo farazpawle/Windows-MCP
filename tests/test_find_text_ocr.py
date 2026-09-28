@@ -141,6 +141,18 @@ def test_the_capture_is_enlarged_and_positions_scaled_back(monkeypatch, width, f
     assert seen == [(width * factor, 100 * factor)]
 
 
+def test_the_enlargement_uses_lanczos(monkeypatch):
+    # Round-5 R5-4: with the default bicubic, OCR dropped "460" from "North 460 12.50" in
+    # 6 of 60 crops of one Notepad window a few pixels apart; Lanczos in none, same speed.
+    capture = Image.new("RGB", (100, 50))
+    resize = MagicMock(return_value=capture)
+    monkeypatch.setattr(capture, "resize", resize)
+    monkeypatch.setattr(ocr.screenshot_capture, "capture", lambda rect: (capture, "x"))
+    monkeypatch.setattr(ocr, "read_lines", lambda image: [])
+    ocr.find_on_screen("x", SimpleNamespace(left=0, top=0, right=100, bottom=50))
+    assert resize.call_args.args[1] == Image.Resampling.LANCZOS
+
+
 # --- read_lines (runs Windows PowerShell) ----------------------------------------------
 
 

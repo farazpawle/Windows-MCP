@@ -182,9 +182,12 @@ def find_on_screen(
     # Measured 2026-09-23: at 1x the OCR split "Zebra Quartz" into "Zebra Q uartz" and
     # missed a small "Save" button; 2x still missed both, 3x read everything. The engine
     # refuses images over 10,000 px. Cost: a full 1920x1080 screen 1.0 s -> 2.6 s.
+    # Lanczos, not the default bicubic: bicubic lost "460" from "North 460 12.50" in 6 of
+    # 60 crops of one window a few pixels apart, Lanczos in none, at the same speed (R5-4).
     scale = min(_ENLARGE, _MAX_IMAGE_SIDE / max(image.size))
     if scale != 1:
-        image = image.resize((int(image.width * scale), int(image.height * scale)))
+        size = (int(image.width * scale), int(image.height * scale))
+        image = image.resize(size, Image.Resampling.LANCZOS)
     matches = find_phrase(
         read_lines(image), phrase, rect.left, rect.top, scale, top_level_window_at
     )

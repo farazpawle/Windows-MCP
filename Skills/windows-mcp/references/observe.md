@@ -61,8 +61,9 @@
 - ~1.6 s for the full screen, ~0.6 s for a small region.
 - It reads visible pixels only: tiny, stylised or low-contrast text can be missed. A phrase
   may run across table columns on one row ("North 460 units"), but never across two windows
-  side by side. A short number alone in a column can be missed in some fonts (Consolas "460"):
-  then search a longer neighbour.
+  side by side. A short number alone in a column (Consolas "460") used to be dropped for
+  some window positions; it was read in 60 of 60 test crops after a fix (2026-09-28). If a
+  number is still missed, search a longer neighbour.
 
 ## WaitFor
 

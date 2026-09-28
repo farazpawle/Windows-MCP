@@ -139,7 +139,11 @@ checks (WaitFor `screen_changed` / `screen_idle`, FindText), open a plain test w
 give a `region` inside its client area: anything else on screen (the Claude Code panel's
 spinner, a clock) changes pixels and spoils the result. A see-through WinForms window
 (`Opacity` < 1) shows in pillow captures too, so it cannot stand in for the Avast alert pillow
-missed (round-3 R3-2); a full capture on one screen uses dxcam now. Give Snapshot a
+missed (round-3 R3-2); a full capture on one screen uses dxcam now.
+Windows OCR drops words for some crops of the same pixels (R5-4: "460" lost when the window
+edge moved 2-4 px), so one live FindText proves little: save one screenshot, then run
+`ocr.service.read_lines` + `find_phrase` offline on 20-60 crops jittered by a few pixels and
+count misses (~0.6 s a read, no screen needed). Give Snapshot a
 `region` around the test window so it does not read other apps. Snapshot, WaitFor and App
 always skip VS Code-family windows; never set `WINDOWS_MCP_READ_VSCODE`, because one read
 freezes VS Code until restart.
