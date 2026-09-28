@@ -108,6 +108,7 @@ Process · Clipboard · Notification · Scrape
 - `list` shows Binary as a decimal list (`{1, 2, 255}`); the bytes are the same as `get`'s hex.
 - **`delete` without `name` deletes the whole tree with no confirmation.**
 - A missing key gives a noisy CLIXML error.
+- Each call starts PowerShell (~0.3-0.5 s); `list` hides values whose names start with "PS".
 
 ## Process
 

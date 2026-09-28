@@ -1,15 +1,17 @@
 """
 Registry service for the Windows MCP server.
 Provides structured operations for reading and writing the Windows Registry
-via PowerShell cmdlets.
+through winreg (round-6 R6-6: starting PowerShell took 0.3-0.5 s a call).
 """
 
 import json
 import logging
 import re
+import winreg
 
-from windows_mcp.powershell import PowerShellExecutor
-from windows_mcp.powershell.utils import ps_quote
+import pywintypes
+import win32api
+
 from windows_mcp.registry.views import ALLOWED_REGISTRY_TYPES, RegistryType
 
 logger = logging.getLogger(__name__)
@@ -125,38 +127,80 @@ def _is_default(name: str) -> bool:
     return name == "" or name.lower() == "(default)"
 
 
-def _value_name(name: str) -> tuple[str, str]:
-    """(name for PowerShell, name for the reply).
+_HIVE_KEYS = {
+    "HKEY_CURRENT_USER": winreg.HKEY_CURRENT_USER,
+    "HKEY_LOCAL_MACHINE": winreg.HKEY_LOCAL_MACHINE,
+    "HKEY_CLASSES_ROOT": winreg.HKEY_CLASSES_ROOT,
+    "HKEY_USERS": winreg.HKEY_USERS,
+    "HKEY_CURRENT_CONFIG": winreg.HKEY_CURRENT_CONFIG,
+}
+_TYPES = {
+    "String": winreg.REG_SZ,
+    "ExpandString": winreg.REG_EXPAND_SZ,
+    "Binary": winreg.REG_BINARY,
+    "DWord": winreg.REG_DWORD,
+    "MultiString": winreg.REG_MULTI_SZ,
+    "QWord": winreg.REG_QWORD,
+}
 
-    PowerShell refuses -Name '' but maps '(default)' to the unnamed value.
+
+class _Refused(Exception):
+    """The reason shown after a reply's "Error ..." prefix."""
+
+
+def _split(path: str) -> tuple[int, str]:
+    """Hive handle and sub-key of a path resolve_path returned (HKCU:\\X or Registry::HKEY_X\\Y)."""
+    if path[:10].lower() == "registry::":
+        hive, _, sub = path[10:].partition("\\")
+    else:
+        drive, _, sub = path.partition(":")
+        hive = _HIVES[drive.upper()]
+    return _HIVE_KEYS[hive.upper()], sub.strip("\\")
+
+
+def _open(path: str, access: int = winreg.KEY_READ) -> winreg.HKEYType:
+    hive, sub = _split(path)
+    try:
+        return winreg.OpenKey(hive, sub, 0, access)
+    except FileNotFoundError:
+        raise _Refused(f"key [{path}] does not exist.") from None
+
+
+def _why(error: OSError, path: str) -> str:
+    if isinstance(error, PermissionError):
+        return f"access denied to [{path}]."
+    return f"{error.strerror or error} [{path}]."
+
+
+def _show(data: object, kind: int) -> str:
+    """A value in the shape set accepts: hex bytes, a JSON string list (R3-9).
+
+    Numbers show unsigned, as PowerShell showed them (a DWord set to -1 reads 4294967295),
+    and an ExpandString shows expanded; the stored value keeps its %VARIABLES%.
     """
-    return ("(default)", "(Default)") if _is_default(name) else (name, name)
-
-
-# PowerShell expression showing $v in the shape set accepts: hex bytes, a JSON string list.
-# Shared by get and list so both show a value the same way (R3-9).
-_FORMAT_VALUE = (
-    "$(if ($v -is [byte[]]) { ($v | ForEach-Object { $_.ToString('x2') }) -join ',' } "
-    "elseif ($v -is [string[]]) { ConvertTo-Json -Compress -InputObject @($v) } "
-    "else { $v })"
-)
+    if kind == winreg.REG_EXPAND_SZ and isinstance(data, str):
+        return winreg.ExpandEnvironmentStrings(data)
+    if isinstance(data, list):
+        return json.dumps(data, ensure_ascii=False, separators=(",", ":"))
+    if isinstance(data, bytes):
+        return ",".join(f"{byte:02x}" for byte in data)
+    return "" if data is None else str(data)
 
 
 def get_value(path: str, name: str) -> str:
     """Read a registry value at *path* with the given *name*."""
-    name, shown_name = _value_name(name)
-    q_path = ps_quote(path)
-    q_name = ps_quote(name)
-    command = (
-        # Property access, not -ExpandProperty: the latter unrolls a byte array
-        # into loose objects, losing the type this formatting depends on.
-        f"$v = (Get-ItemProperty -LiteralPath {q_path} -Name {q_name} -ErrorAction Stop).{q_name}; "
-        f"{_FORMAT_VALUE}"
-    )
-    response, status = PowerShellExecutor.execute_command(command)
-    if status != 0:
-        return f"Error reading registry: {response.strip()}"
-    return f'Registry value [{path}] "{shown_name}" = {response.strip()}'
+    shown_name = "(Default)" if _is_default(name) else name
+    try:
+        with _open(path) as key:
+            try:
+                data, kind = winreg.QueryValueEx(key, "" if _is_default(name) else name)
+            except FileNotFoundError:
+                raise _Refused(f'value "{shown_name}" does not exist in [{path}].') from None
+    except _Refused as e:
+        return f"Error reading registry: {e}"
+    except OSError as e:
+        return f"Error reading registry: {_why(e, path)}"
+    return f'Registry value [{path}] "{shown_name}" = {_show(data, kind)}'
 
 
 def set_value(path: str, name: str, value: str, reg_type: RegistryType = "String") -> str:
@@ -166,38 +210,40 @@ def set_value(path: str, name: str, value: str, reg_type: RegistryType = "String
             f"Error: invalid registry type '{reg_type}'. "
             f"Allowed: {', '.join(sorted(ALLOWED_REGISTRY_TYPES))}"
         )
-    name, shown_name = _value_name(name)
-    q_path = ps_quote(path)
-    q_name = ps_quote(name)
+    shown_name = "(Default)" if _is_default(name) else name
     shown = value
     if reg_type == "Binary":
         try:
             data = parse_binary(value)
         except ValueError as e:
             return f"Error: invalid binary value: {e}"
-        # A quoted string would be stored as a single byte; build a real byte array.
-        q_value = f"([byte[]]({','.join(map(str, data))}))" if data else "([byte[]]@())"
     elif reg_type in ("DWord", "QWord"):
         try:
             number = parse_number(value, reg_type)
         except ValueError as e:
             return f"Error: invalid {reg_type} value: {e}"
-        q_value = shown = str(number)
+        bits = 32 if reg_type == "DWord" else 64
+        if not -(1 << (bits - 1)) <= number < 1 << bits:
+            return (
+                f"Error: invalid {reg_type} value: {reg_type} needs a number from "
+                f"{-(1 << (bits - 1))} to {(1 << bits) - 1} (got {value!r})"
+            )
+        # A negative number is stored as its two's complement, as PowerShell stored it.
+        data = number & ((1 << bits) - 1)
+        shown = str(number)
     elif reg_type == "MultiString":
         try:
-            items = parse_multistring(value)
+            data = parse_multistring(value)
         except ValueError as e:
             return f"Error: invalid MultiString value: {e}"
-        q_value = f"@({','.join(map(ps_quote, items))})"
     else:
-        q_value = ps_quote(value)
-    command = (
-        f"if (-not (Test-Path -LiteralPath {q_path})) {{ New-Item -Path {q_path} -Force | Out-Null }}; "
-        f"Set-ItemProperty -LiteralPath {q_path} -Name {q_name} -Value {q_value} -Type {reg_type} -Force"
-    )
-    response, status = PowerShellExecutor.execute_command(command)
-    if status != 0:
-        return f"Error writing registry: {response.strip()}"
+        data = value
+    hive, sub = _split(path)
+    try:
+        with winreg.CreateKeyEx(hive, sub, 0, winreg.KEY_SET_VALUE) as key:
+            winreg.SetValueEx(key, "" if _is_default(name) else name, 0, _TYPES[reg_type], data)
+    except OSError as e:
+        return f"Error writing registry: {_why(e, path)}"
     return f'Registry value [{path}] "{shown_name}" set to "{shown}" (type: {reg_type}).'
 
 
@@ -206,70 +252,67 @@ def delete_entry(path: str, name: str | None = None, recursive: bool = False) ->
 
     A key that has sub-keys is only removed with recursive=True, so a missing
     ``name`` can no longer wipe a whole tree by accident. Paths holding ``*`` or
-    ``?`` are refused: a wildcard delete could wipe many keys at once.
+    ``?`` are refused: a wildcard delete could wipe many keys at once. A whole
+    hive is never deleted.
     """
     if "*" in path or "?" in path:
         return (
             f"Error: Registry path [{path}] contains a wildcard (* or ?); nothing was deleted. "
             "Give the exact key path."
         )
-    q_path = ps_quote(path)
-    if name:
-        if _is_default(name):
-            # Remove-ItemProperty cannot delete '(default)', and the key Get-Item
-            # returns is read-only, so reopen it writable from its hive.
-            name = "(Default)"
-            command = (
-                f"$hive, $sub = (Get-Item -LiteralPath {q_path} -ErrorAction Stop).Name "
-                "-split '\\\\', 2; "
-                "$base = [Microsoft.Win32.RegistryKey]::OpenBaseKey(@{"
-                "HKEY_CURRENT_USER='CurrentUser'; HKEY_LOCAL_MACHINE='LocalMachine'; "
-                "HKEY_CLASSES_ROOT='ClassesRoot'; HKEY_USERS='Users'; "
-                "HKEY_CURRENT_CONFIG='CurrentConfig'}[$hive], 'Default'); "
-                "$key = if ($sub) { $base.OpenSubKey($sub, $true) } else { $base }; "
-                "try { $key.DeleteValue('') } finally { $key.Close() }"
+    if name is not None:
+        # name="" is the default value, as in get and set; before R6-6 it deleted the key.
+        shown_name = "(Default)" if _is_default(name) else name
+        try:
+            with _open(path, winreg.KEY_SET_VALUE) as key:
+                try:
+                    winreg.DeleteValue(key, "" if _is_default(name) else name)
+                except FileNotFoundError:
+                    raise _Refused(f'value "{shown_name}" does not exist in [{path}].') from None
+        except _Refused as e:
+            return f"Error deleting registry value: {e}"
+        except OSError as e:
+            return f"Error deleting registry value: {_why(e, path)}"
+        return f'Registry value [{path}] "{shown_name}" deleted.'
+    hive, sub = _split(path)
+    if not sub:
+        return f"Error: [{path}] is a whole hive; nothing was deleted."
+    try:
+        with _open(path) as key:
+            count = winreg.QueryInfoKey(key)[0]
+        if count and not recursive:
+            return (
+                f"Error: Registry key [{path}] has {count} sub-key(s); nothing was deleted. "
+                "Pass recursive=true to delete the key with all its sub-keys."
             )
+        if recursive:
+            win32api.RegDeleteTree(hive, sub)
         else:
-            command = f"Remove-ItemProperty -LiteralPath {q_path} -Name {ps_quote(name)} -Force"
-        response, status = PowerShellExecutor.execute_command(command)
-        if status != 0:
-            return f"Error deleting registry value: {response.strip()}"
-        return f'Registry value [{path}] "{name}" deleted.'
-    if recursive:
-        command = f"Remove-Item -LiteralPath {q_path} -Recurse -Force"
-    else:
-        command = (
-            f"$n = @(Get-ChildItem -LiteralPath {q_path} -ErrorAction Stop).Count; "
-            f'if ($n -gt 0) {{ Write-Output "HAS_SUBKEYS:$n"; exit 2 }}; '
-            f"Remove-Item -LiteralPath {q_path} -Force -ErrorAction Stop"
-        )
-    response, status = PowerShellExecutor.execute_command(command)
-    if status == 2 and response.strip().startswith("HAS_SUBKEYS:"):
-        count = response.strip().split(":", 1)[1]
-        return (
-            f"Error: Registry key [{path}] has {count} sub-key(s); nothing was deleted. "
-            "Pass recursive=true to delete the key with all its sub-keys."
-        )
-    if status != 0:
-        return f"Error deleting registry key: {response.strip()}"
+            winreg.DeleteKey(hive, sub)
+    except _Refused as e:
+        return f"Error deleting registry key: {e}"
+    except OSError as e:
+        return f"Error deleting registry key: {_why(e, path)}"
+    except pywintypes.error as e:
+        return f"Error deleting registry key: {e.strerror} [{path}]."
     return f"Registry key [{path}] deleted."
 
 
 def list_key(path: str) -> str:
     """List values and sub-keys under *path*."""
-    q_path = ps_quote(path)
-    command = (
-        f"$item = Get-ItemProperty -LiteralPath {q_path} -ErrorAction Stop; "
-        "$values = @(foreach ($p in @($item.PSObject.Properties | "
-        "Where-Object Name -notlike 'PS*')) { "
-        f'$v = $p.Value; "$($p.Name) : {_FORMAT_VALUE}" }}) -join "`n"; '
-        f"$subkeys = (Get-ChildItem -LiteralPath {q_path} -ErrorAction SilentlyContinue | "
-        f'Select-Object -ExpandProperty PSChildName) -join "`n"; '
-        f'if ($values) {{ Write-Output "Values:`n$values" }}; '
-        f'if ($subkeys) {{ Write-Output "`nSub-Keys:`n$subkeys" }}; '
-        f"if (-not $values -and -not $subkeys) {{ Write-Output 'No values or sub-keys found.' }}"
-    )
-    response, status = PowerShellExecutor.execute_command(command)
-    if status != 0:
-        return f"Error listing registry: {response.strip()}"
-    return f"Registry key [{path}]:\n{response.strip()}"
+    try:
+        with _open(path) as key:
+            subkey_count, value_count, _ = winreg.QueryInfoKey(key)
+            values = [winreg.EnumValue(key, i) for i in range(value_count)]
+            subkeys = [winreg.EnumKey(key, i) for i in range(subkey_count)]
+    except _Refused as e:
+        return f"Error listing registry: {e}"
+    except OSError as e:
+        return f"Error listing registry: {_why(e, path)}"
+    parts = []
+    if values:
+        lines = (f"{name or '(default)'} : {_show(data, kind)}" for name, data, kind in values)
+        parts.append("Values:\n" + "\n".join(lines))
+    if subkeys:
+        parts.append("Sub-Keys:\n" + "\n".join(subkeys))
+    return f"Registry key [{path}]:\n" + ("\n\n".join(parts) or "No values or sub-keys found.")

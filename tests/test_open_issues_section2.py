@@ -124,13 +124,6 @@ class TestRegistryBinary:
         with pytest.raises(ValueError):
             parse_binary(value)
 
-    def test_set_binary_builds_byte_array(self):
-        with patch(EXECUTE_COMMAND_PATH, return_value=("", 0)) as run:
-            result = registry.set_value(r"HKCU:\Software\T", "b", "01,02,ff", "Binary")
-        command = run.call_args[0][0]
-        assert "-Value ([byte[]](1,2,255))" in command
-        assert "set to" in result
-
     def test_set_binary_bad_value_is_error_without_running(self):
         with patch(EXECUTE_COMMAND_PATH) as run:
             result = registry.set_value(r"HKCU:\Software\T", "b", "zz", "Binary")

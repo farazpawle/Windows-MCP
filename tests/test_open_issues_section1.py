@@ -6,13 +6,11 @@ from unittest.mock import MagicMock, patch
 import pytest
 from fastmcp.exceptions import ToolError
 
-from windows_mcp import process, registry
+from windows_mcp import process
 from windows_mcp.filesystem.service import write_file
 from windows_mcp.process.snapshot import ProcCounters
 from windows_mcp.tools._args import as_bool
 from windows_mcp.tools import filesystem as filesystem_tool_module
-
-EXECUTE_COMMAND_PATH = "windows_mcp.powershell.PowerShellExecutor.execute_command"
 
 
 class FakeMCP:
@@ -133,26 +131,3 @@ class TestProcessNames:
             process.kill_process(name="pwsh.exe")
         procs[0].terminate.assert_called_once()
         procs[1].terminate.assert_not_called()
-
-
-# 1.4 Registry key delete refuses sub-keys unless recursive
-class TestRegistryDeleteKey:
-    def test_non_recursive_command_checks_subkeys(self):
-        with patch(EXECUTE_COMMAND_PATH, return_value=("", 0)) as mock_exec:
-            result = registry.delete_entry(path="HKCU:\\Software\\Test")
-        cmd = mock_exec.call_args[0][0]
-        assert "-Recurse" not in cmd.split("Get-ChildItem")[0]
-        assert "Remove-Item" in cmd and "Get-ChildItem" in cmd
-        assert "deleted" in result
-
-    def test_refusal_reported(self):
-        with patch(EXECUTE_COMMAND_PATH, return_value=("HAS_SUBKEYS:3\n", 2)):
-            result = registry.delete_entry(path="HKCU:\\Software\\Test")
-        assert result.startswith("Error")
-        assert "3 sub-key" in result
-        assert "recursive=true" in result
-
-    def test_recursive_uses_recurse(self):
-        with patch(EXECUTE_COMMAND_PATH, return_value=("", 0)) as mock_exec:
-            registry.delete_entry(path="HKCU:\\Software\\Test", recursive=True)
-        assert "-Recurse" in mock_exec.call_args[0][0]

@@ -1,6 +1,6 @@
 ---
 Title: Windows-MCP round 6 - speed and accuracy (tasks)
-Description: Task list for Plan/windows-mcp-round6-speed-accuracy-plan.md. Part A accuracy (R6-1 App switch confirms the front window, R6-2 multi-click re-checks each item, R6-3 optional expect= on Click/Type by loc, R6-13 Snapshot order of a native window, logged 2026-09-28). Part B speed (R6-4 cached element search, closes R5-I2; R6-5 Scroll re-reads one element, closes R5-I1; R6-6 Registry via winreg keeping today's replies, closes R5-2; R6-7 OCR helper only if the user approves). Part C fewer calls (R6-8 recipes page; R6-9 "steps in one go" tool, design approved by the user first). Part D cleanup (R6-10 one fuzzy library). Part E user-only checks from round 4 (R6-11). Part F finish (R6-12 round-5 guide fixes and one guide ZIP rebuild). [User] tasks: R6-7b, R6-9b, R6-11a, R6-11b. Status 2026-09-28: R6-1, R6-2, R6-3, R6-5 and R6-13 done (R5-1, R5-3, R5-4 and R5-I3 too, in the round-5 file); R6-4 closed by measurement with no code change (the 1.5 s was a throwaway Edge profile slowing every window); the rest not started.
+Description: Task list for Plan/windows-mcp-round6-speed-accuracy-plan.md. Part A accuracy (R6-1 App switch confirms the front window, R6-2 multi-click re-checks each item, R6-3 optional expect= on Click/Type by loc, R6-13 Snapshot order of a native window, logged 2026-09-28). Part B speed (R6-4 cached element search, closes R5-I2; R6-5 Scroll re-reads one element, closes R5-I1; R6-6 Registry via winreg keeping today's replies, closes R5-2; R6-7 OCR helper only if the user approves). Part C fewer calls (R6-8 recipes page; R6-9 "steps in one go" tool, design approved by the user first). Part D cleanup (R6-10 one fuzzy library). Part E user-only checks from round 4 (R6-11). Part F finish (R6-12 round-5 guide fixes and one guide ZIP rebuild). [User] tasks: R6-7b, R6-9b, R6-11a, R6-11b. Status 2026-09-28: R6-1, R6-2, R6-3, R6-5, R6-6 and R6-13 done (R5-1, R5-3, R5-4 and R5-I3 too, in the round-5 file); R6-4 closed by measurement with no code change (the 1.5 s was a throwaway Edge profile slowing every window); the rest not started.
 Total Tasks: 70
 ---
 
@@ -90,22 +90,28 @@ then R6-11. R5-I4 is a user decision, any time.
     - Live after: harness 0.22 s (from 0.44); Notepad test tab 0.535 / 0.497 / 0.497 s (from 0.60-0.68; the first call is 0.035 s over the target). Every "now" equalled the next "was". The harness logged all 12 wheel notches (none lost without the settle).
     - The Notepad test tab was a file opened with `notepad.exe <file>` (its own tab), closed with Ctrl+W; the user's window stayed open.
 
-- [ ] R6-6 **Registry uses Python's `winreg` instead of starting PowerShell, with today's replies.**
-  - [ ] a. Unit: no Registry mode starts PowerShell (fails today).
-  - [ ] b. Unit: `get` shows String, MultiString (JSON list), DWord (as today's signed Int32), QWord, Binary (hex), the `(Default)` value, and ExpandString already expanded, each in today's reply text.
-  - [ ] c. Unit: `set` writes each type and creates a missing key.
-  - [ ] d. Unit: `list` reply matches today's and holds no `\r` (closes R5-2).
-  - [ ] e. Unit: `delete` keeps the wildcard guard.
-  - [ ] f. Unit: `delete` without `name` refuses a key with sub-keys unless `recursive=true`, which removes the whole tree.
-  - [ ] g. Unit: `HKCU:\`, `HKEY_CURRENT_USER\`, `HKLM\` and the other hive spellings map to the right hive; paths naming no hive are still refused.
-  - [ ] h. Unit: a missing key or value is a tool error naming the path and the reason.
-  - [ ] i. Rewrite `get` on `winreg`.
-  - [ ] j. Rewrite `set` on `winreg`.
-  - [ ] k. Rewrite `list` on `winreg`.
-  - [ ] l. Rewrite `delete` on `winreg` (recursive delete through pywin32's `RegDeleteTree`).
-  - [ ] m. Tick R5-2 in the round-5 backlog, pointing here.
-  - [ ] n. Update the Registry entry in `references/system-tools.md` and CLAUDE.md's "implemented via PowerShell cmdlets".
+- [x] R6-6 **Registry uses Python's `winreg` instead of starting PowerShell, with today's replies.**
+  - [x] a. Unit: no Registry mode starts PowerShell (fails today).
+  - [x] b. Unit: `get` shows String, MultiString (JSON list), DWord (unsigned, as pwsh 7 showed it: the "signed Int32" here was wrong), QWord, Binary (hex), the `(Default)` value, and ExpandString already expanded, each in today's reply text.
+  - [x] c. Unit: `set` writes each type and creates a missing key.
+  - [x] d. Unit: `list` reply matches today's and holds no `\r` (closes R5-2).
+  - [x] e. Unit: `delete` keeps the wildcard guard.
+  - [x] f. Unit: `delete` without `name` refuses a key with sub-keys unless `recursive=true`, which removes the whole tree.
+  - [x] g. Unit: `HKCU:\`, `HKEY_CURRENT_USER\`, `HKLM\` and the other hive spellings map to the right hive; paths naming no hive are still refused.
+  - [x] h. Unit: a missing key or value is a tool error naming the path and the reason.
+  - [x] i. Rewrite `get` on `winreg`.
+  - [x] j. Rewrite `set` on `winreg`.
+  - [x] k. Rewrite `list` on `winreg`.
+  - [x] l. Rewrite `delete` on `winreg` (recursive delete through pywin32's `RegDeleteTree`).
+  - [x] m. Tick R5-2 in the round-5 backlog, pointing here.
+  - [x] n. Update the Registry entry in `references/system-tools.md` and CLAUDE.md's "implemented via PowerShell cmdlets".
   - **Verify:** Live - every mode on `HKCU:\Software\WMCP-Test` with every value type, checked with `reg.exe query`; each call under 0.05 s (was 0.25-0.33 s).
+  - **Done 2026-09-28:**
+    - Recorded 56 replies (every mode, every type, the default value, edge numbers, missing key/value, sub-keys, wildcard) from the PowerShell version first, then again after: 45 identical; the other 11 are the intended changes - error texts now name the path as given and the reason (PowerShell's own text before, with a different path spelling), and `list` has no stray `\r` and shows values whose names start with "PS" (PowerShell's list filtered them out as its own fields). `reg query` showed every type and value as set (REG_DWORD 0xffffffff for -1, REG_MULTI_SZ items, REG_EXPAND_SZ unexpanded).
+    - Time per call: under 1 ms in-process, 1-6 ms through the tool (first call 0.06 s), from 0.29-0.48 s.
+    - Also changed: a DWord/QWord outside its range is refused before writing (was PowerShell's conversion error); `delete` with `name=""` now deletes the default value, as the tool description says (it deleted the whole key); a whole hive (`HKCU:\`, `HKLM\`) is always refused.
+    - Unit tests use a real throwaway key `HKCU\Software\WMCP-Test\UT<pid>`; the registry tests run in 1.6 s instead of 36 s. The PowerShell-command tests (`test_registry.py`, `test_registry_default_value.py`, two in `test_open_issues_section1/2.py`) were replaced by behaviour tests.
+    - Incident, no damage: run against the old code, the new hive-delete test stubbed only the new delete calls, so the old code's PowerShell path was live; the old code refused (non-recursive: "has 16 sub-keys"; recursive: HKCU's keys all intact, AppEvents first in order untouched; session not elevated). Then, under the new code, four old tests that stubbed only PowerShell wrote a real `HKCU\Software\T` (value "b"); `Software\Test` never existed. Rule added to CLAUDE.md.
 
 - [ ] R6-7 **Kept-running OCR helper (only if approved).**
   - [ ] a. Profile FindText: process start, WinRT load, the OCR itself.

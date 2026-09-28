@@ -1,6 +1,6 @@
 ---
 Title: Windows-MCP open issues - round 5
-Description: Findings of the round-5 re-test (2026-09-26, all 21 tools through the connected server after the round-4 backlog, timed from Claude Code's MCP log), as a task file. Every round-4 fix held. Part A Bugs - 1 Medium (Scrape use_dom drops table text), 3 Low (Registry list stray carriage return; Snapshot lists Notepad's document twice and 100.1% scroll; FindText window= crop misses a phrase the full screen finds). Part B 4 improvements (Scroll 0.7 s, Click element= in Edge 1.5 s, App list front marker when a system panel is in front, a paste option for long text into Notepad). Part D 4 guide corrections. Evidence in docs/testing/windows-mcp-tool-test-report.md (Round 5). Fixes run in round 6 (Plan/windows-mcp-round6-speed-accuracy-tasks.md); done as of 2026-09-28: R5-1, R5-3, R5-4, R5-I1, R5-I2, R5-I3.
+Description: Findings of the round-5 re-test (2026-09-26, all 21 tools through the connected server after the round-4 backlog, timed from Claude Code's MCP log), as a task file. Every round-4 fix held. Part A Bugs - 1 Medium (Scrape use_dom drops table text), 3 Low (Registry list stray carriage return; Snapshot lists Notepad's document twice and 100.1% scroll; FindText window= crop misses a phrase the full screen finds). Part B 4 improvements (Scroll 0.7 s, Click element= in Edge 1.5 s, App list front marker when a system panel is in front, a paste option for long text into Notepad). Part D 4 guide corrections. Evidence in docs/testing/windows-mcp-tool-test-report.md (Round 5). Fixes run in round 6 (Plan/windows-mcp-round6-speed-accuracy-tasks.md); done as of 2026-09-28: R5-1, R5-2, R5-3, R5-4, R5-I1, R5-I2, R5-I3.
 Total Tasks: 25
 ---
 
@@ -20,10 +20,11 @@ Work order: these items are slotted into the round-6 order (`Plan/windows-mcp-ro
   - **Verify:** Live - Scrape `use_dom=true` on a throwaway Edge page with a table returns every cell ("North 460", "South 405").
   - **Done 2026-09-28 (round 6):** Edge gives a row as a nameless DataItem holding DataItem cells named with their text; the words inside are non-control TextControls, so nothing reached the page text. A row now becomes one line of its cells joined by " | " (`tree/service.py`, after the children are read). Live on a throwaway Edge `--app` page (heading, paragraph, header row + 4 rows, one cell a link): Scrape `use_dom` returned "Region | Total", "North | 460", "South | 405", "East | 512", "West | 300" in page order, 0.24-0.57 s. Found on the way: the first read right after the page opens comes from the IA2 fallback (Chromium's UIA tree not built yet), which already gave every cell, one per line; that is likely why the table text was missing only sometimes. A link in a cell also gets its own line (kept: dropping it could lose a same-named link elsewhere). Subtask d is covered by the ordered-rows unit test.
 
-- [ ] R5-2 **Low - Registry `list` reply has a stray carriage return** after the last value ("Revenue : 5000000000\r\n\nSub-Keys").
-  - [ ] a. Unit: the `list` reply holds no `\r`.
-  - [ ] b. Strip the PowerShell output's line ends before building the reply.
+- [x] R5-2 **Low - Registry `list` reply has a stray carriage return** after the last value ("Revenue : 5000000000\r\n\nSub-Keys").
+  - [x] a. Unit: the `list` reply holds no `\r`.
+  - [x] b. Strip the PowerShell output's line ends before building the reply. (Superseded: R6-6 builds the reply in Python, no PowerShell output.)
   - **Verify:** Live - Registry `list` on a test key with 6 values: no `\r` in the reply.
+  - **Done 2026-09-28 by R6-6** (`Plan/windows-mcp-round6-speed-accuracy-tasks.md`): live `list` of a 15-value test key has no `\r`.
 
 - [x] R5-3 **Low - Snapshot lists Notepad's document twice and a scroll of 100.1%.** One `document "Text editor"` entry has the value, a second at the same point has `[v:100.1%]`. With `use_vision=true` the value's bare `\r` line breaks run the lines together ("Week 39Region").
   - [x] a. Unit: an element that is both informative and scrollable is listed once, with value and scroll position.

@@ -44,7 +44,11 @@ These have no focus problems and are the most reliable way to act on the PC.
   even an empty path, is refused. `*`, `?` and `[ ]` in a path are plain characters.
 - Modes: `get`, `list`, `set` (`type` String | ExpandString | Binary | DWord | MultiString |
   QWord), `delete`.
-- `set` creates the key if needed. DWord is stored as a real Int32.
+- Under 0.01 s a call (no PowerShell is started).
+- `set` creates the key if needed. DWord takes -2147483648 to 4294967295 and QWord
+  -9223372036854775808 to 18446744073709551615; anything outside is refused before writing. A
+  negative number is stored as its two's complement and read back unsigned (DWord `-1` →
+  `4294967295`), as regedit shows it.
 - Binary: pass hex bytes `"01,02,ff"`, `"01 02 ff"`, `"0102ff"` or a decimal list
   `"[1, 2, 255]"`; anything else is refused before writing.
 - MultiString: pass a JSON list, `["North","South"]`, for several items; plain text is one
@@ -56,9 +60,11 @@ These have no focus problems and are the most reliable way to act on the PC.
   not name the type; the stored raw value is intact. Read it raw with PowerShell:
   `(Get-Item 'HKCU:\Environment').GetValue('TEMP', $null, 'DoNotExpandEnvironmentNames')`;
   `.GetValueKind('TEMP')` names the type (`ExpandString`).
-- `delete` WITH `name` removes one value; WITHOUT `name` it deletes the key and its values. A
-  key with sub-keys is refused unless `recursive=true`.
-- A missing key is a plain-text error.
+- `delete` WITH `name` removes one value (`name=""` or `"(Default)"` the default value);
+  WITHOUT `name` it deletes the key and its values. A key with sub-keys is refused unless
+  `recursive=true`; a whole hive (`HKCU:\`) is always refused.
+- A missing key or value is a tool error naming the path: `key [HKCU:\X] does not exist.`,
+  `value "V" does not exist in [HKCU:\X].`
 
 ## Process
 
