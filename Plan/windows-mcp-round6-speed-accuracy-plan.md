@@ -1,6 +1,6 @@
 ---
 Title: Windows-MCP round 6 - speed and accuracy (plan)
-Description: Plan from the 2026-09-28 code audit for making agents drive the desktop faster and land every action where intended. Part A accuracy - App switch confirms the window came to the front, MultiSelect/MultiEdit re-check each item before its click, optional expect= on Click/Type by loc. Part B speed - one cached element search for Click element= (R5-I2), Scroll re-reads the element it found (R5-I1), Registry through winreg instead of PowerShell (also R5-2), a kept-running OCR helper only if the user approves. Part C fewer calls per task - a PowerShell recipes page in the guide, and a new "steps in one go" tool designed first and built only after the user approves. Part D cleanup - one fuzzy-matching library. Tasks in Plan/windows-mcp-round6-speed-accuracy-tasks.md.
+Description: Plan from the 2026-09-28 code audit for making agents drive the desktop faster and land every action where intended. Part A accuracy - App switch confirms the window came to the front, MultiSelect/MultiEdit re-check each item before its click, optional expect= on Click/Type by loc. Part B speed - one cached element search for Click element= (R5-I2), Scroll re-reads the element it found (R5-I1), Registry through winreg instead of PowerShell (also R5-2), a kept-running OCR helper only if the user approves. Part C fewer calls per task - a PowerShell recipes page in the guide, and a new "steps in one go" tool designed first and built only after the user approves. Part D cleanup - one fuzzy-matching library. Part E the user's leftover round-4 checks. Part F one guide pass and one ZIP rebuild at the end. Round-5's open items are slotted into the order. Tasks in Plan/windows-mcp-round6-speed-accuracy-tasks.md.
 ---
 
 # Goal
@@ -34,8 +34,11 @@ has today, and is verified to pick the same target as before.
 
 # Design notes
 
-- **R6-1:** after the switch, compare `GetForegroundWindow()` with the target; on a mismatch
-  retry the switch once, then reply with a tool error naming the window that is in front.
+- **R6-1:** after the switch, poll `GetForegroundWindow()` for up to 0.1 s and compare it with
+  the target or a window the target owns (a dialog it opened comes to the front instead of
+  it); on a mismatch retry the switch once, then reply with a tool error naming the window
+  that is in front. `switch_app` is the only caller of `bring_window_to_top`; App `launch` of
+  an already-open app goes through it too.
 - **R6-2:** before each click, run the existing still-there check for that label; if it fails,
   stop without clicking and say which item moved and how many clicks were done. No silent
   re-targeting: the agent takes a new Snapshot.
@@ -43,14 +46,20 @@ has today, and is verified to pick the same target as before.
   the point and its ancestors (a click on a button's text hits a Text child); act only if one
   of their names contains `expect` (case ignored), else refuse and name what is there.
   Without `expect` nothing changes. The point is already read for the reply, so the cost is
-  a few ancestor reads.
+  a few ancestor reads. On a VS Code-family or not-responding window `expect` refuses
+  without reading anything (one tree read freezes VS Code).
 - **R6-4:** one CacheRequest for BoundingRectangle, IsOffscreen, LocalizedControlType and
   Name, passed to `FindAllBuildCache`; read the cached values. Verify live that Chromium's
   cached values equal the uncached ones.
 - **R6-5:** keep the scrollable element the "before" read found, and have every later read
   ask only that element for its percent; fall back to the walk if it has gone.
-- **R6-6:** the tool's inputs and replies stay the same; only the engine changes. Keep the
-  `(Default)` value, every value type and the wildcard-delete guard exactly as today.
+- **R6-6:** the tool's inputs and successful replies stay the same; only the engine changes.
+  Today's PowerShell behaviour `winreg` does not give for free, each kept on purpose:
+  ExpandString shown expanded (`winreg.ExpandEnvironmentStrings`), DWord shown as a signed
+  Int32, the `(Default)` value, the wildcard-delete guard, the sub-key refusal, recursive
+  delete (pywin32 `win32api.RegDeleteTree`), and refusal of paths naming no hive. Error
+  replies change wording (no longer PowerShell's text) but still name the path and reason.
+  Registry calls are rarer than clicks, so this sits after the accuracy items.
 - **R6-7:** decided by the user after R6-4 to R6-6, with a measured split of where FindText's
   time goes.
 - **R6-8:** a `references/recipes.md` page of 10-15 tested PowerShell snippets, each naming
@@ -63,12 +72,23 @@ has today, and is verified to pick the same target as before.
   first failed check, an unexpected new window), the reply (each step's outcome and where it
   stopped), a step limit, and how the action log records it.
 
+- **R6-10:** `thefuzz` keeps `fuzzywuzzy`'s functions but scores through `rapidfuzz`, so a
+  name table test pins today's matches first. `python-levenshtein` only sped up
+  `fuzzywuzzy` and goes with it.
+- **R6-12:** every guide change lands with its item, but the Claude Desktop ZIP is rebuilt
+  once at the end, after round-5's guide corrections are applied with round-6 timings.
+
 # Order
 
-R6-1, R6-4, R6-5, R6-6, R6-2, R6-3, R6-8, R6-9, R6-7; R6-10 at any point. Each item is its own
-commit (`fix:`/`feat:`/`docs:` citing the item). Round 5's remaining items (R5-1, R5-3,
-R5-4, R5-I3, R5-I4, D5-x) stay in `Plan/windows-mcp-open-issues-round5.md`; R5-I1, R5-I2
-and R5-2 are closed by R6-5, R6-4 and R6-6.
+R6-1, R6-4, R6-5, R6-2, R6-3, R5-1, R5-3, R5-4, R5-I3, R6-6, R6-10, R6-8, R6-9, R6-7, R6-12,
+then the user's R6-11. Reasons: the wrong-window risk first; then the two slowest calls
+agents make often (browser element click, Scroll), whose caching work shares one approach;
+then the other accuracy gaps and round-5's bugs; Registry and cleanup after, as they touch
+rarer calls; recipes before the new tool so the tool's design sees what recipes already
+cover; the OCR decision after the other timings are measured; one guide ZIP at the end.
+Round-5 items stay in `Plan/windows-mcp-open-issues-round5.md` (R5-I4 is a user decision,
+any time); R5-I1, R5-I2, R5-2 and D5-1 to D5-4 are closed by R6-5, R6-4, R6-6 and R6-12.
+Each item is its own commit (`fix:`/`feat:`/`docs:` citing the item).
 
 # Out of scope
 

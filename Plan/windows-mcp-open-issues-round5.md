@@ -8,6 +8,8 @@ Total Tasks: 25
 
 Evidence for every item: `docs/testing/windows-mcp-tool-test-report.md`, section "Round 5". Each item: finding, then single-action fix subtasks, then its own Verify line. "Unit" = test written first and seen failing; "Live" = `windows-mcp-live-test` harness (or a real app started by the test), checked a second way. Times are end to end from Claude Code's MCP log.
 
+Work order: these items are slotted into the round-6 order (`Plan/windows-mcp-round6-speed-accuracy-plan.md`, "Order"); R5-I1, R5-I2, R5-2 and D5-1 to D5-4 are done there as R6-5, R6-4, R6-6 and R6-12.
+
 # Part A - Bugs
 
 - [ ] R5-1 **Medium - Scrape `use_dom` leaves out table text.** A local page (heading, paragraph, 3-row table, button) returned only the heading and paragraph. WaitFor `text_exists use_dom=true` found the table's "405", so the text is in the tree; the "Informative Check" in `tree/service.py` (~1041-1079) keeps only `INFORMATIVE_CONTROL_TYPE_NAMES` and links, so table cells (and the button label) never reach `dom_informative_nodes`.
