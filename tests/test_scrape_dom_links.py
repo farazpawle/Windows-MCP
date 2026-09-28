@@ -61,3 +61,38 @@ def test_link_text_is_part_of_the_page_text(tree, monkeypatch):
 def test_unnamed_link_adds_no_blank_line(tree, monkeypatch):
     children_of = {"page": [_element("HyperlinkControl", "  ")]}
     assert _read_page(tree, monkeypatch, children_of) == []
+
+
+# R5-1: Scrape use_dom dropped table text. Structure read from Edge (2026-09-28): a row
+# is a nameless DataItemControl, each cell a DataItemControl named with its text, and
+# the words inside a cell a TextControl that is not a control element.
+def _table(children_of: dict, rows: list[list[str]]) -> MagicMock:
+    table = _element("TableControl", "")
+    children_of[id(table)] = []
+    for cells in rows:
+        row = _element("DataItemControl", "")
+        children_of[id(table)].append(row)
+        children_of[id(row)] = []
+        for text in cells:
+            cell = _element("DataItemControl", text)
+            children_of[id(row)].append(cell)
+            children_of[id(cell)] = [_element("TextControl", text, control_element=False)]
+    return table
+
+
+def test_table_rows_are_part_of_the_page_text_one_line_each(tree, monkeypatch):
+    children_of = {}
+    table = _table(children_of, [["Region", "Total"], ["North", "460"], ["South", "405"]])
+    children_of["page"] = [_element("TextControl", "Sales report"), table]
+    assert _read_page(tree, monkeypatch, children_of) == [
+        "Sales report",
+        "Region | Total",
+        "North | 460",
+        "South | 405",
+    ]
+
+
+def test_a_row_of_blank_cells_adds_no_line(tree, monkeypatch):
+    children_of = {}
+    children_of["page"] = [_table(children_of, [["", " "]])]
+    assert _read_page(tree, monkeypatch, children_of) == []

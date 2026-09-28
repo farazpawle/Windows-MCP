@@ -27,6 +27,10 @@
 ## What comes back
 
 - Only the **visible viewport** text: scroll and scrape again for more.
+- With `use_dom=true` a table comes back one row per line, cells joined by ` | `
+  (`North | 460`). A link inside a cell also gets a line of its own after its row. Right
+  after the page opens, before Edge exposes its tree, the cells can come one per line instead.
+  Buttons are not in the text; Snapshot lists them.
 - `use_sampling=false` gives raw text. Clients that cannot summarise (Claude Code) always get
   raw text, with "Note: summary unavailable in this client".
 - Without a summary, `query` keeps only the paragraphs that mention its words ("showing 2 of 4

@@ -1104,6 +1104,23 @@ class Tree:
             # Phase 3: Cached Children Retrieval
             children = CachedControlHelper.get_cached_children(node, children_cache_req)
 
+            # R5-1: a table row has no name and the words in its cells are non-control
+            # TextControls (skipped above); only the cells' names carry the text, so the
+            # row becomes one line of them. A row is a DataItem holding DataItem cells.
+            # ponytail: a link inside a cell also gets its own line after the row.
+            if (
+                dom_informative_nodes is not None
+                and is_browser
+                and is_dom
+                and is_visible
+                and control_type_name == "DataItemControl"
+                and any(child.CachedControlTypeName == "DataItemControl" for child in children)
+            ):
+                cells = [child.CachedName.strip() for child in children]
+                if any(cells):
+                    self.element_budget.try_consume()
+                    dom_informative_nodes.append(TextElementNode(text=" | ".join(cells)))
+
             # Recursively traverse the tree the right to left for normal apps and for DOM traverse from left to right
             for child in children if is_dom else reversed(children):
                 if self.element_budget.exhausted:

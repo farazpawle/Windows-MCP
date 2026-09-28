@@ -12,12 +12,13 @@ Work order: these items are slotted into the round-6 order (`Plan/windows-mcp-ro
 
 # Part A - Bugs
 
-- [ ] R5-1 **Medium - Scrape `use_dom` leaves out table text.** A local page (heading, paragraph, 3-row table, button) returned only the heading and paragraph. WaitFor `text_exists use_dom=true` found the table's "405", so the text is in the tree; the "Informative Check" in `tree/service.py` (~1041-1079) keeps only `INFORMATIVE_CONTROL_TYPE_NAMES` and links, so table cells (and the button label) never reach `dom_informative_nodes`.
-  - [ ] a. Find which UIA control types Edge gives the table cells' text (DataItem / Text inside a Table) on a throwaway page.
-  - [ ] b. Unit: a table cell's text inside a browser document is added to `dom_informative_nodes`.
-  - [ ] c. Add the cell text in the informative check.
-  - [ ] d. Unit: the page text keeps table rows in order, one row per line.
+- [x] R5-1 **Medium - Scrape `use_dom` leaves out table text.** A local page (heading, paragraph, 3-row table, button) returned only the heading and paragraph. WaitFor `text_exists use_dom=true` found the table's "405", so the text is in the tree; the "Informative Check" in `tree/service.py` (~1041-1079) keeps only `INFORMATIVE_CONTROL_TYPE_NAMES` and links, so table cells (and the button label) never reach `dom_informative_nodes`.
+  - [x] a. Find which UIA control types Edge gives the table cells' text (DataItem / Text inside a Table) on a throwaway page.
+  - [x] b. Unit: a table cell's text inside a browser document is added to `dom_informative_nodes`.
+  - [x] c. Add the cell text in the informative check.
+  - [x] d. Unit: the page text keeps table rows in order, one row per line.
   - **Verify:** Live - Scrape `use_dom=true` on a throwaway Edge page with a table returns every cell ("North 460", "South 405").
+  - **Done 2026-09-28 (round 6):** Edge gives a row as a nameless DataItem holding DataItem cells named with their text; the words inside are non-control TextControls, so nothing reached the page text. A row now becomes one line of its cells joined by " | " (`tree/service.py`, after the children are read). Live on a throwaway Edge `--app` page (heading, paragraph, header row + 4 rows, one cell a link): Scrape `use_dom` returned "Region | Total", "North | 460", "South | 405", "East | 512", "West | 300" in page order, 0.24-0.57 s. Found on the way: the first read right after the page opens comes from the IA2 fallback (Chromium's UIA tree not built yet), which already gave every cell, one per line; that is likely why the table text was missing only sometimes. A link in a cell also gets its own line (kept: dropping it could lose a same-named link elsewhere). Subtask d is covered by the ordered-rows unit test.
 
 - [ ] R5-2 **Low - Registry `list` reply has a stray carriage return** after the last value ("Revenue : 5000000000\r\n\nSub-Keys").
   - [ ] a. Unit: the `list` reply holds no `\r`.
@@ -64,7 +65,7 @@ Work order: these items are slotted into the round-6 order (`Plan/windows-mcp-ro
 # Part D - Guide corrections
 
 - [ ] D5-1 `SKILL.md` timings: "Scroll ~0.5 s" -> ~0.7 s (until R5-I1); "Click ~0.15 s" -> ~0.2 s; add "Click `element=` in a browser can take ~1.5 s the first time".
-- [ ] D5-2 `references/web.md` "What comes back": say `use_dom` leaves out table text; read tables with WaitFor `text_exists use_dom=true` or FindText. Add the same to `known-gaps.md` as R5-1.
+- [x] D5-2 Superseded by the R5-1 fix: `references/web.md` "What comes back" now says how tables come back instead; no known-gaps entry needed.
 - [ ] D5-3 `references/known-gaps.md` R4-16: give the working alternative - back up the clipboard, Clipboard `set` the text, click the document, Ctrl+V, restore the clipboard (exact in 0.1 s in round 5).
 - [ ] D5-4 Rebuild the Claude Desktop guide ZIP after D5-1 to D5-3.
 

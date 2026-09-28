@@ -119,6 +119,12 @@ the Windows Microsoft account and shows a "now syncing" notice over the page (Sc
 `use_dom` then returns the notice's text): click its "Got it" first. That notice can be an
 untitled top-level msedge window over the page centre, so `guarded_call`'s point check aborts
 there: check instead that the window at the point belongs to the throwaway Edge's process tree.
+The first `use_dom` read (Scrape, Snapshot, WaitFor) of a fresh page usually comes from the
+IA2 fallback, since Chromium builds its UIA tree only once asked: a UIA-path fix shows only
+from the second read on, so read at least twice (tell them apart with
+`windows_mcp.tree.service` INFO logging: "IA2 fallback for ..."). Use `--app`: with
+`--new-window` the synced profile opens extension welcome tabs in front of the test page
+(R5-1, 2026-09-28).
 **Never time other tools with a throwaway profile open:** from ~30-40 s after its start
 (sign-in and sync) every UIA call on the PC slows 10-30x (App list/switch by name ~1.4 s
 instead of ~0.08 s) until it closes (R6-4, 2026-09-28). `explorer.exe <scratch folder>` opens a
