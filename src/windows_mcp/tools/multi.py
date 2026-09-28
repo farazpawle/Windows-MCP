@@ -44,19 +44,14 @@ def register(mcp, *, get_desktop, get_analytics):
         if locs is None and labels is None:
             raise ValueError("Either locs or labels must be provided.")
         locs = [to_screen(desktop, loc) for loc in locs or []]
-        if labels is not None:
-            if desktop.label_tree_state is None:
-                raise ValueError("Desktop state is empty. Please call Snapshot first.")
-            try:
-                resolved_locs = desktop.get_coordinates_from_labels(labels)
-                locs.extend([list(loc) for loc in resolved_locs])
-            except Exception as e:
-                raise ValueError(f"Failed to resolve labels {labels}: {e}")
+        if labels is not None and desktop.label_tree_state is None:
+            raise ValueError("Desktop state is empty. Please call Snapshot first.")
 
         press_ctrl = as_bool(press_ctrl, "press_ctrl")
         released = release_held_button(desktop)
-        desktop.multi_select(press_ctrl, locs)
-        elements_str = "\n".join("({},{})".format(*to_model(desktop, loc)) for loc in locs)
+        # Labels are resolved one at a time just before each click (R6-2).
+        done = desktop.multi_select(press_ctrl, locs, labels or [])
+        elements_str = "\n".join("({},{})".format(*to_model(desktop, p[:2])) for p in done)
         action = "Ctrl-selected elements" if press_ctrl else "Clicked in sequence"
         return f"{action} at:\n{elements_str}{released}"
 
@@ -98,17 +93,11 @@ def register(mcp, *, get_desktop, get_analytics):
                 except ValueError, TypeError:
                     raise ValueError(f"Invalid label id in item: {item}")
 
-            try:
-                label_ids = [item[0] for item in processed_labels]
-                resolved_coords = desktop.get_coordinates_from_labels(label_ids)
-                for (x, y), (_, text) in zip(resolved_coords, processed_labels):
-                    locs.append([x, y, text])
-            except Exception as e:
-                raise ValueError(f"Failed to process labels: {e}")
+            labels = processed_labels
 
         released = release_held_button(desktop)
-        desktop.multi_edit(locs)
+        done = desktop.multi_edit(locs, labels or [])
         elements_str = ", ".join(
-            "({},{})".format(*to_model(desktop, e[:2])) + f" with text '{e[2]}'" for e in locs
+            "({},{})".format(*to_model(desktop, e[:2])) + f" with text '{e[2]}'" for e in done
         )
         return f"Multi-edited elements at: {elements_str}{released}"

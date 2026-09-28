@@ -59,14 +59,21 @@ Coordinates · What the replies report · Shrunk screenshots
 
 - `locs=[[x,y,"text"],...]` or `labels=[[id,"text"],...]`. **Clears each field before typing**
   (it overwrites, it does not append).
-- Every target is checked before anything is typed; it stops at a field that fails and lists
-  which were done.
+- Every `locs` point is checked to be on screen before anything is typed. Each label is
+  checked to be still at its spot just before its own field, since typing can reflow a form.
+  The first failure stops the call with an error naming the item (`locs[1]`, `label 7`), what
+  was done and what was not.
+- `locs` items go first, then `labels` items.
 
 ## MultiSelect
 
-- `locs=[[x,y],...]`. `press_ctrl=true` Ctrl-multi-selects (the reply says "Ctrl-selected
-  elements"); `press_ctrl=false` clicks in sequence ("Clicked in sequence"), so in a list the
-  last click wins.
+- `locs=[[x,y],...]` or `labels=[id,...]`. `press_ctrl=true` Ctrl-multi-selects (the reply
+  says "Ctrl-selected elements"); `press_ctrl=false` clicks in sequence ("Clicked in
+  sequence"), so in a list the last click wins.
+- Each label is checked just before its own click. When an earlier click moved it (a list
+  that inserts or expands a row), the call stops before that click with an error naming the
+  label and the clicks done; take a new Snapshot and carry on. `locs` points are not checked
+  (there is nothing to compare against). Ctrl is always released.
 
 ## Scroll
 

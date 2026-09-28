@@ -1,6 +1,6 @@
 ---
 Title: Windows-MCP round 6 - speed and accuracy (tasks)
-Description: Task list for Plan/windows-mcp-round6-speed-accuracy-plan.md. Part A accuracy (R6-1 App switch confirms the front window, R6-2 multi-click re-checks each item, R6-3 optional expect= on Click/Type by loc). Part B speed (R6-4 cached element search, closes R5-I2; R6-5 Scroll re-reads one element, closes R5-I1; R6-6 Registry via winreg keeping today's replies, closes R5-2; R6-7 OCR helper only if the user approves). Part C fewer calls (R6-8 recipes page; R6-9 "steps in one go" tool, design approved by the user first). Part D cleanup (R6-10 one fuzzy library). Part E user-only checks from round 4 (R6-11). Part F finish (R6-12 round-5 guide fixes and one guide ZIP rebuild). [User] tasks: R6-7b, R6-9b, R6-11a, R6-11b. Status 2026-09-28: R6-1 done; the rest not started.
+Description: Task list for Plan/windows-mcp-round6-speed-accuracy-plan.md. Part A accuracy (R6-1 App switch confirms the front window, R6-2 multi-click re-checks each item, R6-3 optional expect= on Click/Type by loc). Part B speed (R6-4 cached element search, closes R5-I2; R6-5 Scroll re-reads one element, closes R5-I1; R6-6 Registry via winreg keeping today's replies, closes R5-2; R6-7 OCR helper only if the user approves). Part C fewer calls (R6-8 recipes page; R6-9 "steps in one go" tool, design approved by the user first). Part D cleanup (R6-10 one fuzzy library). Part E user-only checks from round 4 (R6-11). Part F finish (R6-12 round-5 guide fixes and one guide ZIP rebuild). [User] tasks: R6-7b, R6-9b, R6-11a, R6-11b. Status 2026-09-28: R6-1 and R6-2 done; the rest not started.
 Total Tasks: 66
 ---
 
@@ -29,12 +29,13 @@ then R6-11. R5-I4 is a user decision, any time.
   - **Verify:** Live - switch to the harness window while another window is in front: the reply matches `GetForegroundWindow`; App `launch` of an already-open app (which switches) still works. The refused-switch path is proven by the unit test (Windows' focus lock cannot be forced reliably live).
   - **Done 2026-09-28:** three live switches between two harness windows, each with the other in front: `GetForegroundWindow` equalled the target every time, 0.075-0.117 s per call. The `launch` check was dropped: `launch` never calls `switch_app` (the plan note was wrong), so it is unchanged. Extra unit test: nothing in front (handle 0) gives the error, not a crash.
 
-- [ ] R6-2 **MultiSelect / MultiEdit re-check each labelled item just before its click** (`loc` items have nothing to check against and are clicked as today).
-  - [ ] a. Add to the live-test harness a list that inserts a row above item 2 when item 1 is clicked.
-  - [ ] b. Unit: when item 2 is no longer at its spot after click 1, the call stops before clicking it and names item 2 and the clicks done.
-  - [ ] c. Move the label still-there check from before the batch into the click loop.
-  - [ ] d. Update the MultiSelect and MultiEdit entries in `Skills/windows-mcp/references/input.md`.
+- [x] R6-2 **MultiSelect / MultiEdit re-check each labelled item just before its click** (`loc` items have nothing to check against and are clicked as today).
+  - [x] a. Add to the live-test harness a list that inserts a row above item 2 when item 1 is clicked.
+  - [x] b. Unit: when item 2 is no longer at its spot after click 1, the call stops before clicking it and names item 2 and the clicks done.
+  - [x] c. Move the label still-there check from before the batch into the click loop.
+  - [x] d. Update the MultiSelect and MultiEdit entries in `Skills/windows-mcp/references/input.md`.
   - **Verify:** Live - MultiSelect of items 1 and 3 on the shifting list stops at item 3 with the error; on an unchanged list both are selected.
+  - **Done 2026-09-28:** live on the harness (`shifting_list=True`): MultiSelect labels of items 1 and 3 clicked item 1 (the window logged it and the inserted row), then stopped with "MultiSelect stopped at label 4: ... no longer at its spot ... Done: label 6."; item 3 was never clicked. On an unchanged list both clicks were logged (0.43 s). Also: Ctrl is now released in a `finally`, and failures name items as `locs[i]` / `label N`.
 
 - [ ] R6-3 **Click and Type by position can refuse when the wrong thing is there (optional `expect=`).**
   - [ ] a. Unit: Click `loc` with `expect="Save"` clicks when the element at the point or one of its first three ancestors has a name containing "Save" (case ignored).

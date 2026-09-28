@@ -11,6 +11,9 @@ param(
     [switch]$TextBox,
     [switch]$ScrollBars,  # with -TextBox: a vertical scroll bar (a ScrollPattern for UIA)
     [string]$Buttons = "",  # comma-separated names: a row of buttons, each logs "click <name>"
+    # with -Buttons: stack them as a list; the first click on the first one inserts an
+    # "Inserted" row above the second, so later rows move down (R6-2)
+    [switch]$ShiftingList,
     [switch]$FixedDialog  # fixed-size dialog border, no Maximize/Minimize (UIA CanMaximize False)
 )
 Add-Type -ReferencedAssemblies System.Windows.Forms, System.Drawing -TypeDefinition @"
@@ -88,12 +91,29 @@ if ($Buttons) {
     $panel = New-Object Windows.Forms.FlowLayoutPanel
     $panel.Dock = "Top"
     $panel.Height = 40
+    if ($ShiftingList) {
+        $panel.FlowDirection = "TopDown"
+        $panel.Dock = "Fill"
+    }
+    $script:inserted = $false
     foreach ($name in $Buttons.Split(",")) {
         $button = New-Object Windows.Forms.Button
         $button.Text = $name
         $button.AutoSize = $true
         # Button clicks never reach the form's WndProc, so log them here.
-        $button.Add_Click({ param($s, $e) $form.Write("click " + $s.Text) })
+        $button.Add_Click({
+            param($s, $e)
+            $form.Write("click " + $s.Text)
+            if ($ShiftingList -and -not $script:inserted -and $panel.Controls.IndexOf($s) -eq 0) {
+                $script:inserted = $true
+                $row = New-Object Windows.Forms.Button
+                $row.Text = "Inserted"
+                $row.AutoSize = $true
+                $panel.Controls.Add($row)
+                $panel.Controls.SetChildIndex($row, 1)
+                $form.Write("inserted row")
+            }
+        })
         $panel.Controls.Add($button)
     }
     $form.Controls.Add($panel)

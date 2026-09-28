@@ -147,15 +147,17 @@ def test_mouse_button_loc_is_scaled():
 
 def test_multi_select_locs_scaled_labels_not():
     desktop = _desktop()
+    desktop.multi_select.return_value = [(20, 40), (400, 300)]  # label 0 resolved on screen
     reply = _run(_tools(desktop)["MultiSelect"], locs=[[10, 20]], labels=[0], press_ctrl=False)
-    assert desktop.multi_select.call_args.args[1] == [[20, 40], [400, 300]]
+    desktop.multi_select.assert_called_once_with(False, [[20, 40]], [0])
     assert "(10,20)" in reply and "(200,150)" in reply
 
 
 def test_multi_edit_locs_scaled():
     desktop = _desktop()
+    desktop.multi_edit.return_value = [(20, 40, "a")]
     reply = _run(_tools(desktop)["MultiEdit"], locs=[[10, 20, "a"]])
-    desktop.multi_edit.assert_called_once_with([[20, 40, "a"]])
+    desktop.multi_edit.assert_called_once_with([[20, 40, "a"]], [])
     assert "(10,20)" in reply
 
 

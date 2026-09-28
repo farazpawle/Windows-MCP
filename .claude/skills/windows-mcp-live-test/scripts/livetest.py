@@ -34,6 +34,7 @@ def start_window(
     buttons: tuple[str, ...] = (),
     seconds: int = 90,
     fixed_dialog: bool = False,
+    shifting_list: bool = False,
 ) -> tuple[subprocess.Popen, int]:
     """Open the logging test window and wait until it is visible.
 
@@ -56,6 +57,8 @@ def start_window(
         cmd += ["-Buttons", ",".join(buttons)]
     if fixed_dialog:
         cmd.append("-FixedDialog")
+    if shifting_list:
+        cmd.append("-ShiftingList")
     proc = subprocess.Popen(
         cmd, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
     )

@@ -1466,30 +1466,53 @@ class Desktop:
             # SendKeys' default 0.5 s settle made repeat=100 block for ~50 s.
             uia.SendKeys(sendkeys_str, interval=0.01, waitTime=0.02)
 
-    def multi_select(self, press_ctrl: bool | str = False, locs: list[tuple[int, int]] = []):
-        press_ctrl = press_ctrl is True or (
-            isinstance(press_ctrl, str) and press_ctrl.lower() == "true"
-        )
+    def _run_batch(self, tool: str, locs: list, labels: list[tuple], act) -> list[tuple]:
+        """Call act(x, y, *rest) per item, loc items ([x, y, *rest]) first, then label items
+        ((label, *rest)); returns (x, y, *rest) per item done.
+
+        R6-2: a label is resolved, with its still-there check, only when its turn comes: an
+        earlier click can reflow the list and move it. The first failure stops the batch
+        with a ValueError naming the item and what was done. The caller checks *locs* are
+        on screen before any input.
+        """
+        names = [f"locs[{i}]" for i in range(len(locs))] + [f"label {lb[0]}" for lb in labels]
+        done = []
+        try:
+            for loc in locs:
+                act(*loc)
+                done.append(tuple(loc))
+            for label, *rest in labels:
+                x, y = self.get_coordinates_from_label(label)
+                self._require_on_screen([(x, y)])
+                act(x, y, *rest)
+                done.append((x, y, *rest))
+        except Exception as e:
+            n = len(done)
+            raise ValueError(
+                f"{tool} stopped at {names[n]}: {e} Done: {', '.join(names[:n]) or 'none'}. "
+                f"Not done: {', '.join(names[n:])}."
+            ) from e
+        return done
+
+    def multi_select(self, press_ctrl: bool, locs: list, labels: list[int] = ()) -> list[tuple]:
         self._require_on_screen([(loc[0], loc[1]) for loc in locs])
         if press_ctrl:
             uia.PressKey(uia.Keys.VK_CONTROL, waitTime=0.05)
-        for loc in locs:
-            x, y = loc
-            uia.Click(x, y, waitTime=self._SETTLE)
-        uia.ReleaseKey(uia.Keys.VK_CONTROL, waitTime=0.05)
+        try:
+            return self._run_batch(
+                "MultiSelect",
+                locs,
+                [(label,) for label in labels],
+                lambda x, y: uia.Click(x, y, waitTime=self._SETTLE),
+            )
+        finally:
+            uia.ReleaseKey(uia.Keys.VK_CONTROL, waitTime=0.05)
 
-    def multi_edit(self, locs: list[tuple[int, int, str]]):
-        points = [(loc[0], loc[1]) for loc in locs]
-        self._require_on_screen(points)
-        for i, (x, y, text) in enumerate(locs):
-            try:
-                self.type((x, y), text=text, clear=True)
-            except Exception as e:
-                done = ", ".join(f"({px},{py})" for px, py in points[:i]) or "none"
-                not_done = ", ".join(f"({px},{py})" for px, py in points[i:])
-                raise RuntimeError(
-                    f"MultiEdit stopped at ({x},{y}): {e}. done: {done}; not done: {not_done}"
-                ) from e
+    def multi_edit(self, locs: list, labels: list[tuple[int, str]] = ()) -> list[tuple]:
+        self._require_on_screen([(loc[0], loc[1]) for loc in locs])
+        return self._run_batch(
+            "MultiEdit", locs, labels, lambda x, y, text: self.type((x, y), text=text, clear=True)
+        )
 
     def scrape(self, url: str) -> str:
         current_url = url

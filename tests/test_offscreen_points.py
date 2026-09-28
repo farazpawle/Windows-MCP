@@ -98,10 +98,10 @@ def test_multi_edit_names_every_bad_target(desktop, sent):
 
 def test_multi_edit_failure_reports_done_and_not_done(desktop, sent):
     desktop.type = MagicMock(side_effect=[None, RuntimeError("boom"), None])
-    with pytest.raises(RuntimeError) as err:
+    with pytest.raises(ValueError) as err:
         desktop.multi_edit([(10, 10, "A"), (20, 20, "B"), (30, 30, "C")])
     message = str(err.value)
-    assert "(20,20)" in message and "boom" in message
-    assert "done: (10,10)" in message
-    assert "not done: (20,20), (30,30)" in message
+    assert message.startswith("MultiEdit stopped at locs[1]: boom")
+    assert "Done: locs[0]." in message
+    assert "Not done: locs[1], locs[2]." in message
     assert desktop.type.call_count == 2
