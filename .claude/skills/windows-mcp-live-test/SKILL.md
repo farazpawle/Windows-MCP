@@ -185,6 +185,10 @@ For a read-only or scroll test with a long document (R6-5, 2026-09-28), `notepad
 file>` opens the file as its own tab (restoring the user's tabs if Notepad was closed): the
 title is `<file> - Notepad` while it is selected; check that before every input, and Ctrl+W
 closes it with no question as long as nothing was typed. Leave the window open.
+Ctrl+W needs the tab in front, and another window can take the front mid-run (an Avast
+window did, R6-13): close it instead through UIA with no input - in the Notepad window,
+`TabItemControl(SubName=<file name>, searchDepth=12)`, then its child
+`ButtonControl(Name="Close Tab")` `.GetInvokePattern().Invoke()`; only that tab closes.
 **Never run `pytest` while a user's document is in front** unless `tests/conftest.py`
 `_no_real_input` is in place: before it existed, a run typed "hi"/"new" into the front window.
 Check the screen size with DisplayInventory first (1920x1080 in rounds 4-5, 2560x1440 once):

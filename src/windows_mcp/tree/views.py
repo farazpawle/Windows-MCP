@@ -227,11 +227,62 @@ def _prune_structural(node: SemanticNode) -> bool:
     )
 
 
-def _reverse_children_order(node: SemanticNode) -> None:
-    """Fix child ordering: tree_traversal visits reversed(children) so we reverse back."""
-    node.children.reverse()
+def _extent(node: SemanticNode) -> tuple[int, int, int] | None:
+    """(top, bottom, left) of a node, or of everything under it when it has no box."""
+    if node.bounding_box is not None:
+        box = node.bounding_box
+        return box.top, box.bottom, box.left
+    parts = [e for e in map(_extent, node.children) if e is not None]
+    if not parts:
+        return None
+    return min(p[0] for p in parts), max(p[1] for p in parts), min(p[2] for p in parts)
+
+
+def _sort_children(node: SemanticNode) -> None:
     for child in node.children:
-        _reverse_children_order(child)
+        _sort_children(child)
+    keyed = sorted(
+        ((e, c) for c in node.children if (e := _extent(c)) is not None), key=lambda it: it[0][0]
+    )
+    rows: list[list] = []
+    for (top, bottom, left), child in keyed:
+        if rows:
+            first_top, first_bottom, _ = rows[-1][0][0]
+            # Same row when each one's middle lies inside the other's height: a word
+            # shares a row with the next word, not with the document around it.
+            if (
+                first_top <= (top + bottom) / 2 <= first_bottom
+                and top <= (first_top + first_bottom) / 2 <= bottom
+            ):
+                rows[-1].append(((top, bottom, left), child))
+                continue
+        rows.append([((top, bottom, left), child)])
+    boxless = [c for c in node.children if _extent(c) is None]
+    # ponytail: left-to-right rows; a right-to-left UI would want the rows mirrored.
+    node.children = [c for row in rows for _, c in sorted(row, key=lambda it: it[0][2])] + boxless
+
+
+def sort_reading_order(
+    window: SemanticNode, interactive_nodes: list, scrollable_nodes: list
+) -> None:
+    """List a native window top to bottom, left to right, and number its labels that way.
+
+    UIA gives a window's content before its title bar and menus, and the traversal walks
+    children last-to-first, so the tree came out bottom-to-top (round-6 R6-13). Labels
+    index the flat lists, which are re-sorted to the tree's order so they count down it.
+    """
+    _sort_children(window)
+    rank: dict[tuple, int] = {}
+
+    def walk(node: SemanticNode) -> None:
+        for child in node.children:
+            if child.element_type in ("interactive", "scrollable"):
+                rank.setdefault(_label_key(child.element_type, child), len(rank))
+            walk(child)
+
+    walk(window)
+    for kind, nodes in (("interactive", interactive_nodes), ("scrollable", scrollable_nodes)):
+        nodes.sort(key=lambda n: rank.get(_label_key(kind, n), len(rank)))
 
 
 @dataclass

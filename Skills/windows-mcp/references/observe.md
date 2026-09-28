@@ -22,7 +22,10 @@
 ## Snapshot
 
 - Each element line in the text tree starts with `[label:N]`: the id `label=` takes in Click,
-  Type and MultiSelect. Numbers do not follow the tree's order; read them from the line.
+  Type and MultiSelect. A window is listed top to bottom, left to right (title bar, menu,
+  tabs, then the document and its words in reading order); a pop-up inside a window is its
+  own group. Numbers count down the tree, except a scroll-only area, which is numbered
+  after all the others: read them from the line.
 - Only Snapshot sets labels; WaitFor, Screenshot, App and Scrape leave them alone.
 - Before acting on a label the tool re-checks the element is still at its spot (input.md,
   "Spot check") and refuses with "take a new Snapshot" if the screen changed.

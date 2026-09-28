@@ -41,7 +41,7 @@ from windows_mcp.tree.views import (
     TreeState,
     SemanticNode,
     _prune_structural,
-    _reverse_children_order,
+    sort_reading_order,
 )
 from windows_mcp.tree.cache_utils import (
     CacheRequestFactory,
@@ -1178,6 +1178,18 @@ class Tree:
 
                                 if is_modal:
                                     interactive_nodes.clear()
+                        # A named pop-up inside the window is one group, or the reading-order
+                        # sort would mix its buttons in with what lies under it (R6-13).
+                        dialog_parent = semantic_parent
+                        dialog_name = "" if is_dom else child.CachedName.strip()
+                        if semantic_parent is not None and dialog_name:
+                            dialog_parent = SemanticNode(
+                                control_type=child.CachedLocalizedControlType.title(),
+                                element_type="structural",
+                                name=dialog_name,
+                                window_name=window_name,
+                            )
+                            semantic_parent.add_child(dialog_parent)
                         # enter dialog subtree
                         self.tree_traversal(
                             child,
@@ -1192,7 +1204,7 @@ class Tree:
                             is_dialog=True,
                             element_cache_req=element_cache_req,
                             children_cache_req=children_cache_req,
-                            current_semantic_node=semantic_parent,
+                            current_semantic_node=dialog_parent,
                         )
                     else:
                         # normal non-dialog children
@@ -1374,8 +1386,7 @@ class Tree:
             logger.debug(f"Scrollable nodes:{len(scrollable_nodes)}")
 
             if not is_browser and window_sem_node is not None:
-                # tree_traversal visits reversed(children) for native apps — fix ordering now
-                _reverse_children_order(window_sem_node)
+                sort_reading_order(window_sem_node, interactive_nodes, scrollable_nodes)
             elif is_browser:
                 # Build browser window semantic tree post-hoc from flat DOM lists
                 window_sem_node = SemanticNode(
