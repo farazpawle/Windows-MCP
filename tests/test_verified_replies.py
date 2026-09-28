@@ -166,13 +166,13 @@ def test_unreadable_foreground_is_not_read(screen):
     assert utils.focused_value() == ""
 
 
-# --- scroll_position -----------------------------------------------------------------
+# --- scroll_reader -------------------------------------------------------------------
 
 
 def test_finds_the_scrolling_parent(screen):
     lst = _control("Files", kind="list", patterns={SCROLL: _scroller(vertical=45.0)})
     screen.control = _control("row 3", kind="list item", parent=lst)
-    assert utils.scroll_position(1, 2, "vertical") == ('list "Files"', 45.0)
+    assert utils.scroll_reader(1, 2, "vertical")() == ('list "Files"', 45.0)
 
 
 def test_horizontal_uses_the_horizontal_percent(screen):
@@ -180,18 +180,53 @@ def test_horizontal_uses_the_horizontal_percent(screen):
         "Sheet", kind="pane", patterns={SCROLL: _scroller(vertical=10.0, horizontal=70.0)}
     )
     screen.control = pane
-    assert utils.scroll_position(1, 2, "horizontal") == ('pane "Sheet"', 70.0)
+    assert utils.scroll_reader(1, 2, "horizontal")() == ('pane "Sheet"', 70.0)
 
 
 def test_nothing_scrollable_is_none(screen):
     screen.control = _control("OK")
-    assert utils.scroll_position(1, 2, "vertical") is None
+    assert utils.scroll_reader(1, 2, "vertical")() is None
 
 
 def test_unreadable_window_scroll_is_not_read(screen):
     screen.unreadable = True
-    assert utils.scroll_position(1, 2, "vertical") is None
+    assert utils.scroll_reader(1, 2, "vertical")() is None
     screen.reads.assert_not_called()
+
+
+# R6-5: a Scroll reads its position up to ~7 times; only the first walks up the tree.
+def test_reader_walks_once_then_rereads_the_found_area(screen):
+    scroller = _scroller(vertical=10.0)
+    lst = _control("Files", kind="list", patterns={SCROLL: scroller})
+    screen.control = _control("row 3", kind="list item", parent=lst)
+    read = utils.scroll_reader(1, 2, "vertical")
+    assert read() == ('list "Files"', 10.0)
+    scroller.VerticalScrollPercent = 45.0
+    assert read() == ('list "Files"', 45.0)
+    assert read() == ('list "Files"', 45.0)
+    assert screen.reads.call_count == 1
+
+
+def test_reader_walks_again_when_the_area_is_gone(screen):
+    def gone(_pattern_id):
+        raise utils.uia.UIADeadElementError("element not available")
+
+    lst = _control("Files", kind="list", patterns={SCROLL: _scroller(vertical=10.0)})
+    screen.control = lst
+    read = utils.scroll_reader(1, 2, "vertical")
+    assert read() == ('list "Files"', 10.0)
+    lst.GetPattern = gone
+    screen.control = _control("Other", kind="list", patterns={SCROLL: _scroller(vertical=70.0)})
+    assert read() == ('list "Other"', 70.0)
+    assert screen.reads.call_count == 2
+
+
+def test_reader_does_not_read_a_window_that_stopped_responding(screen):
+    screen.control = _control("Files", kind="list", patterns={SCROLL: _scroller(vertical=10.0)})
+    read = utils.scroll_reader(1, 2, "vertical")
+    assert read() == ('list "Files"', 10.0)
+    screen.hung = True
+    assert read() is None
 
 
 # --- the tools use them --------------------------------------------------------------
@@ -249,8 +284,19 @@ def _readings(monkeypatch, name, values, *args):
     )
 
 
+def _scroll_readings(monkeypatch, values):
+    """Make the Scroll tool's position reader return *values* in turn, then the last one."""
+    values = list(values)
+    monkeypatch.setattr(input_tools, "_SETTLE_GAP", 0.001)
+    monkeypatch.setattr(
+        input_tools,
+        "scroll_reader",
+        lambda *a: lambda: values.pop(0) if len(values) > 1 else values[0],
+    )
+
+
 def test_scroll_reports_before_and_after(monkeypatch):
-    _readings(monkeypatch, "scroll_position", [('list "Files"', 30.0), ('list "Files"', 45.0)])
+    _scroll_readings(monkeypatch, [('list "Files"', 30.0), ('list "Files"', 45.0)])
     desktop = MagicMock()
     desktop.scroll.return_value = None
     reply = _tool("Scroll", desktop)(loc=[5, 6])
@@ -260,11 +306,32 @@ def test_scroll_reports_before_and_after(monkeypatch):
 def test_scroll_reports_the_position_once_it_settles(monkeypatch):
     # Round-4 R4-7: "now at 87.3%" while the next call found "was 100%".
     doc = 'document "Text editor"'
-    _readings(monkeypatch, "scroll_position", [(doc, 62.0), (doc, 87.3), (doc, 96.0), (doc, 100.0)])
+    _scroll_readings(monkeypatch, [(doc, 62.0), (doc, 87.3), (doc, 96.0), (doc, 100.0)])
     desktop = MagicMock()
     desktop.scroll.return_value = None
     reply = _tool("Scroll", desktop)(loc=[5, 6])
     assert reply.endswith(f"{doc} is now at 100% (was 62%).")
+
+
+# R6-5: with no fixed pause after the wheel, the first readings can come before the app
+# has moved; readings equal to "before" do not count as settled.
+def test_scroll_waits_past_readings_that_have_not_moved_yet(monkeypatch):
+    doc = 'document "Text editor"'
+    _scroll_readings(monkeypatch, [(doc, 10.0), (doc, 10.0), (doc, 10.0), (doc, 30.0)])
+    desktop = MagicMock()
+    desktop.scroll.return_value = None
+    reply = _tool("Scroll", desktop)(loc=[5, 6])
+    assert reply.endswith(f"{doc} is now at 30% (was 10%).")
+
+
+def test_scroll_at_the_end_still_answers(monkeypatch):
+    doc = 'document "Text editor"'
+    _scroll_readings(monkeypatch, [(doc, 100.0)])
+    monkeypatch.setattr(input_tools, "_SETTLE_CAP", 0.01)
+    desktop = MagicMock()
+    desktop.scroll.return_value = None
+    reply = _tool("Scroll", desktop)(loc=[5, 6])
+    assert reply.endswith(f"{doc} is now at 100% (was 100%).")
 
 
 def test_type_reports_the_field_once_it_settles(monkeypatch):
@@ -296,7 +363,8 @@ def test_a_reading_that_never_settles_stops_at_the_cap(monkeypatch):
 
 
 def test_scroll_says_when_the_position_is_unknown(monkeypatch):
-    monkeypatch.setattr(input_tools, "scroll_position", lambda x, y, axis: None)
+    monkeypatch.setattr(input_tools, "scroll_reader", lambda x, y, axis: lambda: None)
+    monkeypatch.setattr(input_tools, "_SETTLE_CAP", 0.01)
     desktop = MagicMock()
     desktop.scroll.return_value = None
     reply = _tool("Scroll", desktop)(loc=[5, 6])

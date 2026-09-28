@@ -1,6 +1,6 @@
 ---
 Title: Windows-MCP round 6 - speed and accuracy (tasks)
-Description: Task list for Plan/windows-mcp-round6-speed-accuracy-plan.md. Part A accuracy (R6-1 App switch confirms the front window, R6-2 multi-click re-checks each item, R6-3 optional expect= on Click/Type by loc). Part B speed (R6-4 cached element search, closes R5-I2; R6-5 Scroll re-reads one element, closes R5-I1; R6-6 Registry via winreg keeping today's replies, closes R5-2; R6-7 OCR helper only if the user approves). Part C fewer calls (R6-8 recipes page; R6-9 "steps in one go" tool, design approved by the user first). Part D cleanup (R6-10 one fuzzy library). Part E user-only checks from round 4 (R6-11). Part F finish (R6-12 round-5 guide fixes and one guide ZIP rebuild). [User] tasks: R6-7b, R6-9b, R6-11a, R6-11b. Status 2026-09-28: R6-1 and R6-2 done; R6-4 closed by measurement with no code change (the 1.5 s was a throwaway Edge profile slowing every window); the rest not started.
+Description: Task list for Plan/windows-mcp-round6-speed-accuracy-plan.md. Part A accuracy (R6-1 App switch confirms the front window, R6-2 multi-click re-checks each item, R6-3 optional expect= on Click/Type by loc). Part B speed (R6-4 cached element search, closes R5-I2; R6-5 Scroll re-reads one element, closes R5-I1; R6-6 Registry via winreg keeping today's replies, closes R5-2; R6-7 OCR helper only if the user approves). Part C fewer calls (R6-8 recipes page; R6-9 "steps in one go" tool, design approved by the user first). Part D cleanup (R6-10 one fuzzy library). Part E user-only checks from round 4 (R6-11). Part F finish (R6-12 round-5 guide fixes and one guide ZIP rebuild). [User] tasks: R6-7b, R6-9b, R6-11a, R6-11b. Status 2026-09-28: R6-1, R6-2 and R6-5 done; R6-4 closed by measurement with no code change (the 1.5 s was a throwaway Edge profile slowing every window); the rest not started.
 Total Tasks: 66
 ---
 
@@ -63,13 +63,19 @@ then R6-11. R5-I4 is a user decision, any time.
     - `get_windows` normally takes 0.06-0.09 s, and `pick_window` by name against the user's own Edge takes 0.06-0.08 s. With a fresh throwaway Edge profile it took 1.56 s 3 s after the start, 0.09 s at 10 s and 20 s, and 1.4-1.8 s from about 40 s on (after the profile signs in and syncs). Every UIA call slowed then (ControlFromHandle 0.013-0.035 s per window of any app, against 0.001 s), with low CPU use. Cause not found; it is outside this code.
     - So round 5's 1.5 s was the throwaway profile's start-up and sync, not the element search. Guide note added to `references/web.md`.
 
-- [ ] R6-5 **Scroll re-reads the element it found instead of walking up again (R5-I1).**
-  - [ ] a. Profile one Scroll in Notepad and in the harness: wheel, settle wait, each position read.
-  - [ ] b. Unit: after the first read, later reads ask only the found scrollable element; if it is gone they fall back to the walk.
-  - [ ] c. Keep the found element from the "before" read and reuse it.
-  - [ ] d. Shorten the settle wait where the profile shows the position already stable (keep the two-equal-readings rule from R4-7).
-  - [ ] e. Tick R5-I1 in the round-5 backlog, pointing here.
+- [x] R6-5 **Scroll re-reads the element it found instead of walking up again (R5-I1).**
+  - [x] a. Profile one Scroll in Notepad and in the harness: wheel, settle wait, each position read.
+  - [x] b. Unit: after the first read, later reads ask only the found scrollable element; if it is gone they fall back to the walk.
+  - [x] c. Keep the found element from the "before" read and reuse it.
+  - [x] d. Shorten the settle wait where the profile shows the position already stable (keep the two-equal-readings rule from R4-7).
+  - [x] e. Tick R5-I1 in the round-5 backlog, pointing here.
   - **Verify:** Live - three Scrolls in a Notepad test tab: each under 0.5 s, each "now" equal to the next "was".
+  - **Done 2026-09-28:**
+    - Profile (harness, 3 notches): 0.43-0.45 s = move 0.11 (a fixed 0.1 s hover settle), wheel 0.25 (0.05 s per notch plus a fixed 0.1 s), settle 0.06-0.07, position reads ~0.01 each. The reads were never the cost.
+    - Notepad animates each scroll for ~0.25-0.3 s after the wheel (readings 0.8, 1.3, 1.6, 2.1, 2.6, 2.9, 2.9 at 50 ms steps), so its settle wait legitimately runs ~0.3 s.
+    - Changes: the reader walks once and re-reads that element, walking again if it is gone (`tree/utils.py` `scroll_reader`). The fixed 0.1 s after the wheel is gone, and `_settled(unmoved=before)` does not count readings equal to the one before the wheel as settled. The Scroll's pointer move has no hover settle (`move(settle=0)`).
+    - Live after: harness 0.22 s (from 0.44); Notepad test tab 0.535 / 0.497 / 0.497 s (from 0.60-0.68; the first call is 0.035 s over the target). Every "now" equalled the next "was". The harness logged all 12 wheel notches (none lost without the settle).
+    - The Notepad test tab was a file opened with `notepad.exe <file>` (its own tab), closed with Ctrl+W; the user's window stayed open.
 
 - [ ] R6-6 **Registry uses Python's `winreg` instead of starting PowerShell, with today's replies.**
   - [ ] a. Unit: no Registry mode starts PowerShell (fails today).

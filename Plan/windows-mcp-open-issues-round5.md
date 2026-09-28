@@ -41,10 +41,11 @@ Work order: these items are slotted into the round-6 order (`Plan/windows-mcp-ro
 
 # Part B - Improvements
 
-- [ ] R5-I1 **Scroll takes 0.68-0.72 s** a call (round 4 0.27-0.56 s; guide ~0.5 s), apparently the settle wait added for R4-7.
-  - [ ] a. Profile one Scroll in Notepad and in the harness (wheel, settle wait, read-back).
-  - [ ] b. Shorten the settle wait where the position is already stable.
+- [x] R5-I1 **Scroll takes 0.68-0.72 s** a call (round 4 0.27-0.56 s; guide ~0.5 s), apparently the settle wait added for R4-7.
+  - [x] a. Profile one Scroll in Notepad and in the harness (wheel, settle wait, read-back).
+  - [x] b. Shorten the settle wait where the position is already stable.
   - **Verify:** Live - three Scrolls in a Notepad test tab: each under 0.5 s, each "now" equal to the next "was".
+  - **Done 2026-09-28 in round-6 R6-5:** Notepad 0.50-0.54 s (its own ~0.3 s scroll animation is waited out on purpose), harness 0.22 s; see R6-5.
 
 - [x] R5-I2 **Click `element=` in Edge took 1.5 s** the first time (Notepad 0.27-0.30 s).
   - [x] a. Profile Click `element="button:Got it"` on a fresh throwaway Edge window.

@@ -82,6 +82,10 @@ Coordinates · What the replies report · Shrunk screenshots
   does not fit the axis (horizontal + up) is an error.
 - `modifiers="ctrl"` with up/down zooms a page or document (2 notches took Notepad from 100%
   to 120%).
+- The reply's "now at X% (was Y%)" is read once the position stops moving, so it is the
+  final one. That makes a Scroll take ~0.2-0.3 s in plain boxes and ~0.5 s in apps that
+  animate scrolling (Notepad animates ~0.3 s); at the end of a list, where nothing moves,
+  ~0.5 s.
 
 ## Move
 

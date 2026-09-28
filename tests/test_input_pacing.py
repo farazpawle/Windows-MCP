@@ -81,6 +81,31 @@ def test_no_input_waits_more_than_100ms(action):
     assert waits and max(waits) <= 0.1
 
 
+@pytest.mark.parametrize("direction", ["up", "down"])
+def test_scroll_wheel_adds_no_wait_after_the_last_notch(direction):
+    # R6-5: the Scroll tool waits for the position to settle itself, so a fixed 0.1 s
+    # after the wheel only added time.
+    wheel = MagicMock()
+    with patch.object(uia, "WheelUp" if direction == "up" else "WheelDown", wheel):
+        Desktop.__new__(Desktop)._scroll_wheel("vertical", direction, 3)
+    assert wheel.call_args.kwargs["waitTime"] == 0
+
+
+def test_scroll_moves_the_pointer_without_a_settle_wait():
+    # R6-5: the wheel goes to the window under the pointer when it is sent, so the
+    # 0.1 s hover settle before it only added time.
+    d = Desktop.__new__(Desktop)
+    d._require_on_screen = lambda points: None
+    with (
+        patch.object(uia, "MoveTo") as move,
+        patch.object(uia, "WheelDown"),
+    ):
+        d.scroll((10, 20))
+    move.assert_called_once()
+    assert move.call_args.args[:2] == (10, 20)
+    assert move.call_args.kwargs["waitTime"] == 0
+
+
 def test_clear_fallback_does_not_wait_half_a_second():
     # Live R3-I2 follow-up: SetValue's default 0.5 s wait made MultiEdit ~0.95 s a field
     # whenever Ctrl+A left text behind.

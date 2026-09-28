@@ -1276,20 +1276,23 @@ class Desktop:
         modifiers: list[str] = (),
     ) -> str | None:
         if loc:
-            self.move(loc)
+            # The wheel goes to the window under the pointer when sent: no hover settle.
+            self.move(loc, settle=0)
         with _keys_held(list(modifiers)):
             return self._scroll_wheel(axis, direction, wheel_times, bool(modifiers))
 
     def _scroll_wheel(
         self, axis: str, direction: str, wheel_times: int, keys_held: bool = False
     ) -> str | None:
+        # No wait after the last notch: the Scroll tool waits for the position to settle
+        # (R6-5), and a fixed 0.1 s only added time.
         match axis:
             case "vertical":
                 match direction:
                     case "up":
-                        uia.WheelUp(wheel_times, waitTime=self._SETTLE)
+                        uia.WheelUp(wheel_times, waitTime=0)
                     case "down":
-                        uia.WheelDown(wheel_times, waitTime=self._SETTLE)
+                        uia.WheelDown(wheel_times, waitTime=0)
                     case _:
                         return 'Invalid direction. Use "up" or "down".'
             case "horizontal":
@@ -1385,10 +1388,10 @@ class Desktop:
             "duration": effective_duration,
         }
 
-    def move(self, loc: tuple[int, int]):
+    def move(self, loc: tuple[int, int], settle: float = _SETTLE):
         x, y = loc
         self._require_on_screen([(x, y)])
-        uia.MoveTo(x, y, moveSpeed=10, waitTime=self._SETTLE)
+        uia.MoveTo(x, y, moveSpeed=10, waitTime=settle)
 
     _left_held = False  # set by mouse_button("down"), cleared by any release
 

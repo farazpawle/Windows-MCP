@@ -22,7 +22,7 @@ from windows_mcp.tree.utils import (
     find_element,
     focused_value,
     name_element,
-    scroll_position,
+    scroll_reader,
 )
 
 
@@ -164,8 +164,8 @@ def _point_description(point: list) -> str:
     return f"{described} " if described else ""
 
 
-def _scroll_position(point: list, axis: str) -> tuple[str, float] | None:
-    return scroll_position(*point, axis) if _is_point(point) else None
+def _scroll_reader(point: list, axis: str) -> Callable[[], tuple[str, float] | None]:
+    return scroll_reader(*point, axis) if _is_point(point) else lambda: None
 
 
 _SETTLE_GAP = 0.05  # seconds between two readings that must agree
@@ -173,20 +173,21 @@ _SETTLE_CAP = 0.3  # seconds at most spent waiting for them to agree
 _MISMATCH_CAP = 2.0  # longer, while a field still lacks the typed text (R4-16)
 
 
-def _settled[T](read: Callable[[], T], cap: float | None = None) -> T:
+def _settled[T](read: Callable[[], T], cap: float | None = None, *, unmoved: object = None) -> T:
     """Read until two readings _SETTLE_GAP apart agree, or *cap* (_SETTLE_CAP) has passed.
 
     The app is still working through the input when the tool returns: Type read
-    "213 characters" of 215 and Scroll "87.3%" of 100% (round-4 R4-7).
+    "213 characters" of 215 and Scroll "87.3%" of 100% (round-4 R4-7). Readings equal
+    to *unmoved* (the state before the input) never count as settled: the app may not
+    have started on the input yet. When nothing changes (a list already at its end),
+    the call waits out the cap.
     """
-    # ponytail: an app that has not started on the input yet reads the same twice and
-    # is reported as it was; no case of that has been seen.
     deadline = time.monotonic() + (_SETTLE_CAP if cap is None else cap)
     last = read()
     while time.monotonic() < deadline:
         time.sleep(_SETTLE_GAP)
         current = read()
-        if current == last:
+        if current == last and (unmoved is None or current != unmoved):
             break
         last = current
     return last
@@ -626,12 +627,13 @@ def register(
             raise ValueError("Location must be a list of exactly 2 integers [x, y]")
         released = release_held_button(desktop)
         point = loc or list(desktop.get_cursor_location())
-        before = _scroll_position(point, axis)
+        read_position = _scroll_reader(point, axis)
+        before = read_position()
         response = desktop.scroll(loc, axis, direction, wheel_times, modifiers=modifiers)
         if response:
             return f"{response}{released}"
         where = " at ({},{})".format(*to_model(desktop, loc)) if loc else " at the mouse position"
-        after = _settled(lambda: _scroll_position(point, axis))
+        after = _settled(read_position, unmoved=before)
         return (
             f"Scrolled {axis} {direction} by {wheel_times} wheel times"
             f"{where}{_held_suffix(modifiers)}.{_scroll_change(before, after)}"

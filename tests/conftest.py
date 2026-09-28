@@ -25,7 +25,7 @@ def _nothing_covers_fake_windows(monkeypatch):
     # B.10 reply reads: nothing is known about made-up points (test_verified_replies covers them).
     monkeypatch.setattr("windows_mcp.tools.input.describe_point", lambda *a, **k: "")
     monkeypatch.setattr("windows_mcp.tools.input.focused_value", lambda *a, **k: "")
-    monkeypatch.setattr("windows_mcp.tools.input.scroll_position", lambda *a, **k: None)
+    monkeypatch.setattr("windows_mcp.tools.input.scroll_reader", lambda *a, **k: lambda: None)
     # R3-N1 new-window notes: a window opening on the real desktop mid-test must not change
     # a reply; test_new_windows_note covers the note. Likewise R4-5 in-window dialogs.
     monkeypatch.setattr("windows_mcp.tools._new_windows._top_windows", lambda: {})

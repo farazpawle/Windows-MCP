@@ -306,28 +306,56 @@ def focused_value(typed: str | None = None) -> str:
         return ""
 
 
-def scroll_position(x: int, y: int, axis: str, max_depth: int = 15) -> tuple[str, float] | None:
-    """(description, percent) of the nearest area at (x, y) that scrolls along *axis*."""
-    if not _readable_window(top_level_window_at(x, y)):
+def _scroll_percent(control, axis: str) -> float | None:
+    """*control*'s scroll percent along *axis*, or None when it does not scroll that way."""
+    pattern = control.GetPattern(uia.PatternId.ScrollPattern)
+    if pattern is None:
         return None
-    vertical = axis == "vertical"
+    if axis == "vertical":
+        return round(pattern.VerticalScrollPercent, 1) if pattern.VerticallyScrollable else None
+    return round(pattern.HorizontalScrollPercent, 1) if pattern.HorizontallyScrollable else None
+
+
+def _scroll_area(x: int, y: int, axis: str, max_depth: int = 15) -> tuple | None:
+    """(control, description, percent) of the nearest area at (x, y) scrolling along *axis*."""
     try:
         control = uia.ControlFromPoint(x, y)
         for _ in range(max_depth):
             if control is None:
                 break
-            pattern = control.GetPattern(uia.PatternId.ScrollPattern)
-            if pattern is not None and (
-                pattern.VerticallyScrollable if vertical else pattern.HorizontallyScrollable
-            ):
-                percent = (
-                    pattern.VerticalScrollPercent if vertical else pattern.HorizontalScrollPercent
-                )
-                return _described(control), round(percent, 1)
+            percent = _scroll_percent(control, axis)
+            if percent is not None:
+                return control, _described(control), percent
             control = control.GetParentControl()
     except Exception:
         logger.debug("Could not read the scroll position at (%s, %s)", x, y, exc_info=True)
     return None
+
+
+def scroll_reader(x: int, y: int, axis: str) -> Callable[[], tuple[str, float] | None]:
+    """A reader of (description, percent) for the area at (x, y) that scrolls along *axis*.
+
+    R6-5: the first read walks up from the point; later reads ask only the area found,
+    walking again if it is gone. The window is checked before every read.
+    """
+    area = None
+
+    def read() -> tuple[str, float] | None:
+        nonlocal area
+        if not _readable_window(top_level_window_at(x, y)):
+            return None
+        if area is not None:
+            try:
+                percent = _scroll_percent(area[0], axis)
+            except Exception:
+                percent = None  # the element is gone
+            if percent is not None:
+                return area[1], percent
+        found = _scroll_area(x, y, axis)
+        area = found[:2] if found else None
+        return (found[1], found[2]) if found else None
+
+    return read
 
 
 # Round-2 C.5: Click element="button:Save" resolves the element when it clicks, so no
