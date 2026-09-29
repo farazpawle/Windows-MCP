@@ -1,6 +1,6 @@
 ---
 Title: Windows-MCP round 6 - speed and accuracy (tasks)
-Description: Task list for Plan/windows-mcp-round6-speed-accuracy-plan.md. Part A accuracy (R6-1 App switch confirms the front window, R6-2 multi-click re-checks each item, R6-3 optional expect= on Click/Type by loc, R6-13 Snapshot order of a native window, logged 2026-09-28). Part B speed (R6-4 cached element search, closes R5-I2; R6-5 Scroll re-reads one element, closes R5-I1; R6-6 Registry via winreg keeping today's replies, closes R5-2; R6-7 OCR helper only if the user approves). Part C fewer calls (R6-8 recipes page; R6-9 "steps in one go" tool, design approved by the user first). Part D cleanup (R6-10 one fuzzy library). Part E user-only checks from round 4 (R6-11). Part F finish (R6-12 round-5 guide fixes and one guide ZIP rebuild). [User] tasks: R6-7b, R6-9b, R6-11a, R6-11b. Status 2026-09-28: R6-1, R6-2, R6-3, R6-5, R6-6 and R6-13 done (R5-1, R5-3, R5-4 and R5-I3 too, in the round-5 file); R6-4 closed by measurement with no code change (the 1.5 s was a throwaway Edge profile slowing every window); R6-10 done 2026-09-29; R6-7a profiled 2026-09-29 and a BMP temp image made FindText 2.1 s -> 1.1 s full screen (R6-7b decision now worth ~0.3 s); the rest not started.
+Description: Task list for Plan/windows-mcp-round6-speed-accuracy-plan.md. Part A accuracy (R6-1 App switch confirms the front window, R6-2 multi-click re-checks each item, R6-3 optional expect= on Click/Type by loc, R6-13 Snapshot order of a native window, logged 2026-09-28). Part B speed (R6-4 cached element search, closes R5-I2; R6-5 Scroll re-reads one element, closes R5-I1; R6-6 Registry via winreg keeping today's replies, closes R5-2; R6-7 OCR helper only if the user approves). Part C fewer calls (R6-8 recipes page; R6-9 "steps in one go" tool, design approved by the user first). Part D cleanup (R6-10 one fuzzy library). Part E user-only checks from round 4 (R6-11). Part F finish (R6-12 round-5 guide fixes and one guide ZIP rebuild). [User] tasks: R6-9b, R6-11a, R6-11b. Status 2026-09-28: R6-1, R6-2, R6-3, R6-5, R6-6 and R6-13 done (R5-1, R5-3, R5-4 and R5-I3 too, in the round-5 file); R6-4 closed by measurement with no code change (the 1.5 s was a throwaway Edge profile slowing every window); R6-10 done 2026-09-29; R6-7a profiled 2026-09-29 and a BMP temp image made FindText 2.1 s -> 1.1 s full screen (R6-7b: user chose not to build the helper, R6-7 closed); the rest not started.
 Total Tasks: 71
 ---
 
@@ -113,11 +113,11 @@ then R6-11. R5-I4 is a user decision, any time.
     - Unit tests use a real throwaway key `HKCU\Software\WMCP-Test\UT<pid>`; the registry tests run in 1.6 s instead of 36 s. The PowerShell-command tests (`test_registry.py`, `test_registry_default_value.py`, two in `test_open_issues_section1/2.py`) were replaced by behaviour tests.
     - Incident, no damage: run against the old code, the new hive-delete test stubbed only the new delete calls, so the old code's PowerShell path was live; the old code refused (non-recursive: "has 16 sub-keys"; recursive: HKCU's keys all intact, AppEvents first in order untouched; session not elevated). Then, under the new code, four old tests that stubbed only PowerShell wrote a real `HKCU\Software\T` (value "b"); `Software\Test` never existed. Rule added to CLAUDE.md.
 
-- [ ] R6-7 **Kept-running OCR helper (only if approved).**
+- [x] R6-7 **Kept-running OCR helper (only if approved).**
   - [x] a. Profile FindText: process start, WinRT load, the OCR itself.
   - [x] a2. (from the profile) Hand the OCR a BMP instead of a PNG. Unit test first (`test_read_lines_hands_ocr_an_uncompressed_bmp`, failed before).
-  - [ ] b. [User] Decide whether to build it (needs a person's judgement: after a2 it saves only PowerShell start 0.21 s + WinRT load 0.08 s, about 0.3 s per FindText - 1.1 s to ~0.8 s full screen, 0.47 s to ~0.17 s for a small region - but adds a background program that must restart itself after a crash).
-  - [ ] c. If yes, write the build subtasks here from the profile.
+  - [x] b. [User] Decide whether to build it (needs a person's judgement: after a2 it saves only PowerShell start 0.21 s + WinRT load 0.08 s, about 0.3 s per FindText - 1.1 s to ~0.8 s full screen, 0.47 s to ~0.17 s for a small region - but adds a background program that must restart itself after a crash). **Decided 2026-09-29 by the user: no, not built.**
+  - [-] c. If yes, write the build subtasks here from the profile. Not needed (b was no).
   - **Verify:** per the decision - Live FindText results identical to today's, time from the MCP log.
   - **Profile 2026-09-29** (this PC, read-only, 5 warm runs each, medians):
     - Full screen 1920x1080 (3x = 5760x3240), `find_on_screen` 2.12 s: capture 0.007, enlarge (Lanczos) 0.24, **PNG save 0.92**, PowerShell start 0.21, WinRT types 0.08, engine 0.007, open + decode 0.19, recognise 0.40, JSON 0.05.
@@ -180,4 +180,4 @@ then R6-11. R5-I4 is a user decision, any time.
 - Speed items: same target picked and same reply text as before, only faster.
 - `pytest`, `ruff check .` and `ruff format --check .` clean with zero warnings.
 - Guide, tool descriptions and CLAUDE.md updated with each change; `known-gaps.md` lines removed for fixed items; the guide ZIP rebuilt once, in R6-12.
-- Open `[User]` tasks listed to the user at the end of each session: R6-7b, R6-9b, R6-11a, R6-11b.
+- Open `[User]` tasks listed to the user at the end of each session: R6-9b, R6-11a, R6-11b.
