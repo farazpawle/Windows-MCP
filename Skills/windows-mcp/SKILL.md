@@ -66,6 +66,7 @@ list: skipped" line) where PyPI says "No active window found".
 | Read a web page | Scrape | web.md |
 | Write a document or report | FileSystem `write` (not typing it) | system-tools.md |
 | Check text inside a document | WaitFor `text_exists` (or Ctrl+A, Ctrl+C, Clipboard `get`, after backing up the clipboard) | observe.md |
+| Replace text in files, copy picked files, sum a CSV, wait for a file, drive an open Explorer window | PowerShell, one ready-made command | recipes.md |
 
 System tools have no focus problems: prefer them over the UI when both can do the job.
 

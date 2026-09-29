@@ -1,6 +1,6 @@
 ---
 Title: Windows-MCP round 6 - speed and accuracy (tasks)
-Description: Task list for Plan/windows-mcp-round6-speed-accuracy-plan.md. Part A accuracy (R6-1 App switch confirms the front window, R6-2 multi-click re-checks each item, R6-3 optional expect= on Click/Type by loc, R6-13 Snapshot order of a native window, logged 2026-09-28). Part B speed (R6-4 cached element search, closes R5-I2; R6-5 Scroll re-reads one element, closes R5-I1; R6-6 Registry via winreg keeping today's replies, closes R5-2; R6-7 OCR helper only if the user approves). Part C fewer calls (R6-8 recipes page; R6-9 "steps in one go" tool, design approved by the user first). Part D cleanup (R6-10 one fuzzy library). Part E user-only checks from round 4 (R6-11). Part F finish (R6-12 round-5 guide fixes and one guide ZIP rebuild). [User] tasks: R6-9b, R6-11a, R6-11b. Status 2026-09-28: R6-1, R6-2, R6-3, R6-5, R6-6 and R6-13 done (R5-1, R5-3, R5-4 and R5-I3 too, in the round-5 file); R6-4 closed by measurement with no code change (the 1.5 s was a throwaway Edge profile slowing every window); R6-10 done 2026-09-29; R6-7a profiled 2026-09-29 and a BMP temp image made FindText 2.1 s -> 1.1 s full screen (R6-7b: user chose not to build the helper, R6-7 closed); the rest not started.
+Description: Task list for Plan/windows-mcp-round6-speed-accuracy-plan.md. Part A accuracy (R6-1 App switch confirms the front window, R6-2 multi-click re-checks each item, R6-3 optional expect= on Click/Type by loc, R6-13 Snapshot order of a native window, logged 2026-09-28). Part B speed (R6-4 cached element search, closes R5-I2; R6-5 Scroll re-reads one element, closes R5-I1; R6-6 Registry via winreg keeping today's replies, closes R5-2; R6-7 OCR helper only if the user approves). Part C fewer calls (R6-8 recipes page; R6-9 "steps in one go" tool, design approved by the user first). Part D cleanup (R6-10 one fuzzy library). Part E user-only checks from round 4 (R6-11). Part F finish (R6-12 round-5 guide fixes and one guide ZIP rebuild). [User] tasks: R6-9b, R6-11a, R6-11b. Status 2026-09-28: R6-1, R6-2, R6-3, R6-5, R6-6 and R6-13 done (R5-1, R5-3, R5-4 and R5-I3 too, in the round-5 file); R6-4 closed by measurement with no code change (the 1.5 s was a throwaway Edge profile slowing every window); R6-10 done 2026-09-29; R6-7a profiled 2026-09-29 and a BMP temp image made FindText 2.1 s -> 1.1 s full screen (R6-7b: user chose not to build the helper, R6-7 closed); R6-8 recipes page done 2026-09-29 (10 recipes, each run live); the rest not started.
 Total Tasks: 71
 ---
 
@@ -128,14 +128,20 @@ then R6-11. R5-I4 is a user decision, any time.
 
 # Part C - Fewer calls per task
 
-- [ ] R6-8 **Recipes page in the guide.**
-  - [ ] a. List the jobs test rounds 1-5 (`docs/testing/windows-mcp-tool-test-report.md`) did by clicking that one PowerShell or FileSystem call can do.
-  - [ ] b. Pick 10-15 of them.
-  - [ ] c. Write each as a PowerShell snippet for the PowerShell tool, naming the click-through it replaces.
-  - [ ] d. Run each snippet once through the connected server on test data only (`%TEMP%`, `HKCU:\Software\WMCP-Test`), check its effect a second way, then undo it.
-  - [ ] e. Write `Skills/windows-mcp/references/recipes.md` in the other reference pages' layout.
-  - [ ] f. Link it from `SKILL.md`'s "Which tool for which job" table.
+- [x] R6-8 **Recipes page in the guide.**
+  - [x] a. List the jobs test rounds 1-5 (`docs/testing/windows-mcp-tool-test-report.md`) did by clicking that one PowerShell or FileSystem call can do.
+  - [x] b. Pick 10-15 of them.
+  - [x] c. Write each as a PowerShell snippet for the PowerShell tool, naming the click-through it replaces.
+  - [x] d. Run each snippet once through the connected server on test data only (`%TEMP%`, `HKCU:\Software\WMCP-Test`), check its effect a second way, then undo it.
+  - [x] e. Write `Skills/windows-mcp/references/recipes.md` in the other reference pages' layout.
+  - [x] f. Link it from `SKILL.md`'s "Which tool for which job" table.
   - **Verify:** every recipe run live and checked; `SKILL.md` grows by one table row only.
+  - **Done 2026-09-29:**
+    - 10 recipes: replace text in a file (Notepad Find & Replace, rounds 4-5), read some lines (scroll / Ctrl+A+C), find files containing a word, copy chosen files (Explorer MultiSelect + Ctrl+C/V, rounds 3-4), count lines/words/characters (Notepad status bar), newest file (checking a Save), wait for a file to appear (round 4's save check; WaitFor has no file condition), sum a CSV column, point an open Explorer window at a folder (Ctrl+L + typed path + Enter, rounds 3-4), which files are selected in Explorer (round 5's check).
+    - Left out: "open a file in its default app" (a .txt starts Notepad, which restores the user's tabs; App launch covers it) and "find a window's process" (App `list` already shows it). No registry recipe: the Registry tool is already one call.
+    - All run through the connected server's PowerShell tool on `%TEMP%\wmcp-recipes` and checked a second way: file bytes and line endings (`cat -A`), `cmp` of the copy, the CSV sum in Python (14938), `grep`/`wc` counts, the Explorer window's folder after `Navigate`, and the selection through UIA `SelectionItemPattern.IsSelected` (the window was behind VS Code, so no Screenshot). Explorer was opened with `launch_executable` and closed by its handle; the temp folders were deleted (`Test-Path` False).
+    - Two drafts were wrong and fixed before writing: the line count counted the empty end after the last line break (now `Measure-Object -Line`), and the wait loop said "ready" at once because a missing file's `.Length` reads as 0 in PowerShell (now `Test-Path` first; noted on the page). The wait's timeout error was also run.
+    - `SKILL.md`: one table row added.
 
 - [ ] R6-9 **"Steps in one go" tool.**
   - [ ] a. Write the design as a Plan file (step types, the checks each step keeps including R6-2 and `expect=` from R6-3, what stops the run, the reply, a step limit, new-window handling, action log).
