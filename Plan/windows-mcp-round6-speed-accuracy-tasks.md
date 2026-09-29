@@ -1,6 +1,6 @@
 ---
 Title: Windows-MCP round 6 - speed and accuracy (tasks)
-Description: Task list for Plan/windows-mcp-round6-speed-accuracy-plan.md. Part A accuracy (R6-1 App switch confirms the front window, R6-2 multi-click re-checks each item, R6-3 optional expect= on Click/Type by loc, R6-13 Snapshot order of a native window, logged 2026-09-28). Part B speed (R6-4 cached element search, closes R5-I2; R6-5 Scroll re-reads one element, closes R5-I1; R6-6 Registry via winreg keeping today's replies, closes R5-2; R6-7 OCR helper only if the user approves). Part C fewer calls (R6-8 recipes page; R6-9 "steps in one go" tool, design approved by the user first). Part D cleanup (R6-10 one fuzzy library). Part E user-only checks from round 4 (R6-11). Part F finish (R6-12 round-5 guide fixes and one guide ZIP rebuild). [User] tasks: R6-11a, R6-11b. Status 2026-09-28: R6-1, R6-2, R6-3, R6-5, R6-6 and R6-13 done (R5-1, R5-3, R5-4 and R5-I3 too, in the round-5 file); R6-4 closed by measurement with no code change (the 1.5 s was a throwaway Edge profile slowing every window); R6-10 done 2026-09-29; R6-7a profiled 2026-09-29 and a BMP temp image made FindText 2.1 s -> 1.1 s full screen (R6-7b: user chose not to build the helper, R6-7 closed); R6-8 recipes page done 2026-09-29 (10 recipes, each run live); R6-9 Steps tool built and proven live 2026-09-29; the rest not started.
+Description: Task list for Plan/windows-mcp-round6-speed-accuracy-plan.md. Part A accuracy (R6-1 App switch confirms the front window, R6-2 multi-click re-checks each item, R6-3 optional expect= on Click/Type by loc, R6-13 Snapshot order of a native window, logged 2026-09-28). Part B speed (R6-4 cached element search, closes R5-I2; R6-5 Scroll re-reads one element, closes R5-I1; R6-6 Registry via winreg keeping today's replies, closes R5-2; R6-7 OCR helper only if the user approves). Part C fewer calls (R6-8 recipes page; R6-9 "steps in one go" tool, design approved by the user first). Part D cleanup (R6-10 one fuzzy library). Part E user-only checks from round 4 (R6-11). Part F finish (R6-12 round-5 guide fixes and one guide ZIP rebuild). [User] tasks: R6-11a, R6-11b. Status 2026-09-28: R6-1, R6-2, R6-3, R6-5, R6-6 and R6-13 done (R5-1, R5-3, R5-4 and R5-I3 too, in the round-5 file); R6-4 closed by measurement with no code change (the 1.5 s was a throwaway Edge profile slowing every window); R6-10 done 2026-09-29; R6-7a profiled 2026-09-29 and a BMP temp image made FindText 2.1 s -> 1.1 s full screen (R6-7b: user chose not to build the helper, R6-7 closed); R6-8 recipes page done 2026-09-29 (10 recipes, each run live); R6-9 Steps tool built and proven live 2026-09-29; R6-12 guide pass and ZIP rebuild done 2026-09-29 (windows-mcp-skill-2026-09-29.zip in Downloads); only R6-11 (user checks) remains.
 Total Tasks: 85
 ---
 
@@ -193,11 +193,15 @@ then R6-11. R5-I4 is a user decision, any time.
 
 # Part F - Finish
 
-- [ ] R6-12 **One guide pass and one ZIP rebuild at the end.**
-  - [ ] a. Apply round-5 D5-1 to D5-3 with the timings measured in round 6 (not the round-5 ones).
-  - [ ] b. Rebuild the Claude Desktop guide ZIP once (replaces round-5 D5-4).
-  - [ ] c. Tick D5-1 to D5-4 in the round-5 backlog, pointing here.
+- [x] R6-12 **One guide pass and one ZIP rebuild at the end.**
+  - [x] a. Apply round-5 D5-1 to D5-3 with the timings measured in round 6 (not the round-5 ones).
+  - [x] b. Rebuild the Claude Desktop guide ZIP once (replaces round-5 D5-4).
+  - [x] c. Tick D5-1 to D5-4 in the round-5 backlog, pointing here.
   - **Verify:** the ZIP's files equal `Skills/windows-mcp/`; every timing in `SKILL.md` matches the round-6 measurements.
+  - **Done 2026-09-29:**
+    - `SKILL.md` "Typical cost per call", from round-6 measurements: Click ~0.16 s (R6-3 median 0.160); Scroll ~0.2 s, ~0.5 s in apps that animate (R6-5: harness 0.22, Notepad 0.50-0.54); App switch ~0.1 s (R6-1: 0.075-0.117, was listed under 0.1 s); Click `element=` ~0.5 s in Edge, slower while a new profile starts (R6-4, pointing to web.md, which already had the note); Steps added (R6-9: 4 steps 0.65 s). Already right: Snapshot region 0.27-0.29 (R6-13), FindText 0.47 / 1.13 (R6-7), MultiSelect ~0.2 s per click (R6-2: 2 clicks 0.43), Registry under 0.1 s (R6-6). Not measured in round 6, left as they were: Screenshot, WaitFor, PowerShell, Move, double click, drag, Type, MultiEdit, Process.
+    - `known-gaps.md` R4-16: the clipboard-paste alternative (back up, `set`, click, `ctrl+v`, restore). R5-I4 (a paste option in Type) stays a user decision.
+    - ZIP: `windows-mcp-skill-2026-09-29.zip` in the user's Downloads (25.3 KB, 9 files as `windows-mcp/...`); read back and every file byte-equal to `Skills/windows-mcp/`. The 2026-09-25 ZIP left as it was. Includes the Notepad++ launch fix's guide change (commit 36f6b6e).
 
 # Implementation verification
 

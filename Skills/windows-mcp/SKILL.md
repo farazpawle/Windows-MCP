@@ -98,13 +98,15 @@ Clean up: kill only your own PIDs, remove sandbox files and keys, confirm with `
 
 ## Typical cost per call
 
-- Under 0.1 s: DisplayInventory, Clipboard, FileSystem, Registry, App list/switch,
-  Screenshot, Shortcut.
+- Under 0.1 s: DisplayInventory, Clipboard, FileSystem, Registry, App list,
+  Screenshot, Shortcut. App switch ~0.1 s (it confirms the window came to the front).
 - ~0.2-0.3 s Snapshot of a region; ~0.2 s WaitFor; ~0.3 s PowerShell (a new PowerShell each call).
 - FindText ~0.5 s for a region, ~1.1 s for the full screen.
-- Move ~0.1 s, Click ~0.15 s, Scroll ~0.5 s, MultiSelect ~0.2 s per click (a 0.1 s pause
-  after each action; a slow app may need WaitFor `screen_idle` before a Screenshot).
-  Double click ~0.25 s, Click `element=` ~0.3 s, Move drag ~0.5 s (longer with `duration`).
+- Move ~0.1 s, Click ~0.16 s, MultiSelect ~0.2 s per click (a 0.1 s pause after each action;
+  a slow app may need WaitFor `screen_idle` before a Screenshot). Scroll ~0.2 s, ~0.5 s in
+  apps that animate scrolling (Notepad). Double click ~0.25 s, Click `element=` ~0.3 s
+  (~0.5 s in Edge; much slower while a new browser profile starts, see web.md), Move drag
+  ~0.5 s (longer with `duration`). Steps: its steps' own times added up (4 steps ~0.65 s).
 - Type without `loc` ~0.1 s for short text, under 1 s for 600 characters with
   line breaks; MultiEdit ~0.45 s per field;
   Process list under 0.05 s (~0.5 s sorted by CPU).

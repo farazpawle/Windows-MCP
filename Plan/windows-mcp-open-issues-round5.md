@@ -69,10 +69,10 @@ Work order: these items are slotted into the round-6 order (`Plan/windows-mcp-ro
 
 # Part D - Guide corrections
 
-- [ ] D5-1 `SKILL.md` timings: "Scroll ~0.5 s" -> ~0.7 s (until R5-I1); "Click ~0.15 s" -> ~0.2 s; add "Click `element=` in a browser can take ~1.5 s the first time".
+- [x] D5-1 `SKILL.md` timings: "Scroll ~0.5 s" -> ~0.7 s (until R5-I1); "Click ~0.15 s" -> ~0.2 s; add "Click `element=` in a browser can take ~1.5 s the first time". Done in round-6 R6-12 with round-6 timings (Click ~0.16 s, Scroll ~0.2/~0.5 s, the 1.5 s traced to a new browser profile).
 - [x] D5-2 Superseded by the R5-1 fix: `references/web.md` "What comes back" now says how tables come back instead; no known-gaps entry needed.
-- [ ] D5-3 `references/known-gaps.md` R4-16: give the working alternative - back up the clipboard, Clipboard `set` the text, click the document, Ctrl+V, restore the clipboard (exact in 0.1 s in round 5).
-- [ ] D5-4 Rebuild the Claude Desktop guide ZIP after D5-1 to D5-3.
+- [x] D5-3 `references/known-gaps.md` R4-16: give the working alternative - back up the clipboard, Clipboard `set` the text, click the document, Ctrl+V, restore the clipboard (exact in 0.1 s in round 5). Done in round-6 R6-12.
+- [x] D5-4 Rebuild the Claude Desktop guide ZIP after D5-1 to D5-3. Done in round-6 R6-12 (`windows-mcp-skill-2026-09-29.zip`).
 
 # Implementation verification
 
