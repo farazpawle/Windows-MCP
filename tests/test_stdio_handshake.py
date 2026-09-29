@@ -26,6 +26,7 @@ import asyncio
 import json
 import os
 import sys
+from pathlib import Path
 
 import pytest
 
@@ -98,6 +99,12 @@ async def test_handshake_completes_and_lists_tools() -> None:
         tools = await asyncio.wait_for(client.list_tools(), STARTUP_TIMEOUT)
 
     assert {tool.name for tool in tools} == EXPECTED_TOOLS
+
+
+def test_manifest_lists_every_tool() -> None:
+    """Claude Desktop's extension manifest names the same tools (it lacked two, R6-9)."""
+    manifest = json.loads((Path(__file__).parents[1] / "manifest.json").read_text(encoding="utf-8"))
+    assert {tool["name"] for tool in manifest["tools"]} == EXPECTED_TOOLS
 
 
 async def test_tool_call_round_trips_over_stdio() -> None:

@@ -92,6 +92,10 @@
       "description": "Manages file system operations with eight modes: 'read' (read text file contents), 'write' (create/overwrite/append to files), 'copy' (copy files or directories), 'move' (move or rename), 'delete' (delete files or directories), 'list' (list directory contents), 'search' (find files by glob pattern), 'info' (get metadata like size, dates, type). Relative paths are resolved from the user's Desktop folder. Use absolute paths to access other locations."
     },
     {
+      "name": "DisplayInventory",
+      "description": "Lists every display with its bounds, work area, DPI and scale factor."
+    },
+    {
       "name": "Screenshot",
       "description": "Captures a fast screenshot-first desktop snapshot with cursor position, active/open windows, and an image. Skips UI tree extraction for speed and should be the default first call when you mainly need visual context. Supports display=[0] or display=[0,1] using zero-based active Windows display indices. Note: the returned image may be downscaled for efficiency; when it is, multiply image coordinates by the ratio of original size to displayed size to get the actual screen coordinates for mouse actions (Click, Move, etc.)."
     },
@@ -122,6 +126,10 @@
     {
       "name": "Shortcut",
       "description": "Executes keyboard shortcuts using key combinations separated by +. Examples: \"ctrl+c\" (copy), \"ctrl+v\" (paste), \"alt+tab\" (switch apps), \"win+r\" (Run dialog), \"win\" (Start menu), \"ctrl+shift+esc\" (Task Manager). Use for quick actions and system commands."
+    },
+    {
+      "name": "WaitFor",
+      "description": "Waits until a UI condition is met (window active, element or text present, screen text, screen changed or idle), polling inside the tool."
     },
     {
       "name": "Wait",

@@ -166,7 +166,7 @@ then R6-11. R5-I4 is a user decision, any time.
     - `tools/steps.py`: each step runs through `mcp.call_tool` (FastMCP 4.0.3), so it keeps its tool's checks, notes and action-log line. Checked first against each tool's input schema (`get_tool(...).parameters`); `get_tool` returns None for a tool removed by `--exclude-tools`. A bad value found at run time comes as FastMCP's `ValidationError` wrapping pydantic's. 21 unit tests (`tests/test_steps_tool.py`), written first (failed on the missing module); `test_stdio_handshake.py` expects Steps; full suite 1721 passed, ruff clean.
     - Live (harness `LiveSteps69`, text box + Save button, in-process server, user hands-off): O - click, type "week39.txt", click `element="button:Save"`, `wait_for element_exists` in one call, 0.65 s; box text "week39.txt", log `click Save`. P - `wait_for active_window` on a missing title stopped at step 1 after 2.23 s naming the front window; step 2's "zzz" never typed. Q1 - Shortcut `win+r` without the flag stopped with the Run box's note; "zzz" not typed; the Run box closed by WM_CLOSE. Q2 - the same with `allow_new_window`, `wait_for` Run (0.16 s), Escape: 3 of 3 steps, no Run box left.
     - Guide (`references/input.md` Steps, SKILL.md row), README, `manifest.json`, CLAUDE.md (22 tools), tool-tester skill (Steps cases) and live-test skill (the Run box as a safe new window) updated.
-    - Found, not fixed (existing, separate): `manifest.json` lists no DisplayInventory and no WaitFor.
+    - Found and fixed separately (user approved): `manifest.json` listed no DisplayInventory and no WaitFor; `test_manifest_lists_every_tool` now keeps it equal to the server's tools.
 
 # Part D - Cleanup
 
