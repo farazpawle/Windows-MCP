@@ -1,13 +1,13 @@
 ---
 name: windows-mcp
-description: Use when controlling this Windows PC via the windows-mcp tools (lcl-windows-mcp-*) — apps, UI clicks/typing, files, registry, processes, PowerShell, screenshots. Read before the first windows-mcp call.
+description: Use when controlling this Windows PC via the windows-mcp tools (lcl-windows-mcp-* in Claude Desktop, mcp__windows-mcp__* in Claude Code) — apps, UI clicks/typing, files, registry, processes, PowerShell, screenshots. Read before the first windows-mcp call.
 ---
 # Windows MCP — field guide
 
 ## Which server
 
-Claude Code and Claude Desktop on this PC both run the **local repo** build
-(`uv --directory <repo> run windows-mcp serve`). This guide and its references describe it.
+Claude Code, Claude Desktop and Antigravity (Gemini) on this PC all run the **local repo**
+build (`uv --directory <repo> run windows-mcp serve`). This guide and its references describe it.
 
 The **PyPI** release (`uvx windows-mcp`, other machines or configs) differs in many places:
 read `references/pypi-differences.md` before using it. To tell them apart: local repo Snapshot
