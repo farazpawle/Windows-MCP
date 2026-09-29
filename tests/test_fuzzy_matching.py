@@ -1,4 +1,5 @@
-"""Round-6 R6-10: window and app names match through thefuzz, picking what fuzzywuzzy picked."""
+"""Round-6 R6-10: window and app names match through thefuzz, picking what fuzzywuzzy picked,
+except that an exact app name now wins over a fuzzy tie ("Notepad++")."""
 
 import pytest
 
@@ -80,8 +81,10 @@ APPS = [
     "query, picked",
     [
         ("notepad", "Notepad"),
-        # Both libraries drop the "+" signs, so "Notepad" ties at 100 and, listed first, wins.
-        ("Notepad++", "Notepad"),
+        # The fuzzy scorer drops "+", tying "Notepad" at 100; an exact name wins first.
+        ("Notepad++", "Notepad++"),
+        ("notepad++", "Notepad++"),
+        (" Paint ", "Paint"),
         ("Paint 3D", "Paint 3D"),
         ("calc", "Calculator"),
         ("Teams", "Microsoft Teams"),

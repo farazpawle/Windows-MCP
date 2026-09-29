@@ -14,7 +14,8 @@
 
 ## launch
 
-- By Start Menu name, fuzzy ("calc" opens Calculator). An unknown name replies
+- By Start Menu name, fuzzy ("calc" opens Calculator); an exact name, ignoring case, wins
+  first ("Notepad++" opens Notepad++, not Notepad). An unknown name replies
   "... not found in start menu."; an empty name is refused.
 - The reply names the new window with its real title and handle ("Calculator launched
   (handle 123456)."). Windows open before the launch are never named. If no new window

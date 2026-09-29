@@ -883,10 +883,15 @@ class Desktop:
         if not name or not name.strip():
             return ("Provide the name of an app to launch (the name was empty).", 1, 0)
         apps_map = self.get_apps_from_start_menu()
-        matched_app = process.extractOne(name, apps_map.keys(), score_cutoff=70)
-        if matched_app is None:
-            return (f'"{name}" not found in start menu.', 1, 0)
-        app_name, _ = matched_app
+        # An exact name wins first: the fuzzy scorer drops punctuation, so "Notepad++" tied
+        # "Notepad" at 100 and the one listed first was launched.
+        query = name.strip().casefold()
+        app_name = next((app for app in apps_map if app.casefold() == query), None)
+        if app_name is None:
+            matched_app = process.extractOne(name, apps_map.keys(), score_cutoff=70)
+            if matched_app is None:
+                return (f'"{name}" not found in start menu.', 1, 0)
+            app_name, _ = matched_app
         appid = apps_map.get(app_name)
         if appid is None:
             return (f'"{name}" not found in start menu.', 1, 0)
