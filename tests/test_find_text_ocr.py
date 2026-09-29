@@ -164,6 +164,22 @@ def test_read_lines_runs_windows_powershell_and_parses_json(monkeypatch):
     assert run.call_args.kwargs["shell"] == "powershell"
 
 
+def test_read_lines_hands_ocr_an_uncompressed_bmp(monkeypatch):
+    # Round-6 R6-7: PNG compression of a 3x full screen took 0.9 s of FindText's 2.1 s;
+    # a BMP saves in 0.04 s and the OCR read the same text from it (measured 2026-09-29).
+    headers = []
+
+    def run(command, **kwargs):
+        path = command.split("'")[1]
+        with open(path, "rb") as f:
+            headers.append((path, f.read(2)))
+        return "", 0
+
+    monkeypatch.setattr(ocr.PowerShellExecutor, "execute_command", run)
+    ocr.read_lines(Image.new("RGB", (10, 10)))
+    assert headers[0][0].endswith(".bmp") and headers[0][1] == b"BM"
+
+
 def test_read_lines_wraps_a_single_line(monkeypatch):
     out = json.dumps({"angle": None, "lines": LINES[0]})
     monkeypatch.setattr(ocr.PowerShellExecutor, "execute_command", lambda *a, **k: (out, 0))

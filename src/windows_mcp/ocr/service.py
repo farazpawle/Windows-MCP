@@ -2,9 +2,10 @@
 
 For games, remote desktops and canvas UIs, which expose no accessibility tree.
 Windows.Media.Ocr is a WinRT API; with no WinRT package in the project, Windows
-PowerShell 5.1 (pwsh 7 cannot load WinRT types) reads a temporary PNG. A full
-1920x1080 screen takes about 1.6 s at the 3x enlargement, process start included
-(measured 2026-09-24; a small region about 0.6 s).
+PowerShell 5.1 (pwsh 7 cannot load WinRT types) reads a temporary BMP. A full
+1920x1080 screen takes about 1.1 s at the 3x enlargement, process start included
+(measured 2026-09-29: enlarge 0.24, save 0.04, PowerShell start 0.21, WinRT load 0.08,
+decode 0.19, recognise 0.40 s; a small region about 0.45 s).
 """
 
 import json
@@ -59,7 +60,9 @@ ConvertTo-Json -Compress -Depth 6 -InputObject @{ angle = $result.TextAngle; lin
 
 def read_lines(image: Image.Image) -> list[dict]:
     """The text lines Windows OCR sees in *image*; RuntimeError when it cannot run."""
-    handle, path = tempfile.mkstemp(suffix=".png")
+    # BMP, not PNG: compressing a 3x full screen took 0.9 s of FindText's 2.1 s; a BMP
+    # (56 MB, deleted at once) saves in 0.04 s and gave identical OCR output (R6-7).
+    handle, path = tempfile.mkstemp(suffix=".bmp")
     os.close(handle)
     try:
         image.save(path)

@@ -78,7 +78,7 @@
   plain labels ("Saved") and the text inside text boxes and documents: a whole phrase
   ("North leads the week") matches, not just one word. ~0.3-0.4 s a look.
 - `screen_text` (`text`, optional `region`, no `window_name`) reads the screen by OCR on each
-  look and reports where the text is: ~1.6 s a look full screen, ~0.6 s for a small region.
+  look and reports where the text is: ~1.1 s a look full screen, ~0.5 s for a small region.
 - `screen_changed` waits until the screen (or `region`) differs from how it looked when
   WaitFor started, and says where (`changed around [l, t, r, b]`, a window's drop shadow
   included). It misses a change that already happened during the click before it.

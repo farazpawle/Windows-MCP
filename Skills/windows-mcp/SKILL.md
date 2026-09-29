@@ -99,7 +99,7 @@ Clean up: kill only your own PIDs, remove sandbox files and keys, confirm with `
 - Under 0.1 s: DisplayInventory, Clipboard, FileSystem, Registry, App list/switch,
   Screenshot, Shortcut.
 - ~0.2-0.3 s Snapshot of a region; ~0.2 s WaitFor; ~0.3 s PowerShell (a new PowerShell each call).
-- FindText ~0.6 s for a region, ~1.6 s for the full screen.
+- FindText ~0.5 s for a region, ~1.1 s for the full screen.
 - Move ~0.1 s, Click ~0.15 s, Scroll ~0.5 s, MultiSelect ~0.2 s per click (a 0.1 s pause
   after each action; a slow app may need WaitFor `screen_idle` before a Screenshot).
   Double click ~0.25 s, Click `element=` ~0.3 s, Move drag ~0.5 s (longer with `duration`).
