@@ -144,7 +144,7 @@ then R6-11. R5-I4 is a user decision, any time.
     - `SKILL.md`: one table row added.
 
 - [ ] R6-9 **"Steps in one go" tool.**
-  - [ ] a. Write the design as a Plan file (step types, the checks each step keeps including R6-2 and `expect=` from R6-3, what stops the run, the reply, a step limit, new-window handling, action log).
+  - [x] a. Write the design as a Plan file (step types, the checks each step keeps including R6-2 and `expect=` from R6-3, what stops the run, the reply, a step limit, new-window handling, action log). Done 2026-09-29: `Plan/windows-mcp-r6-9-steps-tool-design.md`.
   - [ ] b. [User] Approve the design (needs a person's judgement: a new tool that changes how agents drive the desktop).
   - [ ] c. Write the build subtasks here from the approved design (tests first, guide, tool count in CLAUDE.md).
   - **Verify:** per design - Live, a four-step save-as on the harness in one call; a deliberately wrong step stops the run and the reply names it.
