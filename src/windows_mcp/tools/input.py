@@ -849,7 +849,7 @@ def register(
             "active_window, element_exists, element_enabled, focused_element. Provide text "
             "and/or window_name depending on the condition. text_exists matches element names "
             "and the text inside text boxes and documents. Set use_dom=True for browser DOM text. "
-            "screen_text instead reads the screen's pixels (Windows OCR, ~1.6 s per full-screen look, ~0.6 s for a small region) for apps "
+            "screen_text instead reads the screen's pixels (Windows OCR, ~1.1 s per full-screen look, ~0.5 s for a small region) for apps "
             "with no accessibility data, and reports where the text is. screen_changed waits "
             "for the screen to change from how it looked when WaitFor started (it misses a "
             "change that already happened) and says where; screen_idle waits until nothing "
