@@ -60,6 +60,7 @@ list: skipped" line) where PyPI says "No active window found".
 | Wait for a window, text, element or screen change | WaitFor (not Wait) | observe.md |
 | Monitor bounds, DPI, scale | DisplayInventory | observe.md |
 | Click, type, scroll, drag, keys | Click, Type, MultiEdit, MultiSelect, Scroll, Move, Shortcut | input.md |
+| A fixed sequence of those (Save As, a small form) in one call | Steps | input.md |
 | Start, switch, resize, move, close windows | App | apps-windows.md |
 | Commands, files, registry, processes | PowerShell, FileSystem, Registry, Process | system-tools.md |
 | Clipboard, toast notifications | Clipboard, Notification | system-tools.md |
@@ -114,7 +115,7 @@ Read only the one the task needs:
 
 - `references/observe.md`: Screenshot, Snapshot, FindText, WaitFor, Wait, DisplayInventory,
   and the frozen-app check.
-- `references/input.md`: Click, Type, MultiEdit, MultiSelect, Scroll, Move, Shortcut;
+- `references/input.md`: Click, Type, MultiEdit, MultiSelect, Scroll, Move, Shortcut, Steps;
   coordinates, shrunk screenshots, what the replies report.
 - `references/apps-windows.md`: App launch, switch, resize, minimize/maximize/restore, close,
   list, move, and how window names match.

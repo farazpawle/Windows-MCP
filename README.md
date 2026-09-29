@@ -737,6 +737,7 @@ MCP Client can access the following tools to interact with Windows:
 - `Scrape`: To scrape the entire webpage for information.
 - `MultiSelect`: Select multiple items (files, folders, checkboxes) with optional Ctrl key. Uses bulk label-to-coordinate resolution when labels are provided.
 - `MultiEdit`: Enter text into multiple input fields at specified coordinates. Uses bulk label-to-coordinate resolution when labels are provided.
+- `Steps`: Run up to 20 input steps (click, type, shortcut, scroll, move, wait_for, wait) in one call; each keeps its own tool's checks, and the run stops at the first failure or unexpected new window.
 - `Clipboard`: Read or set Windows clipboard content.
 - `Process`: List running processes or terminate them by PID or name.
 - `Notification`: Send a Windows toast notification with a title and message.

@@ -1,7 +1,7 @@
 ---
 Title: Windows-MCP round 6 - speed and accuracy (tasks)
-Description: Task list for Plan/windows-mcp-round6-speed-accuracy-plan.md. Part A accuracy (R6-1 App switch confirms the front window, R6-2 multi-click re-checks each item, R6-3 optional expect= on Click/Type by loc, R6-13 Snapshot order of a native window, logged 2026-09-28). Part B speed (R6-4 cached element search, closes R5-I2; R6-5 Scroll re-reads one element, closes R5-I1; R6-6 Registry via winreg keeping today's replies, closes R5-2; R6-7 OCR helper only if the user approves). Part C fewer calls (R6-8 recipes page; R6-9 "steps in one go" tool, design approved by the user first). Part D cleanup (R6-10 one fuzzy library). Part E user-only checks from round 4 (R6-11). Part F finish (R6-12 round-5 guide fixes and one guide ZIP rebuild). [User] tasks: R6-9b, R6-11a, R6-11b. Status 2026-09-28: R6-1, R6-2, R6-3, R6-5, R6-6 and R6-13 done (R5-1, R5-3, R5-4 and R5-I3 too, in the round-5 file); R6-4 closed by measurement with no code change (the 1.5 s was a throwaway Edge profile slowing every window); R6-10 done 2026-09-29; R6-7a profiled 2026-09-29 and a BMP temp image made FindText 2.1 s -> 1.1 s full screen (R6-7b: user chose not to build the helper, R6-7 closed); R6-8 recipes page done 2026-09-29 (10 recipes, each run live); the rest not started.
-Total Tasks: 71
+Description: Task list for Plan/windows-mcp-round6-speed-accuracy-plan.md. Part A accuracy (R6-1 App switch confirms the front window, R6-2 multi-click re-checks each item, R6-3 optional expect= on Click/Type by loc, R6-13 Snapshot order of a native window, logged 2026-09-28). Part B speed (R6-4 cached element search, closes R5-I2; R6-5 Scroll re-reads one element, closes R5-I1; R6-6 Registry via winreg keeping today's replies, closes R5-2; R6-7 OCR helper only if the user approves). Part C fewer calls (R6-8 recipes page; R6-9 "steps in one go" tool, design approved by the user first). Part D cleanup (R6-10 one fuzzy library). Part E user-only checks from round 4 (R6-11). Part F finish (R6-12 round-5 guide fixes and one guide ZIP rebuild). [User] tasks: R6-11a, R6-11b. Status 2026-09-28: R6-1, R6-2, R6-3, R6-5, R6-6 and R6-13 done (R5-1, R5-3, R5-4 and R5-I3 too, in the round-5 file); R6-4 closed by measurement with no code change (the 1.5 s was a throwaway Edge profile slowing every window); R6-10 done 2026-09-29; R6-7a profiled 2026-09-29 and a BMP temp image made FindText 2.1 s -> 1.1 s full screen (R6-7b: user chose not to build the helper, R6-7 closed); R6-8 recipes page done 2026-09-29 (10 recipes, each run live); R6-9 Steps tool built and proven live 2026-09-29; the rest not started.
+Total Tasks: 85
 ---
 
 # Round 6 - speed and accuracy
@@ -143,11 +143,30 @@ then R6-11. R5-I4 is a user decision, any time.
     - Two drafts were wrong and fixed before writing: the line count counted the empty end after the last line break (now `Measure-Object -Line`), and the wait loop said "ready" at once because a missing file's `.Length` reads as 0 in PowerShell (now `Test-Path` first; noted on the page). The wait's timeout error was also run.
     - `SKILL.md`: one table row added.
 
-- [ ] R6-9 **"Steps in one go" tool.**
+- [x] R6-9 **"Steps in one go" tool.**
   - [x] a. Write the design as a Plan file (step types, the checks each step keeps including R6-2 and `expect=` from R6-3, what stops the run, the reply, a step limit, new-window handling, action log). Done 2026-09-29: `Plan/windows-mcp-r6-9-steps-tool-design.md`.
-  - [ ] b. [User] Approve the design (needs a person's judgement: a new tool that changes how agents drive the desktop).
-  - [ ] c. Write the build subtasks here from the approved design (tests first, guide, tool count in CLAUDE.md).
+  - [x] b. [User] Approve the design (needs a person's judgement: a new tool that changes how agents drive the desktop). **Approved 2026-09-29 as recommended: name "Steps", 20 steps and 60 s of waits at most, an unallowed new window or dialog stops the run.**
+  - [x] c. Write the build subtasks here from the approved design (tests first, guide, tool count in CLAUDE.md).
+  - [x] d. Unit: an unknown `do`, an unknown key, a missing required argument, 0 or 21 steps, and waits over 60 s are each refused naming the step, and nothing runs.
+  - [x] e. Unit: steps run in order through the server's own tools with their arguments; the reply has one numbered line per step.
+  - [x] f. Unit: a failing step stops the run as a tool error listing the steps done and not run.
+  - [x] g. Unit: a step reply naming a new window or dialog stops the run; `allow_new_window: true` lets it continue.
+  - [x] h. Unit: a step whose tool is excluded is refused before the run.
+  - [x] i. Unit: the action log gets one line per step plus the Steps line.
+  - [x] j. Write `tools/steps.py` (`register()`, `@with_analytics`, no `@note_new_windows`).
+  - [x] k. Add `steps` to `tools/__init__.py`.
+  - [x] l. Add the Steps entry to `Skills/windows-mcp/references/input.md`.
+  - [x] m. Add one row for Steps to `SKILL.md`'s "Which tool for which job" table.
+  - [x] n. Update CLAUDE.md: tool count 21 -> 22 and the Input group.
+  - [x] o. Live (harness): the four-step save-as in one call.
+  - [x] p. Live (harness): a `wait_for` on a title that never comes stops the run and the reply names it.
+  - [x] q. Live (harness): a first step that opens a dialog without the flag stops before typing.
   - **Verify:** per design - Live, a four-step save-as on the harness in one call; a deliberately wrong step stops the run and the reply names it.
+  - **Done 2026-09-29:**
+    - `tools/steps.py`: each step runs through `mcp.call_tool` (FastMCP 4.0.3), so it keeps its tool's checks, notes and action-log line. Checked first against each tool's input schema (`get_tool(...).parameters`); `get_tool` returns None for a tool removed by `--exclude-tools`. A bad value found at run time comes as FastMCP's `ValidationError` wrapping pydantic's. 21 unit tests (`tests/test_steps_tool.py`), written first (failed on the missing module); `test_stdio_handshake.py` expects Steps; full suite 1721 passed, ruff clean.
+    - Live (harness `LiveSteps69`, text box + Save button, in-process server, user hands-off): O - click, type "week39.txt", click `element="button:Save"`, `wait_for element_exists` in one call, 0.65 s; box text "week39.txt", log `click Save`. P - `wait_for active_window` on a missing title stopped at step 1 after 2.23 s naming the front window; step 2's "zzz" never typed. Q1 - Shortcut `win+r` without the flag stopped with the Run box's note; "zzz" not typed; the Run box closed by WM_CLOSE. Q2 - the same with `allow_new_window`, `wait_for` Run (0.16 s), Escape: 3 of 3 steps, no Run box left.
+    - Guide (`references/input.md` Steps, SKILL.md row), README, `manifest.json`, CLAUDE.md (22 tools), tool-tester skill (Steps cases) and live-test skill (the Run box as a safe new window) updated.
+    - Found, not fixed (existing, separate): `manifest.json` lists no DisplayInventory and no WaitFor.
 
 # Part D - Cleanup
 
@@ -186,4 +205,4 @@ then R6-11. R5-I4 is a user decision, any time.
 - Speed items: same target picked and same reply text as before, only faster.
 - `pytest`, `ruff check .` and `ruff format --check .` clean with zero warnings.
 - Guide, tool descriptions and CLAUDE.md updated with each change; `known-gaps.md` lines removed for fixed items; the guide ZIP rebuilt once, in R6-12.
-- Open `[User]` tasks listed to the user at the end of each session: R6-9b, R6-11a, R6-11b.
+- Open `[User]` tasks listed to the user at the end of each session: R6-11a, R6-11b.

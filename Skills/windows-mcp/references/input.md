@@ -1,6 +1,6 @@
-# Input: Click, Type, MultiEdit, MultiSelect, Scroll, Move, Shortcut
+# Input: Click, Type, MultiEdit, MultiSelect, Scroll, Move, Shortcut, Steps
 
-Contents: Click · Spot check · Type · MultiEdit · MultiSelect · Scroll · Move · Shortcut ·
+Contents: Click · Spot check · Type · MultiEdit · MultiSelect · Scroll · Move · Shortcut · Steps ·
 Coordinates · What the replies report · Shrunk screenshots
 
 ## Click
@@ -121,6 +121,26 @@ Coordinates · What the replies report · Shrunk screenshots
 - A misspelled key is refused before anything is pressed.
 - It hits whatever has focus, which after an approval is Claude: unreliable unless
   Always-allow.
+
+## Steps
+
+- Several input steps in one call, for a fixed sequence (a Save As, a small form):
+  `steps=[{"do": "click", "element": "button:Save"}, {"do": "type", "text": "hi"}, ...]`.
+  `do` is `click`, `type`, `shortcut`, `scroll`, `move`, `wait_for` or `wait`; every other key
+  is that tool's own argument, and each step keeps all of that tool's checks.
+- Up to 20 steps; the waits (Wait, WaitFor `timeout` - 10 s when left out -, Move `duration`,
+  Shortcut `hold`) may add up to 60 s. The whole list is checked first: an unknown `do`, a
+  misspelled key or a missing argument is refused naming the step, and nothing runs.
+- The run stops at the first step that fails, or whose reply names a new window or dialog,
+  unless that step has `"allow_new_window": true`. The stop is a tool error listing what each
+  step that ran replied and which steps did not run. Example, a pop-up on purpose:
+  `[{"do": "shortcut", "shortcut": "win+r", "allow_new_window": true}, {"do": "wait_for",
+  "condition": "active_window", "text": "Run", "timeout": 3}, {"do": "shortcut", "shortcut": "escape"}]`.
+- No Screenshot mid-run: prefer `element=` and `wait_for` over `loc`, and put `expect=` on
+  every `loc` click or Type after the first step (an earlier step can move things).
+- The action log records each step as its own call, then the Steps call.
+- One Claude Desktop approval covers the whole list (fewer focus-stealing prompts).
+- Measured: a four-step click, type, click, wait_for on a test window took 0.65 s in one call.
 
 ## Coordinates
 

@@ -62,6 +62,7 @@ EXPECTED_TOOLS = {
     "Scroll",
     "Shortcut",
     "Snapshot",
+    "Steps",
     "Type",
     "Wait",
     "WaitFor",

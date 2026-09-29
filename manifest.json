@@ -140,6 +140,10 @@
       "description": "Enters text into multiple input fields at specified coordinates locs=[[x,y,text], ...] or using labels=[[label,text], ...]. Provide either locs or labels."
     },
     {
+      "name": "Steps",
+      "description": "Runs up to 20 input steps (click, type, shortcut, scroll, move, wait_for, wait) in one call; each keeps its own tool's checks, and the run stops at the first failure or unexpected new window."
+    },
+    {
       "name": "Clipboard",
       "description": "Manages Windows clipboard operations. Use mode=\"get\" to read current clipboard content, mode=\"set\" to set clipboard text."
     },

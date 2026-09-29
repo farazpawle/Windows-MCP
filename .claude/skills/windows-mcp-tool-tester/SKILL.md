@@ -4,7 +4,7 @@ description: >
   Automated testing skill for Windows-MCP tools. Use this skill whenever the user wants to test,
   validate, benchmark, or evaluate any Windows-MCP tool (App, PowerShell, Screenshot, Snapshot,
   DisplayInventory, Click, Type, Scroll, Move, Shortcut, Wait, WaitFor, MultiSelect, MultiEdit,
-  Clipboard, Process, Notification, FileSystem, Registry, Scrape, FindText). Triggers on phrases like "test the Click tool",
+  Steps, Clipboard, Process, Notification, FileSystem, Registry, Scrape, FindText). Triggers on phrases like "test the Click tool",
   "benchmark Screenshot", "validate FileSystem", "run QA on Registry", "check if PowerShell works",
   "evaluate tool performance", or any mention of testing/validating a Windows-MCP tool.
   Each invocation tests exactly ONE tool.
@@ -59,7 +59,7 @@ and actionable recommendations.
 If the user hasn't specified a tool, present the full list and ask them to pick one:
 
 > App, PowerShell, Screenshot, Snapshot, DisplayInventory, Click, Type, Scroll, Move, Shortcut,
-> Wait, WaitFor, MultiSelect, MultiEdit, Clipboard, Process, Notification, FileSystem, Registry,
+> Wait, WaitFor, MultiSelect, MultiEdit, Steps, Clipboard, Process, Notification, FileSystem, Registry,
 > Scrape, FindText
 
 Once a tool is confirmed, proceed to Step 1. Do NOT test multiple tools in one session.
@@ -179,7 +179,7 @@ and its output includes `Active Desktop` and `All Desktops`.
 
 ### Pre-Test Step 2: Prepare Environment
 
-For **input tools** (Type, Click, Scroll, Move, Shortcut, MultiSelect, MultiEdit), prepare the
+For **input tools** (Type, Click, Scroll, Move, Shortcut, MultiSelect, MultiEdit, Steps), prepare the
 environment before executing any test cases:
 
 1. **IME (Input Method) state**: Check the Tray Input Indicator in the Snapshot output. If it
@@ -589,6 +589,12 @@ Hints per tool. Always read the actual schema to discover additional scenarios b
 - Edit multiple fields by coordinates
 - Edit by labels
 - Mixed valid and invalid targets
+
+### Steps
+- A 3-4 step sequence on the test window (click, type, click element=, wait_for): each step's effect in the window's log
+- An unknown `do`, a misspelled key, 21 steps, waits over 60 s: refused naming the step, nothing sent
+- A failing middle step (wait_for that times out): later steps not run, reply lists what ran
+- A step opening a window (Shortcut win+r) without and with `allow_new_window`: stops before the next step / continues; close the Run box after
 
 ### Clipboard
 - get mode when clipboard has text

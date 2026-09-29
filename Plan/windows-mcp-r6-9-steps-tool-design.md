@@ -136,3 +136,6 @@ agent relies on); the total goes through `cap_text` (50,000 characters).
 2. **Step limit 20 and 60 s of waits** (recommended: enough for a dialog flow, short enough
    that the agent looks at the screen often).
 3. **New window stops the run unless allowed** (recommended), or only note it and carry on.
+
+**Decided 2026-09-29:** approved as recommended on all three: "Steps", 20 steps and 60 s of
+waits, an unallowed new window or dialog stops the run.

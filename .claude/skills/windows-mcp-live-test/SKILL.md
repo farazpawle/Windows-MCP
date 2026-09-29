@@ -197,6 +197,10 @@ above 1920x1080 the server scales coordinates (x0.75 at 2560x1440), so run with
 To put a window App `list` does not list in front without a click (R5-I3, 2026-09-28): Win+B
 focuses the taskbar tray (`Shell_TrayWnd`), then Enter opens the hidden-icons panel
 (`TopLevelWindowForOverflowXamlIsland`); Escape twice closes it, and focus stays on the taskbar.
+A safe "unexpected new window" for new-window notes or Steps stops (R6-9, 2026-09-29): Shortcut
+`win+r` opens Windows' Run box ("Run", class `#32770`, explorer.exe's pid), which input replies
+name as a new window. Close it with `WM_CLOSE` to its own handle, or an Escape while it is in
+front; never type into it.
 Starting `test_harness.ps1` yourself (not through `start_window`) for a connected-tool test
 opens a visible console window per harness; input replies then name it as a new window.
 
