@@ -1,6 +1,6 @@
 ---
 Title: Windows-MCP round 6 - speed and accuracy (tasks)
-Description: Task list for Plan/windows-mcp-round6-speed-accuracy-plan.md. Part A accuracy (R6-1 App switch confirms the front window, R6-2 multi-click re-checks each item, R6-3 optional expect= on Click/Type by loc, R6-13 Snapshot order of a native window, logged 2026-09-28). Part B speed (R6-4 cached element search, closes R5-I2; R6-5 Scroll re-reads one element, closes R5-I1; R6-6 Registry via winreg keeping today's replies, closes R5-2; R6-7 OCR helper only if the user approves). Part C fewer calls (R6-8 recipes page; R6-9 "steps in one go" tool, design approved by the user first). Part D cleanup (R6-10 one fuzzy library). Part E user-only checks from round 4 (R6-11). Part F finish (R6-12 round-5 guide fixes and one guide ZIP rebuild). [User] tasks: R6-7b, R6-9b, R6-11a, R6-11b. Status 2026-09-28: R6-1, R6-2, R6-3, R6-5, R6-6 and R6-13 done (R5-1, R5-3, R5-4 and R5-I3 too, in the round-5 file); R6-4 closed by measurement with no code change (the 1.5 s was a throwaway Edge profile slowing every window); the rest not started.
+Description: Task list for Plan/windows-mcp-round6-speed-accuracy-plan.md. Part A accuracy (R6-1 App switch confirms the front window, R6-2 multi-click re-checks each item, R6-3 optional expect= on Click/Type by loc, R6-13 Snapshot order of a native window, logged 2026-09-28). Part B speed (R6-4 cached element search, closes R5-I2; R6-5 Scroll re-reads one element, closes R5-I1; R6-6 Registry via winreg keeping today's replies, closes R5-2; R6-7 OCR helper only if the user approves). Part C fewer calls (R6-8 recipes page; R6-9 "steps in one go" tool, design approved by the user first). Part D cleanup (R6-10 one fuzzy library). Part E user-only checks from round 4 (R6-11). Part F finish (R6-12 round-5 guide fixes and one guide ZIP rebuild). [User] tasks: R6-7b, R6-9b, R6-11a, R6-11b. Status 2026-09-28: R6-1, R6-2, R6-3, R6-5, R6-6 and R6-13 done (R5-1, R5-3, R5-4 and R5-I3 too, in the round-5 file); R6-4 closed by measurement with no code change (the 1.5 s was a throwaway Edge profile slowing every window); R6-10 done 2026-09-29; the rest not started.
 Total Tasks: 70
 ---
 
@@ -138,14 +138,19 @@ then R6-11. R5-I4 is a user decision, any time.
 
 # Part D - Cleanup
 
-- [ ] R6-10 **One fuzzy-matching library.**
-  - [ ] a. Unit: a table of app and window names (short, long, zero-width space, near-duplicates) picks today's matches (passes before and after the switch).
-  - [ ] b. Switch the window and app name matching import from `fuzzywuzzy` to `thefuzz` (same functions; its scores come from `rapidfuzz` and may differ slightly).
-  - [ ] c. Remove `fuzzywuzzy` from `pyproject.toml`.
-  - [ ] d. Remove `python-levenshtein` from `pyproject.toml` (only `fuzzywuzzy` used it).
-  - [ ] e. Refresh the lock with `uv lock --offline`, then `uv sync --extra dev` (stop any running server from this `.venv` first).
-  - [ ] f. Correct CLAUDE.md: fuzzy matching is for window and app names; element names use exact, then a single partial, match.
+- [x] R6-10 **One fuzzy-matching library.**
+  - [x] a. Unit: a table of app and window names (short, long, zero-width space, near-duplicates) picks today's matches (passes before and after the switch).
+  - [x] b. Switch the window and app name matching import from `fuzzywuzzy` to `thefuzz` (same functions; its scores come from `rapidfuzz` and may differ slightly).
+  - [x] c. Remove `fuzzywuzzy` from `pyproject.toml`.
+  - [x] d. Remove `python-levenshtein` from `pyproject.toml` (only `fuzzywuzzy` used it).
+  - [~] e. Refresh the lock with `uv lock --offline` (done), then `uv sync --extra dev` (partial: see below).
+  - [x] f. Correct CLAUDE.md: fuzzy matching is for window and app names; element names match as a case-ignored part of the name (a native substring search, not "exact then partial").
   - **Verify:** `pytest` green including a.; Live App `launch name=Notepad` and `switch name=Notepad` pick the same window as before.
+  - **Done 2026-09-29:**
+    - `tests/test_fuzzy_matching.py` (12 window names, 8 app names) passed on the old code except the "uses thefuzz" check, and all pass after. `pytest` 1698 passed, ruff clean.
+    - Live, read-only (no input sent): old and new picks compared on this PC's 5 open windows (47 names from their titles, 26 matching something) and 222 Start-menu apps (19 names incl. Notepad): identical every time. The old library ran from a temp copy with a stand-in for python-Levenshtein 0.27 (itself a rapidfuzz wrapper; the real one was not in uv's offline cache). No App switch/launch was sent: the choice of window is what changed, the switching code did not.
+    - Found, unchanged (both libraries): `launch name="Notepad++"` picks "Notepad" when both are in the Start menu - the matcher drops "+", they tie at 100 and the first listed wins. Pinned in the test. A name made only of punctuation ("-") scores 0 against everything and logs a warning.
+    - Sync: six windows-mcp servers from this `.venv` were running, so `uv sync --extra dev --offline --no-install-project` removed fuzzywuzzy but not Levenshtein (its `.pyd` is loaded). It left `Levenshtein/` with only the `.pyd` and two dist-info folders; nothing imports it. Run `uv sync --extra dev --offline` once those servers are stopped to clear it.
 
 # Part E - Carried over from rounds 4 and 5 (user only)
 

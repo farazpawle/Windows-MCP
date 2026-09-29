@@ -37,7 +37,7 @@ from locale import getpreferredencoding
 from typing import Literal
 from markdownify import MarkdownConverter
 from bs4 import BeautifulSoup
-from fuzzywuzzy import process
+from thefuzz import process
 from time import sleep, time, perf_counter
 from psutil import Process
 import math

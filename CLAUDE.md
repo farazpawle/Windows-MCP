@@ -71,7 +71,7 @@ The codebase follows a layered service architecture under `src/windows_mcp/`:
 - Mouse/keyboard input uses UIA (same coordinate space as BoundingRectangle; no DPI mismatch)
 - Screenshot is the preferred fast visual-context tool; Snapshot is the heavier path for UI element ids and DOM extraction
 - Browser detection (Chrome, Edge, Firefox) triggers special DOM extraction mode in Snapshot
-- Fuzzy string matching (`thefuzz`) is used for element name matching
+- Fuzzy string matching (`thefuzz`) is used only for window and app names (App); element names (Click `element=`) match as a case-ignored part of the name
 - UI element fetching has retry logic (`THREAD_MAX_RETRIES=3` in tree service)
 - The server supports stdio, SSE, and streamable HTTP transports
 - `serve()` drops `SSLKEYLOGFILE` at startup (`_drop_ssl_keylog_env`): Avast/AVG inject it into every process, and this Python's OpenSSL then aborts the whole server on the first HTTPS request. Keep it. Test scripts that act as HTTP(S) clients (e.g. the FastMCP client) hit the same abort (`OPENSSL_Uplink ... no OPENSSL_Applink`); run them with `SSLKEYLOGFILE` unset (`env -u SSLKEYLOGFILE ...`).
