@@ -1700,7 +1700,7 @@ wheels = [
 
 [[package]]
 name = "windows-mcp"
-version = "0.8.5"
+version = "0.9.0"
 source = { editable = "." }
 dependencies = [
     { name = "beautifulsoup4" },
