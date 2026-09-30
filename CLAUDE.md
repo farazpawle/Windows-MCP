@@ -26,6 +26,7 @@ ruff check --fix .               # Lint and auto-fix
 pytest                           # Run all tests
 pytest tests/test_foo.py         # Run a single test file
 python scripts/check_versions.py # Check the four version strings agree (run before a release)
+mcpb pack . <out>.mcpb           # Claude Desktop bundle; .mcpbignore is an allowlist (code, manifest, pyproject, lock, assets)
 ```
 
 `windows-mcp` is a click command group: `serve`, `install` / `uninstall` (run the server as a background scheduled task) and `auth` (generate HTTP credentials; `--with-tls` adds a self-signed cert). Bare `windows-mcp` does not start the server, and serve flags placed before the subcommand are rejected with a hint. `serve` also reads `~/.windows-mcp/config.toml` (`--config` to override); explicit flags win.
