@@ -24,7 +24,7 @@ from pathlib import Path
 import pytest
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-VERSIONED_FILES = ("pyproject.toml", "uv.lock", "manifest.json", "server.json")
+VERSIONED_FILES = ("pyproject.toml", "uv.lock", "mcpb/manifest.json", "server.json")
 
 
 def _load_module():
@@ -43,6 +43,7 @@ check_versions = _load_module()
 def repo(tmp_path):
     """A throwaway copy of the repo's version-bearing files."""
     for filename in VERSIONED_FILES:
+        (tmp_path / filename).parent.mkdir(exist_ok=True)
         shutil.copy(REPO_ROOT / filename, tmp_path / filename)
     return tmp_path
 
@@ -60,7 +61,7 @@ class TestCollectVersions:
         assert set(check_versions.collect_versions(repo)) == {
             "pyproject.toml:project.version",
             "uv.lock:windows-mcp",
-            "manifest.json:version",
+            "mcpb/manifest.json:version",
             "server.json:packages[0].version",
         }
 
@@ -70,11 +71,11 @@ class TestCollectVersions:
         assert "server.json:version" not in labels
 
     def test_missing_manifest_version_is_an_error(self, repo):
-        data = _read_json(repo, "manifest.json")
+        data = _read_json(repo, "mcpb/manifest.json")
         del data["version"]
-        _write_json(repo, "manifest.json", data)
+        _write_json(repo, "mcpb/manifest.json", data)
 
-        with pytest.raises(ValueError, match="manifest.json"):
+        with pytest.raises(ValueError, match="mcpb/manifest.json"):
             check_versions.collect_versions(repo)
 
     def test_missing_uv_lock_entry_is_an_error(self, repo):
@@ -126,9 +127,9 @@ class TestCheck:
             ),
             encoding="utf-8",
         )
-        manifest = _read_json(repo, "manifest.json")
+        manifest = _read_json(repo, "mcpb/manifest.json")
         manifest["version"] = "0.8.1"
-        _write_json(repo, "manifest.json", manifest)
+        _write_json(repo, "mcpb/manifest.json", manifest)
         server = _read_json(repo, "server.json")
         server["packages"][0]["version"] = "0.8.1"
         _write_json(repo, "server.json", server)
@@ -147,9 +148,9 @@ class TestCheck:
         assert check_versions.check(None, repo) == []
 
     def test_catches_single_stale_file(self, repo):
-        manifest = _read_json(repo, "manifest.json")
+        manifest = _read_json(repo, "mcpb/manifest.json")
         manifest["version"] = "0.0.1"
-        _write_json(repo, "manifest.json", manifest)
+        _write_json(repo, "mcpb/manifest.json", manifest)
 
         assert check_versions.check(None, repo) != []
 

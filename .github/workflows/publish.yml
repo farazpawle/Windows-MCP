@@ -29,7 +29,7 @@ jobs:
         with:
           python-version: "3.14"
       
-      # Fails the release if pyproject.toml, uv.lock, manifest.json and
+      # Fails the release if pyproject.toml, uv.lock, mcpb/manifest.json and
       # server.json's package entry don't all agree with the tag. At v0.8.5
       # the latter two were still on 0.8.1, two releases behind, because the
       # 0.8.2 bump touched only pyproject.toml and nothing checked.

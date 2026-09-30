@@ -6,7 +6,7 @@ different distribution channel:
 
     pyproject.toml              the PyPI package
     uv.lock                     the locked workspace member
-    manifest.json               the Claude Desktop extension
+    mcpb/manifest.json          the Claude Desktop extension
     server.json packages[]      the MCP registry's PyPI package entry
 
 These drift silently. At the v0.8.5 release `manifest.json` and
@@ -66,10 +66,10 @@ def collect_versions(root: Path = REPO_ROOT) -> dict[str, str]:
         raise ValueError("uv.lock has no [[package]] entry for windows-mcp")
     versions["uv.lock:windows-mcp"] = match.group(1)
 
-    manifest = json.loads((root / "manifest.json").read_text(encoding="utf-8"))
+    manifest = json.loads((root / "mcpb" / "manifest.json").read_text(encoding="utf-8"))
     if "version" not in manifest:
-        raise ValueError("manifest.json is missing a top-level version field")
-    versions["manifest.json:version"] = manifest["version"]
+        raise ValueError("mcpb/manifest.json is missing a top-level version field")
+    versions["mcpb/manifest.json:version"] = manifest["version"]
 
     server = json.loads((root / "server.json").read_text(encoding="utf-8"))
     packages = server.get("packages", [])

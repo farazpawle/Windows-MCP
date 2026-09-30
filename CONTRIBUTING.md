@@ -302,7 +302,7 @@ When adding or modifying tools:
 1. Update the tool's `description` parameter in `main.py`
 2. Add appropriate `ToolAnnotations`
 3. Update the tools list in `README.md`
-4. Update `manifest.json` if needed
+4. Update `mcpb/manifest.json` if needed
 
 ## Reporting Issues
 

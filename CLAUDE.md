@@ -26,12 +26,12 @@ ruff check --fix .               # Lint and auto-fix
 pytest                           # Run all tests
 pytest tests/test_foo.py         # Run a single test file
 python scripts/check_versions.py # Check the four version strings agree (run before a release)
-mcpb pack . <out>.mcpb           # Claude Desktop bundle; .mcpbignore is an allowlist (code, manifest, pyproject, lock, assets)
+uv run python mcpb/build.py      # Claude Desktop extension -> mcpb/windows-mcp-<version>.mcpb (gitignored), smoke-started
 ```
 
 `windows-mcp` is a click command group: `serve`, `install` / `uninstall` (run the server as a background scheduled task) and `auth` (generate HTTP credentials; `--with-tls` adds a self-signed cert). Bare `windows-mcp` does not start the server, and serve flags placed before the subcommand are rejected with a hint. `serve` also reads `~/.windows-mcp/config.toml` (`--config` to override); explicit flags win.
 
-The version lives in `pyproject.toml`, `uv.lock`, `manifest.json` and `server.json` `packages[].version` (not the top-level `server.json` version, which is the registry entry's own 1.x line). Bump all of them together; `scripts/check_versions.py` catches drift.
+The version lives in `pyproject.toml`, `uv.lock`, `mcpb/manifest.json` and `server.json` `packages[].version` (not the top-level `server.json` version, which is the registry entry's own 1.x line). Bump all of them together; `scripts/check_versions.py` catches drift.
 
 On this PC Avast breaks TLS to PyPI (`invalid peer certificate: BadSignature`, even with `--native-tls`), so refresh the lock after a dependency edit with `uv lock --offline` (works when every package is already cached). While a windows-mcp server from this `.venv` is running, `uv run` cannot reinstall the project (`windows-mcp.exe` is locked) after `pyproject.toml` changes; use `uv run --no-sync ...`.
 
@@ -77,7 +77,8 @@ The codebase follows a layered service architecture under `src/windows_mcp/`:
 - The server supports stdio, SSE, and streamable HTTP transports
 - `serve()` drops `SSLKEYLOGFILE` at startup (`_drop_ssl_keylog_env`): Avast/AVG inject it into every process, and this Python's OpenSSL then aborts the whole server on the first HTTPS request. Keep it. Test scripts that act as HTTP(S) clients (e.g. the FastMCP client) hit the same abort (`OPENSSL_Uplink ... no OPENSSL_Applink`); run them with `SSLKEYLOGFILE` unset (`env -u SSLKEYLOGFILE ...`).
 - Docs live in `docs/` (test reports in `docs/testing/`); plans and task files in `Plan/`.
-- A local, unversioned `.git/hooks/post-commit` refreshes the GitNexus index in the background after each commit (`gitnexus analyze --skip-agents-md --skip-skills`; log `.git/gitnexus-analyze.log`, lock dir `.git/gitnexus-analyze.lock`). A fresh clone does not have it.
+- Everything for the Claude Desktop extension lives in `mcpb/`: `manifest.json` (a new tool must be added to its `tools` list; a test checks) and `build.py`, which zips only the runnable files (git-tracked `src/`, pyproject, lock, README/LICENSE named by pyproject, the manifest's images) and starts the unpacked bundle once. It is a uv-type bundle: Claude Desktop installs Python and the dependencies itself.
+- A local, unversioned `.git/hooks/post-commit` refreshes the GitNexus index (`gitnexus analyze --skip-agents-md --skip-skills`; log `.git/gitnexus-analyze.log`, lock dir `.git/gitnexus-analyze.lock`) and rebuilds the extension (log `.git/mcpb-build.log`), both in the background after each commit. A fresh clone does not have it.
 
 ## Environment Variables
 
