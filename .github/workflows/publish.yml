@@ -6,52 +6,10 @@ on:
       - 'v*'
 
 jobs:
-  build-and-publish:
-    name: Build and publish to PyPI
-    # The windows-mcp PyPI name belongs to the upstream project; a fork's
-    # release skips this job and only makes the GitHub release below.
-    if: github.repository == 'CursorTouch/Windows-MCP'
-    runs-on: ubuntu-latest
-    environment:
-      name: pypi
-      url: https://pypi.org/p/windows-mcp
-    permissions:
-      id-token: write
-      contents: write
-      
-    steps:
-      - uses: actions/checkout@v7
-      
-      - name: Install uv
-        uses: astral-sh/setup-uv@v7
-        with:
-          version: "latest"
-      
-      - name: Set up Python
-        uses: actions/setup-python@v7
-        with:
-          python-version: "3.14"
-      
-      # Fails the release if pyproject.toml, uv.lock, mcpb/manifest.json and
-      # server.json's package entry don't all agree with the tag. At v0.8.5
-      # the latter two were still on 0.8.1, two releases behind, because the
-      # 0.8.2 bump touched only pyproject.toml and nothing checked.
-      - name: Check version consistency
-        run: python scripts/check_versions.py "${{ github.ref_name }}"
-      
-      - name: Build package
-        run: uv build
-      
-      - name: Publish package distributions to PyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          skip-existing: true
-
+  # The fork does not publish to PyPI: the windows-mcp name belongs to the
+  # upstream project, and this repo has no "pypi" environment for it.
   release:
     name: GitHub release with the Claude Desktop extension
-    needs: build-and-publish
-    # Runs when PyPI succeeded or was skipped (fork), never after a failure.
-    if: ${{ !failure() && !cancelled() }}
     # Windows: the extension build starts the unpacked server once, and the
     # server imports Windows-only modules.
     runs-on: windows-latest
@@ -69,6 +27,10 @@ jobs:
         with:
           python-version: "3.14"
 
+      # Fails the release if pyproject.toml, uv.lock, mcpb/manifest.json and
+      # server.json's package entry don't all agree with the tag. At v0.8.5
+      # the latter two were still on 0.8.1, two releases behind, because the
+      # 0.8.2 bump touched only pyproject.toml and nothing checked.
       - name: Check version consistency
         run: uv run --no-project python scripts/check_versions.py "${{ github.ref_name }}"
 
