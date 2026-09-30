@@ -1,8 +1,12 @@
 ---
 name: windows-mcp
-description: Use when controlling this Windows PC via the windows-mcp tools (lcl-windows-mcp-* in Claude Desktop, mcp__windows-mcp__* in Claude Code) — apps, UI clicks/typing, files, registry, processes, PowerShell, screenshots. Read before the first windows-mcp call.
+description: Field guide for the windows-mcp desktop tools (lcl-windows-mcp-* in Claude Desktop, mcp__windows-mcp__* in Claude Code). Simple calls need no guide. Read it when a desktop task gets tricky - a click or typing landed in the wrong window or changed nothing, an approval pop-up stole focus, a window or element cannot be found, an app froze or a call is slow, coordinates are off (shrunk screenshot, Remote Desktop), the target is VS Code, Cursor or Antigravity, or a game or canvas with no UI tree - or when it needs drag-and-drop, a multi-step form (Steps), waiting (WaitFor), screen text (FindText), killing processes, a tool error you do not understand, or a long multi-step desktop job to plan.
 ---
 # Windows MCP — field guide
+
+You are probably here because something went wrong: read the golden rules, then the
+reference for the tool that misbehaved; known problems and workarounds are in
+`references/known-gaps.md`.
 
 ## Which server
 

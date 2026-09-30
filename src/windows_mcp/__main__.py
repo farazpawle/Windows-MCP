@@ -64,9 +64,30 @@ analytics: Any | None = None
 screen_size: Any | None = None
 _mcp: FastMCP | None = None
 
+# Every client shows this to the model whenever the tools are loaded, unlike the field-guide
+# skill, which the model loads only when its description matches. So it carries the rules
+# that always apply and names the situations that should send the model to the skill.
 instructions = dedent("""
-Windows MCP server provides tools to interact directly with the Windows desktop,
-thus enabling to operate the desktop on the user's behalf.
+Windows MCP controls this Windows desktop: apps and windows, mouse and keyboard, the screen,
+files, registry, processes and PowerShell. Simple tasks: call the tools directly.
+
+Always:
+- Prefer PowerShell, FileSystem, Registry and Process over clicking and typing when they can
+  do the job; they cannot land in the wrong window.
+- Use absolute paths; relative ones resolve to the user's Desktop.
+- Kill processes by a PID you launched, never by name; close windows with App mode="close".
+- Check each action by its effect (WaitFor, a file or registry read, a Screenshot), not by
+  the reply saying it ran.
+- Take a fresh Screenshot before a coordinate click, Type with press_enter=true, or Shortcut:
+  they hit whatever window is on top.
+- VS Code-family windows (VS Code, Cursor, Windsurf, Antigravity, VSCodium) are never read;
+  use Screenshot and coordinates for them.
+
+Read the windows-mcp skill (field guide), if you have it, before going on when: a click or
+typing landed in the wrong place or changed nothing; a window or element cannot be found;
+an app is frozen or a call is slow; coordinates look off (shrunk screenshot, Remote Desktop);
+the app has no UI tree (game, canvas, remote desktop); you need drag-and-drop, a multi-step
+form (Steps), waiting (WaitFor) or screen text (FindText); or a tool error is unclear.
 """)
 
 
